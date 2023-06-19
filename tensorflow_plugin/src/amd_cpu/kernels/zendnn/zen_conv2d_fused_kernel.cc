@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -92,7 +92,9 @@ class ZenFusedConv2DOp : public OpKernel {
     conv_util.InitFwdDimensions(input_shape, filter_shape, &dimensions);
 
     // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
+    bool is_input_float = std::is_same<T, float>::value;
+    ZenTensorType out_type =
+        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 
     TensorShape out_shape = ShapeFromFormat(
         (params_.data_format), dimensions.batch, dimensions.out_rows,
@@ -125,10 +127,10 @@ class ZenFusedConv2DOp : public OpKernel {
         unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
         zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
         if (zen_pool_buffer) {
-          float* output_array = static_cast<float*>(output->flat<T>().data());
+          T* output_array = static_cast<T*>(output->flat<T>().data());
           zen_pool_buffer->ZenMemPoolUpdateTensorPtrStatus(
-              context, static_cast<float*>(output_array),
-              zendnn_params_.out_links, zendnn_params_.reset);
+              context, static_cast<T*>(output_array), zendnn_params_.out_links,
+              zendnn_params_.reset);
         }
       }
     } else {
@@ -178,11 +180,11 @@ class ZenFusedConv2DOp : public OpKernel {
         !zendnn_params_.is_eager && zen_pool_buffer) {
       T* input_array = const_cast<T*>(input.template flat<T>().data());
       zen_pool_buffer->ZenMemPoolFree(context,
-                                      reinterpret_cast<float*>(input_array));
-      if (is_sum && (dinput.dtype() == DT_FLOAT)) {
+                                      reinterpret_cast<void*>(input_array));
+      if (is_sum) {
         T* dinput_array = const_cast<T*>(dinput.template flat<T>().data());
         zen_pool_buffer->ZenMemPoolFree(context,
-                                        reinterpret_cast<float*>(dinput_array));
+                                        reinterpret_cast<void*>(dinput_array));
       }
     }
 
@@ -201,17 +203,22 @@ class ZenFusedConv2DOp : public OpKernel {
   ZendnnParameters zendnn_params_;
 };
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenFusedConv2D").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenFusedConv2DOp<float>);
+#define REGISTER_FUSED_CONV2D_KERNELS(TYPE)                                 \
+  REGISTER_KERNEL_BUILDER(                                                  \
+      Name("_ZenFusedConv2D").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      ZenFusedConv2DOp<TYPE>);                                              \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedDepthwiseConv2dNative")            \
+                              .Device(DEVICE_CPU)                           \
+                              .TypeConstraint<TYPE>("T"),                   \
+                          ZenFusedConv2DOp<TYPE, false, true, false>);
+
+TF_CALL_float(REGISTER_FUSED_CONV2D_KERNELS);
+TF_CALL_bfloat16(REGISTER_FUSED_CONV2D_KERNELS);
+
+#undef REGISTER_FUSED_CONV2D_KERNELS
 
 REGISTER_KERNEL_BUILDER(
     Name("_ZenFusedConv2DSum").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenFusedConv2DOp<float, false, false, true>);
-
-REGISTER_KERNEL_BUILDER(Name("_ZenFusedDepthwiseConv2dNative")
-                            .Device(DEVICE_CPU)
-                            .TypeConstraint<float>("T"),
-                        ZenFusedConv2DOp<float, false, true, false>);
 
 }  // namespace amd_cpu_plugin

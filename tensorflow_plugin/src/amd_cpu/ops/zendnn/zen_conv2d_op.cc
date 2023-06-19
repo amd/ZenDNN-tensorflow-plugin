@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ void RegisterZenConv2D() {
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "filter: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int)");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 GetPaddingAttrStringWithExplicit().c_str());
@@ -73,7 +73,7 @@ void RegisterZenDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "filter: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int)");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 GetPaddingAttrStringWithExplicit().c_str());
@@ -113,7 +113,7 @@ void RegisterZenFusedDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "filter: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int)");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 GetPaddingAttrStringWithExplicit().c_str());
@@ -160,7 +160,7 @@ void RegisterZenFusedConv2D() {
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "filter: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int)");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 GetPaddingAttrStringWithExplicit().c_str());
@@ -204,7 +204,7 @@ void RegisterZenFusedConv2DSum() {
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "filter: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int)");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 GetPaddingAttrStringWithExplicit().c_str());

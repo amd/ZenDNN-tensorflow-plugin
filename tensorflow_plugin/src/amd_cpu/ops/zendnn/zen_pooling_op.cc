@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ void RegisterZenAvgPool() {
   TF_OpDefinitionBuilder* op_builder = TF_NewOpDefinitionBuilder("_ZenAvgPool");
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "ksize: list(int) >= 4");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int) >= 4");
   TF_OpDefinitionBuilderAddAttr(op_builder, GetPaddingAttrString().c_str());
@@ -66,7 +66,7 @@ void RegisterZenMaxPool() {
   TF_OpDefinitionBuilder* op_builder = TF_NewOpDefinitionBuilder("_ZenMaxPool");
   TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "ksize: list(int) >= 4");
   TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int) >= 4");
   TF_OpDefinitionBuilderAddAttr(op_builder,

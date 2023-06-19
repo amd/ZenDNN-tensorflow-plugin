@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -36,8 +36,6 @@ limitations under the License.
 
 namespace amd_cpu_plugin {
 
-#define NEW_API 1
-#if NEW_API
 void ZenGemmConvolution2D(void* input_array, int batch_size, int channels,
                           int height, int width, void* filter_array,
                           int output_channels, int kernel_h, int kernel_w,
@@ -48,6 +46,7 @@ void ZenGemmConvolution2D(void* input_array, int batch_size, int channels,
                           void* bn_scale, void* bn_mean, void* bn_offset,
                           const float ops_alpha = 0.0f);
 
+template <typename T>
 void ZenConvolution2DBiasOrRelu(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
     void* input_array, int batch_size, int channels, int height, int width,
@@ -56,7 +55,6 @@ void ZenConvolution2DBiasOrRelu(
     int stride_w, void* bias_array, void* output_array, int out_height,
     int out_width, bool is_eager, bool reorder_before, bool reorder_after,
     void* cached_filter_data_, void* context);
-#endif
 
 template <typename T, bool pad_enabled = false, bool is_depthwise = false>
 class ZenConv2DOp : public OpKernel {
@@ -82,7 +80,9 @@ class ZenConv2DOp : public OpKernel {
     conv_util.InitFwdDimensions(input_shape, filter_shape, &dimensions);
 
     // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
+    bool is_input_float = std::is_same<T, float>::value;
+    ZenTensorType out_type =
+        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 
     TensorShape out_shape = ShapeFromFormat(
         (params_.data_format), dimensions.batch, dimensions.out_rows,
@@ -136,8 +136,13 @@ class ZenConv2DOp : public OpKernel {
     T* filter_array = const_cast<T*>(filter.template flat<T>().data());
     T* output_array = const_cast<T*>(output->template flat<T>().data());
 
-#if NEW_API
-    float* bias_arr = nullptr;
+    T* bias_arr = nullptr;
+
+    if (!(is_depthwise || blocked || blocked_nhwc)) {
+      OP_REQUIRES(context, is_input_float,
+                  errors::Unimplemented(
+                      "ZenDNN GEMM path only supported for FP32 data type"));
+    }
 
     // Direct convolution.
     primitive_attr conv_attr;
@@ -145,7 +150,7 @@ class ZenConv2DOp : public OpKernel {
     engine eng = ex->getEngine();
     stream s = ex->getStream();
     if (is_depthwise) {
-      ZenConvolution2DDepthwise(
+      ZenConvolution2DDepthwise<T>(
           eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
           dimensions.input_rows, dimensions.input_cols, filter_array,
           dimensions.out_depth, dimensions.filter_rows, dimensions.filter_cols,
@@ -156,7 +161,7 @@ class ZenConv2DOp : public OpKernel {
           zendnn_params_.is_eager, zendnn_params_.reorder_before,
           zendnn_params_.reorder_after, &(cached_filter_data_), context);
     } else if (blocked || blocked_nhwc) {
-      ZenConvolution2DBiasOrRelu(
+      ZenConvolution2DBiasOrRelu<T>(
           eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
           dimensions.input_rows, dimensions.input_cols, filter_array,
           dimensions.out_depth, dimensions.filter_rows, dimensions.filter_cols,
@@ -178,24 +183,13 @@ class ZenConv2DOp : public OpKernel {
           output_array, dimensions.out_rows, dimensions.out_cols, false, false,
           false, nullptr, nullptr, nullptr);
     }
-#else
-    zenConvolution2D(input_array, dimensions.batch, dimensions.in_depth,
-                     dimensions.input_rows, dimensions.input_cols, filter_array,
-                     dimensions.out_depth, dimensions.filter_rows,
-                     dimensions.filter_cols, dimensions.pad_rows_before,
-                     dimensions.pad_cols_before, dimensions.pad_rows_after,
-                     dimensions.pad_cols_after, dimensions.stride_rows,
-                     dimensions.stride_cols, output_array, dimensions.out_rows,
-                     dimensions.out_cols);
-#endif
 
     // If ZenMemPool Optimization is enabled(default), update the state of
     // Memory pool based on input_array address.
     if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
         !zendnn_params_.is_eager && zen_pool_buffer) {
-      T* input_array = const_cast<T*>(input.template flat<T>().data());
       zen_pool_buffer->ZenMemPoolFree(context,
-                                      reinterpret_cast<float*>(input_array));
+                                      reinterpret_cast<void*>(input_array));
     }
 
     zendnnInfo(ZENDNN_FWKLOG,
@@ -210,13 +204,18 @@ class ZenConv2DOp : public OpKernel {
   ZendnnParameters zendnn_params_;
 };
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenConv2D").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenConv2DOp<float>);
+#define REGISTER_CONV2D_KERNELS(TYPE)                                  \
+  REGISTER_KERNEL_BUILDER(                                             \
+      Name("_ZenConv2D").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      ZenConv2DOp<TYPE>);                                              \
+  REGISTER_KERNEL_BUILDER(Name("_ZenDepthwiseConv2dNative")            \
+                              .Device(DEVICE_CPU)                      \
+                              .TypeConstraint<TYPE>("T"),              \
+                          ZenConv2DOp<TYPE, false, true>);
 
-REGISTER_KERNEL_BUILDER(Name("_ZenDepthwiseConv2dNative")
-                            .Device(DEVICE_CPU)
-                            .TypeConstraint<float>("T"),
-                        ZenConv2DOp<float, false, true>);
+TF_CALL_float(REGISTER_CONV2D_KERNELS);
+TF_CALL_bfloat16(REGISTER_CONV2D_KERNELS);
+
+#undef REGISTER_CONV2D_KERNELS
 
 }  // namespace amd_cpu_plugin

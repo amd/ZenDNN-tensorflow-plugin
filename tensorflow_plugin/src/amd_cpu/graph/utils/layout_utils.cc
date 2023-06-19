@@ -229,6 +229,9 @@ bool IsLayoutRewriteSupportedDataType(const string& op_name,
              op_name == "SquaredDifference" || op_name == "Add" ||
              op_name == "AddV2" || op_name == "Maximum") {
     return (T == DT_FLOAT);
+  } else if (op_name == "FusedBatchNorm" || op_name == "FusedBatchNormV2" ||
+             op_name == "FusedBatchNormV3") {
+    return (T == DT_FLOAT);
   } else {
     return (T == DataType::DT_FLOAT || T == DataType::DT_BFLOAT16);
   }

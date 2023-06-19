@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ using zendnn::stream;
 
 namespace amd_cpu_plugin {
 
+template <typename T>
 void ZenConvolution2DDepthwise(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
     void *input_array, int batch_size, int channels, int height, int width,

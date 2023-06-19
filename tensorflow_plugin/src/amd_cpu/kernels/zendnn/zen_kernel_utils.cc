@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_conv_kernel_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
+#include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
@@ -376,6 +377,7 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
  *                    other. Need to check on memcpy instead for optimal
  *                    performance.
  */
+template <typename T>
 void ZenBlockedConv2DBiasEltSum(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr prim_attr,
     void *input_array, int batch_size, int channels, int height, int width,
@@ -390,6 +392,7 @@ void ZenBlockedConv2DBiasEltSum(
 
   using tag = memory::format_tag;
   using dt = memory::data_type;
+  bool is_input_float = std::is_same<T, float>::value;
 
   std::vector<primitive> net;
   std::vector<std::unordered_map<int, memory>> net_args;
@@ -408,16 +411,31 @@ void ZenBlockedConv2DBiasEltSum(
       zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
   bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
 
+  // Check for the BF16 support on the machine.
+  if (!is_input_float) {
+    bool result =
+        tensorflow::port::TestCPUFeature(tensorflow::port::CPUFeature::AVX512F);
+    if (!result) {
+      OP_REQUIRES_OK(
+          (OpKernelContext *)context,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
+    }
+    blocked = 0;
+    blocked_nhwc = 1;
+  }
+  auto dtype = is_input_float ? dt::f32 : dt::bf16;
+
   // Define memory descriptors.
   memory::desc src_md = memory::desc({src_tz}, dt::f32, tag::any);
   memory::desc bias_md = memory::desc({bias_tz}, dt::f32, tag::any);
   memory::desc wts_md = memory::desc({wts_tz}, dt::f32, tag::any);
   memory::desc dst_md = memory::desc({dst_tz}, dt::f32, tag::aBcd8b);
   if (blocked_nhwc) {
-    src_md = memory::desc({src_tz}, dt::f32, tag::nhwc);
-    bias_md = memory::desc({bias_tz}, dt::f32, tag::x);
-    wts_md = memory::desc({wts_tz}, dt::f32, tag::any);
-    dst_md = memory::desc({dst_tz}, dt::f32, tag::nhwc);
+    src_md = memory::desc({src_tz}, dtype, tag::nhwc);
+    bias_md = memory::desc({bias_tz}, dtype, tag::x);
+    wts_md = memory::desc({wts_tz}, dtype, tag::any);
+    dst_md = memory::desc({dst_tz}, dtype, tag::nhwc);
   }
 
   const Tensor &cached_filter_data_tensor =
@@ -484,13 +502,13 @@ void ZenBlockedConv2DBiasEltSum(
       }
     }
   } else {
-    src_mem = memory({{src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-    dst_mem = memory({{dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
+    src_mem = memory({{src_tz}, dtype, tag::nhwc}, eng, input_array);
+    dst_mem = memory({{dst_tz}, dtype, tag::nhwc}, eng, output_array);
   }
   // Define filters memory.
   zendnn::memory wts_mem;
   if (res <= 0) {
-    wts_mem = memory({{wts_tz}, dt::f32, tag::hwcn}, eng, filter_array);
+    wts_mem = memory({{wts_tz}, dtype, tag::hwcn}, eng, filter_array);
     if (prim_desc.weights_desc() != wts_mem.get_desc()) {
       // Filters are in hwcn format in TF and hence for blocked format we need
       // to reorder the filters to blocked format
@@ -501,8 +519,8 @@ void ZenBlockedConv2DBiasEltSum(
           {{ZENDNN_ARG_SRC, usr_wts_mem}, {ZENDNN_ARG_DST, wts_mem}});
     }
   } else {
-    filter_data = static_cast<float *>(
-        const_cast<float *>(cached_filter_data_tensor.flat<float>().data()));
+    filter_data = static_cast<T *>(
+        const_cast<T *>(cached_filter_data_tensor.flat<T>().data()));
     wts_mem = memory(prim_desc.weights_desc(), eng, filter_data);
   }
 
@@ -511,7 +529,7 @@ void ZenBlockedConv2DBiasEltSum(
 
   if (bias_array) {
     zendnn::memory bias_mem =
-        memory({{bias_tz}, dt::f32, tag::x}, eng, bias_array);
+        memory({{bias_tz}, dtype, tag::x}, eng, bias_array);
     net_args.push_back({{ZENDNN_ARG_SRC, src_mem},
                         {ZENDNN_ARG_WEIGHTS, wts_mem},
                         {ZENDNN_ARG_BIAS, bias_mem},
@@ -532,13 +550,13 @@ void ZenBlockedConv2DBiasEltSum(
     TensorShape filter_tf_shape;
     filter_tf_shape.AddDim(wts_mem.get_desc().get_size());
     static_cast<OpKernelContext *>(context)->allocate_temp(
-        DT_FLOAT, filter_tf_shape, static_cast<Tensor *>(cached_filter_data_));
+        is_input_float ? DT_FLOAT : DT_BFLOAT16, filter_tf_shape,
+        static_cast<Tensor *>(cached_filter_data_));
     size_t cached_filter_data_size = wts_mem.get_desc().get_size();
-    float *weights_data = static_cast<float *>(wts_mem.get_data_handle());
-    memcpy(
-        static_cast<float *>(
-            static_cast<Tensor *>(cached_filter_data_)->flat<float>().data()),
-        weights_data, cached_filter_data_size);
+    T *weights_data = static_cast<T *>(wts_mem.get_data_handle());
+    memcpy(static_cast<T *>(
+               static_cast<Tensor *>(cached_filter_data_)->flat<T>().data()),
+           weights_data, cached_filter_data_size);
   }
 
   if (reorder_after && blocked) {
@@ -570,7 +588,16 @@ void ZenBlockedConv2DBiasEltSum(
     }
   }
 }
+template void ZenBlockedConv2DBiasEltSum<float>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, int, int, int, int, int, int, void *,
+    void *, int, int, bool, bool, bool, void *, void *);
+template void ZenBlockedConv2DBiasEltSum<Eigen::bfloat16>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, int, int, int, int, int, int, void *,
+    void *, int, int, bool, bool, bool, void *, void *);
 
+template <typename T>
 void ZenConvolution2DDepthwise(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
     void *input_array, int batch_size, int channels, int height, int width,
@@ -581,6 +608,7 @@ void ZenConvolution2DDepthwise(
     void *cached_filter_data_, void *context) {
   using tag = memory::format_tag;
   using dt = memory::data_type;
+  bool is_input_float = std::is_same<T, float>::value;
 
   memory::dims conv1_src_tz = {batch_size, channels, height, width};
   // Assumption: output_channel and input_channel should be the multiple of
@@ -612,17 +640,34 @@ void ZenConvolution2DDepthwise(
   // filter Tag:: d = height,e = width, c = ic, a = group, b = oc.
   auto filter_format = tag::decab;
 
+  // Check for the BF16 support on the machine.
+  if (!is_input_float) {
+    bool result =
+        tensorflow::port::TestCPUFeature(tensorflow::port::CPUFeature::AVX512F);
+    if (!result) {
+      OP_REQUIRES_OK(
+          (OpKernelContext *)context,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
+    }
+    blocked = 0;
+    blocked_nhwc = 1;
+  }
+
+  // BF16 support.
+  auto dtype = std::is_same<T, float>::value ? dt::f32 : dt::bf16;
+
   zendnn::memory user_src_memory;
   zendnn::memory conv1_dst_memory, conv1_dst_memory_new;
   zendnn::memory conv1_bias_memory;
   zendnn::memory user_weights_memory = zendnn::memory(
-      {{conv1_weights_tz}, dt::f32, filter_format}, eng, filter_array);
+      {{conv1_weights_tz}, dtype, filter_format}, eng, filter_array);
   // Memory descriptors.
-  memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::nhwc);
-  memory::desc conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::x);
+  memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::nhwc);
+  memory::desc conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::x);
   memory::desc conv1_weights_md =
-      memory::desc({conv1_weights_tz}, dt::f32, tag::any);
-  memory::desc conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::nhwc);
+      memory::desc({conv1_weights_tz}, dtype, tag::any);
+  memory::desc conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
 
   if (blocked) {
     if (reorder_before) {
@@ -668,7 +713,7 @@ void ZenConvolution2DDepthwise(
   if (!blocked) {
     user_src_memory = memory(conv1_prim_desc.src_desc(), eng, input_array);
     conv1_dst_memory =
-        memory({{conv1_dst_tz}, dt::f32, tag::acdb}, eng, output_array);
+        memory({{conv1_dst_tz}, dtype, tag::acdb}, eng, output_array);
     conv1_bias_memory = memory(conv1_prim_desc.bias_desc(), eng, bias_array);
   }
 
@@ -693,8 +738,8 @@ void ZenConvolution2DDepthwise(
                           {ZENDNN_ARG_DST, conv1_weights_memory}});
     }
   } else {
-    filter_data = static_cast<float *>(
-        const_cast<float *>(cached_filter_data_tensor.flat<float>().data()));
+    filter_data = static_cast<T *>(
+        const_cast<T *>(cached_filter_data_tensor.flat<T>().data()));
     conv1_weights_memory =
         memory(conv1_prim_desc.weights_desc(), eng, filter_data);
   }
@@ -720,14 +765,13 @@ void ZenConvolution2DDepthwise(
     Tensor *filter_tensor_ptr = nullptr;
     filter_tf_shape.AddDim(conv1_weights_memory.get_desc().get_size());
     static_cast<OpKernelContext *>(context)->allocate_temp(
-        DT_FLOAT, filter_tf_shape, static_cast<Tensor *>(cached_filter_data_));
+        is_input_float ? DT_FLOAT : DT_BFLOAT16, filter_tf_shape,
+        static_cast<Tensor *>(cached_filter_data_));
     size_t cached_filter_data_size = conv1_weights_memory.get_desc().get_size();
-    float *weights_data =
-        static_cast<float *>(conv1_weights_memory.get_data_handle());
-    memcpy(
-        static_cast<float *>(
-            static_cast<Tensor *>(cached_filter_data_)->flat<float>().data()),
-        weights_data, cached_filter_data_size);
+    T *weights_data = static_cast<T *>(conv1_weights_memory.get_data_handle());
+    memcpy(static_cast<T *>(
+               static_cast<Tensor *>(cached_filter_data_)->flat<T>().data()),
+           weights_data, cached_filter_data_size);
   }
 
   if (reorder_after && blocked) {
@@ -735,7 +779,16 @@ void ZenConvolution2DDepthwise(
         .execute(s, conv1_dst_memory, conv1_dst_memory_new);
   }
 }
+template void ZenConvolution2DDepthwise<float>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, float, float, float, float, int, int,
+    void *, void *, int, int, bool, bool, bool, void *, void *);
+template void ZenConvolution2DDepthwise<Eigen::bfloat16>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, float, float, float, float, int, int,
+    void *, void *, int, int, bool, bool, bool, void *, void *);
 
+template <typename T>
 void ZenConvolution2DBiasOrRelu(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
     void *input_array, int batch_size, int channels, int height, int width,
@@ -746,6 +799,7 @@ void ZenConvolution2DBiasOrRelu(
     void *cached_filter_data_, void *context) {
   using tag = memory::format_tag;
   using dt = memory::data_type;
+  bool is_input_float = std::is_same<T, float>::value;
 
   memory::dims conv1_src_tz = {batch_size, channels, height, width};
   memory::dims conv1_weights_tz = {output_channels, channels, kernel_h,
@@ -772,10 +826,25 @@ void ZenConvolution2DBiasOrRelu(
       zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
   bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
 
+  // Check for the BF16 support on the machine.
+  if (!is_input_float) {
+    bool result =
+        tensorflow::port::TestCPUFeature(tensorflow::port::CPUFeature::AVX512F);
+    if (!result) {
+      OP_REQUIRES_OK(
+          (OpKernelContext *)context,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
+    }
+    blocked = 0;
+    blocked_nhwc = 1;
+  }
+  auto dtype = std::is_same<T, float>::value ? dt::f32 : dt::bf16;
+
   zendnn::memory user_weights_memory =
-      memory({{conv1_weights_tz}, dt::f32, tag::hwcn}, eng, filter_array);
+      memory({{conv1_weights_tz}, dtype, tag::hwcn}, eng, filter_array);
   zendnn::memory conv1_user_bias_memory =
-      memory({{conv1_bias_tz}, dt::f32, tag::x}, eng, bias_array);
+      memory({{conv1_bias_tz}, dtype, tag::x}, eng, bias_array);
 
   if (blocked || blocked_nhwc) {
     zendnnInfo(ZENDNN_FWKLOG,
@@ -802,24 +871,23 @@ void ZenConvolution2DBiasOrRelu(
       }
     } else {
       user_src_memory =
-          memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
+          memory({{conv1_src_tz}, dtype, tag::nhwc}, eng, input_array);
       conv1_dst_memory =
-          memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
+          memory({{conv1_dst_tz}, dtype, tag::nhwc}, eng, output_array);
     }
 
-    memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
-    memory::desc conv1_bias_md =
-        memory::desc({conv1_bias_tz}, dt::f32, tag::any);
+    memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::any);
+    memory::desc conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::any);
     memory::desc conv1_weights_md =
-        memory::desc({conv1_weights_tz}, dt::f32, tag::any);
+        memory::desc({conv1_weights_tz}, dtype, tag::any);
     memory::desc conv1_dst_md =
-        memory::desc({conv1_dst_tz}, dt::f32, tag::aBcd8b);
+        memory::desc({conv1_dst_tz}, dtype, tag::aBcd8b);
 
     if (blocked_nhwc) {
-      conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::nhwc);
-      conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::x);
-      conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
-      conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::nhwc);
+      conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::nhwc);
+      conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::x);
+      conv1_weights_md = memory::desc({conv1_weights_tz}, dtype, tag::any);
+      conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
     }
 
     // TODO(zendnn): Current there is no default consructor to create conv desc
@@ -857,8 +925,8 @@ void ZenConvolution2DBiasOrRelu(
                             {ZENDNN_ARG_DST, conv1_weights_memory}});
       }
     } else {
-      filter_data = static_cast<float *>(
-          const_cast<float *>(cached_filter_data_tensor.flat<float>().data()));
+      filter_data = static_cast<T *>(
+          const_cast<T *>(cached_filter_data_tensor.flat<T>().data()));
       conv1_weights_memory =
           memory(conv1_prim_desc.weights_desc(), eng, filter_data);
     }
@@ -884,16 +952,15 @@ void ZenConvolution2DBiasOrRelu(
       Tensor *filter_tensor_ptr = nullptr;
       filter_tf_shape.AddDim(conv1_weights_memory.get_desc().get_size());
       static_cast<OpKernelContext *>(context)->allocate_temp(
-          DT_FLOAT, filter_tf_shape,
+          is_input_float ? DT_FLOAT : DT_BFLOAT16, filter_tf_shape,
           static_cast<Tensor *>(cached_filter_data_));
       size_t cached_filter_data_size =
           conv1_weights_memory.get_desc().get_size();
-      float *weights_data =
-          static_cast<float *>(conv1_weights_memory.get_data_handle());
-      memcpy(
-          static_cast<float *>(
-              static_cast<Tensor *>(cached_filter_data_)->flat<float>().data()),
-          weights_data, cached_filter_data_size);
+      T *weights_data =
+          static_cast<T *>(conv1_weights_memory.get_data_handle());
+      memcpy(static_cast<T *>(
+                 static_cast<Tensor *>(cached_filter_data_)->flat<T>().data()),
+             weights_data, cached_filter_data_size);
     }
 
     if (reorder_after && blocked) {
@@ -934,6 +1001,15 @@ void ZenConvolution2DBiasOrRelu(
     }
   }
 }
+
+template void ZenConvolution2DBiasOrRelu<float>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, float, float, float, float, int, int,
+    void *, void *, int, int, bool, bool, bool, void *, void *);
+template void ZenConvolution2DBiasOrRelu<Eigen::bfloat16>(
+    zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
+    int, int, void *, int, int, int, float, float, float, float, int, int,
+    void *, void *, int, int, bool, bool, bool, void *, void *);
 
 void ZenConvolution2DBatchNormOrRelu(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,

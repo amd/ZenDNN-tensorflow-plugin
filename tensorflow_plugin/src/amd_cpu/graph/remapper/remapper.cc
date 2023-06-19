@@ -611,6 +611,12 @@ bool FindConv2DWithBatchNorm(const RemapperContext& ctx, int node_index,
                              ContractionWithBatchNorm* matched) {
   const auto* node_view = ctx.graph_view.GetNode(node_index);
   const auto* node_def = node_view->node();
+
+  // Fusion type is not supported for BF16 path because of the lack of API
+  // support from ZenDNN.
+  // TODO(zendnn) : Add the API support from ZenDNN library.
+  if (HasDataType(node_def, DT_BFLOAT16)) return false;
+
   // Root of the pattern must be a FusedBatchNorm.
   if (!IsFusedBatchNorm(*node_def)) return false;
 
