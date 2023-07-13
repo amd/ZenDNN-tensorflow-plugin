@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ void RegisterZenMatMul() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_b: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
@@ -68,7 +68,7 @@ void RegisterZenFusedMatMul() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_b: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
   TF_OpDefinitionBuilderAddAttr(op_builder, "fused_ops: list(string) = []");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
@@ -105,7 +105,7 @@ void RegisterZenMatMulBiasAddGelu() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_b: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float}");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16}");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
@@ -141,7 +141,7 @@ void RegisterMatMulBiasAddGelu() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_b: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float}");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16}");
   // TODO(plugin) :: Update shape inference function with
   // shape_inference::MatMulShape.
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,

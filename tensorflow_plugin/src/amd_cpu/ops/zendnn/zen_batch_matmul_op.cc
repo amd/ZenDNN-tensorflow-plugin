@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ void RegisterZenBatchMatMul() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_x: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_y: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
@@ -66,7 +66,7 @@ void RegisterZenBatchMatMulV2() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_x: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_y: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
@@ -99,7 +99,7 @@ void RegisterZenFusedBatchMatMulV2() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_x: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "adj_y: bool = false");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
   TF_OpDefinitionBuilderAddAttr(op_builder, "fused_ops: list(string) = []");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");

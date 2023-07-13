@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -146,20 +146,19 @@ class ZenMatMulPrimitive : public ZenPrimitive {
   };
 
   void Setup(const ZenMatMulParams &matmul_params) {
+    bool is_float = std::is_same<Tinput, float>::value;
     // Create memory descriptors.
-    context_.src_md.reset(new memory::desc({matmul_params.src_dims},
-                                           memory::data_type::f32,
+    auto data_type =
+        (is_float) ? memory::data_type::f32 : memory::data_type::bf16;
+    context_.src_md.reset(new memory::desc({matmul_params.src_dims}, data_type,
                                            matmul_params.src_format));
-    context_.weight_md.reset(new memory::desc({matmul_params.weight_dims},
-                                              memory::data_type::f32,
-                                              matmul_params.weight_format));
-    context_.dst_md.reset(new memory::desc({matmul_params.dst_dims},
-                                           memory::data_type::f32,
+    context_.weight_md.reset(new memory::desc(
+        {matmul_params.weight_dims}, data_type, matmul_params.weight_format));
+    context_.dst_md.reset(new memory::desc({matmul_params.dst_dims}, data_type,
                                            memory::format_tag::nc));
     if (matmul_params.is_biasadd) {
-      context_.bias_md.reset(new memory::desc({matmul_params.bias_dims},
-                                              memory::data_type::f32,
-                                              memory::format_tag::nc));
+      context_.bias_md.reset(new memory::desc(
+          {matmul_params.bias_dims}, data_type, memory::format_tag::nc));
       // Create descriptor for matmul.
       context_.matmul_desc.reset(
           new matmul::desc(*context_.src_md, *context_.weight_md,

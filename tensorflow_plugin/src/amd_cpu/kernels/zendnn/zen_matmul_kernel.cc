@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -57,8 +57,8 @@ struct LaunchZenFusedMatMulOp {
     bool is_biasadd = true;
     matmul_params.is_biasadd = is_biasadd;
 
-    auto a_ptr = const_cast<float *>(a.template flat<T>().data());
-    auto b_ptr = const_cast<float *>(b.template flat<T>().data());
+    auto a_ptr = const_cast<T *>(a.template flat<T>().data());
+    auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (output->template flat<T>().data());
     auto bias_ptr = const_cast<T *>(bias.flat<T>().data());
 
@@ -181,7 +181,9 @@ class ZenMatMulOp : public OpKernel {
         {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)});
 
     // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
+    bool is_float = std::is_same<T, float>::value;
+    ZenTensorType out_type =
+        (is_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 
     zendnnEnv zen_env_obj = readEnv();
     Tensor *out = nullptr;
@@ -200,8 +202,8 @@ class ZenMatMulOp : public OpKernel {
         if (zen_pool_buffer) {
           T *output_array = static_cast<T *>(out->flat<T>().data());
           zen_pool_buffer->ZenMemPoolUpdateTensorPtrStatus(
-              context, static_cast<float *>(output_array),
-              zendnn_params_.out_links, zendnn_params_.reset);
+              context, static_cast<T *>(output_array), zendnn_params_.out_links,
+              zendnn_params_.reset);
         }
       }
     } else {
@@ -225,10 +227,12 @@ class ZenMatMulOp : public OpKernel {
           zen_enable_mempool = 0;
         }
       } else if (zen_enable_mempool) {
+        DataType out_type =
+            (is_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
         // Caching the output buffer and reusing it with persistent tensor.
         int res = cached_data_.NumElements();
         if (res <= 0 || res != out_shape.num_elements()) {
-          context->allocate_temp(DataType::DT_FLOAT, out_shape, &cached_data_);
+          context->allocate_temp(out_type, out_shape, &cached_data_);
         }
         out = &cached_data_;
         context->set_output(0, *out);
@@ -280,7 +284,7 @@ class ZenMatMulOp : public OpKernel {
                                   src_format, weight_format);
 
     if (!is_fused) {
-      float *bias_ptr = NULL;
+      T *bias_ptr = NULL;
       if (is_bias_add_gelu) {
         const Tensor &bias = context->input(2);
         bias_ptr = const_cast<T *>(bias.template flat<T>().data());
@@ -323,18 +327,22 @@ class ZenMatMulOp : public OpKernel {
 
   ZendnnParameters zendnn_params_;
 };
+#define REGISTER_MATMUL_KERNELS(T)                                             \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenFusedMatMul").Device(DEVICE_CPU).TypeConstraint<T>("T"),       \
+      ZenMatMulOp<CPUDevice, T, false, true>);                                 \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenMatMul").Device(DEVICE_CPU).TypeConstraint<T>("T"),            \
+      ZenMatMulOp<CPUDevice, T>);                                              \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenMatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      ZenMatMulOp<CPUDevice, T, true>);                                        \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("MatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<T>("T"),     \
+      ZenMatMulOp<CPUDevice, T, true>);
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenFusedMatMul").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<CPUDevice, float, false, true>);
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenMatMul").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<CPUDevice, float>);
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenMatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<CPUDevice, float, true>);
-REGISTER_KERNEL_BUILDER(
-    Name("MatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<CPUDevice, float, true>);
+TF_CALL_float(REGISTER_MATMUL_KERNELS);
+TF_CALL_bfloat16(REGISTER_MATMUL_KERNELS);
+#undef REGISTER_MATMUL_KERNELS
 
 }  // namespace amd_cpu_plugin
