@@ -112,15 +112,15 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "amd_blis",
         build_file = "//third_party/amd_blis:blis.BUILD",
-        sha256 = "cddd31176834a932753ac0fc4c76332868feab3e9ac607fa197d8b44c1e74a41",
-        strip_prefix = "blis-4.0",
-        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/4.0.tar.gz"),
+        sha256 = "a05c6c7d359232580d1d599696053ad0beeedf50f3b88d5d22ee7d34375ab577",
+        strip_prefix = "blis-4.1",
+        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/4.1.tar.gz"),
     )
 
     tf_http_archive(
         name = "zen_dnn",
         build_file = "//third_party/zen_dnn:zen.BUILD",
-        sha256 = "702d34f1783d1ed97c55a2d46109fa8a6caf59b482c870715db8def6a73114fa",
-        strip_prefix = "ZenDNN-4.0",
-        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz"),
+        sha256 = "b5696f20416da4164e02a1f158d47782611a575b0a1251d5826e65ac2b23872f",
+        strip_prefix = "ZenDNN-4.1",
+        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/v4.1.tar.gz"),
     )
