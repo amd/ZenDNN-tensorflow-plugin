@@ -18,19 +18,19 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 | :--------------: | :-----: |
 | [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=3.1 |
 | Git | >=1.8 |
-| Python | >=3.8 and <=3.11 |
+| Python | >=3.9 and <=3.11 |
 | [TensorFlow](https://www.tensorflow.org/) | >=2.12 |
 
 # Installation Guide
 
->Note: Make sure you have active conda environment and TensorFlow>=2.12 is installed.
+>Note: Make sure you have active conda environment and TensorFlow v2.14 installed.
 
 ## Install via wheel file.
 ### 1. Download the wheel file from [here](http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/).
 
 ### 2. Install wheel file using pip:
 ```
-pip install tensorflow_zendnn_plugin-0.1.0-cp38-cp38-linux_x86_64.whl
+$ pip install tensorflow_zendnn_plugin-0.2.0-cp39-cp39-linux_x86_64.whl
 ```
 
 
@@ -40,15 +40,25 @@ pip install tensorflow_zendnn_plugin-0.1.0-cp38-cp38-linux_x86_64.whl
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
-### 2. Configure the build options:
+### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
+>Note: Configure & Build Tensorflow-ZenDNN Plug-in manually by following the steps [3-6].
+
 ```
+The setup script will configure & build and install Tensorflow-ZenDNN Plug-in. It will also set the necessary environment variables of ZenDNN execution. However, these variables should be verified empirically.
+
+ZenDNN-tensorflow-plugin$ source scripts/TensorFlow_ZenDNN_plugin_setup.sh
+```
+### 3. Configure the build options:
+```
+ZenDNN-tensorflow-plugin$ pip install -r requirements.txt
+
 ZenDNN-tensorflow-plugin$ ./configure
 You have bazel 5.3.0 installed.
 Please specify the location of python. [Default is /home/user/anaconda3/envs/tf-2.14-zendnn-plugin-env/bin/python]:
 
 Found possible Python library paths:
-  /home/user/anaconda3/envs/tf-2.14-check-env/lib/python3.8/site-packages
-Please input the desired Python library path to use.  Default is [/home/user/anaconda3/envs/tf-2.14-zendnn-plugin-env/lib/python3.8/site-packages]
+  /home/user/anaconda3/envs/tf-2.14-zendnn-plugin-env/lib/python3.9/site-packages
+Please input the desired Python library path to use.  Default is [/home/user/anaconda3/envs/tf-2.14-zendnn-plugin-env/lib/python3.9/site-packages]
 
 Do you wish to build TensorFlow plug-in with MPI support? [y/N]:
 No MPI support will be enabled for TensorFlow plug-in.
@@ -58,20 +68,20 @@ Please specify optimization flags to use during compilation when bazel option "-
 Configuration finished
 ```
 
-### 3. Build the TensorFlow-ZenDNN Plug-in:
+### 4. Build the TensorFlow-ZenDNN Plug-in:
 ```
 ZenDNN-tensorflow-plugin$ bazel build  -c opt //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --spawn_strategy=standalone
 ```
 
-### 4. Generate python wheel file:
+### 5. Generate python wheel file:
 ```
 ZenDNN-tensorflow-plugin$ bazel-bin/tensorflow_plugin/tools/pip_package/build_pip_package .
   Note: It will generate and save python wheel file for TensorFlow-ZenDNN Plug-in into the current directory (i.e., ZenDNN-tensorflow-plugin/).
 ```
 
-### 5. Install wheel file using pip:
+### 6. Install wheel file using pip:
 ```
-pip install tensorflow_zendnn_plugin-0.1.0-cp38-cp38-linux_x86_64.whl
+ZenDNN-tensorflow-plugin$ pip install tensorflow_zendnn_plugin-0.2.0-cp39-cp39-linux_x86_64.whl
 ```
 
 **The build and installation from source is done!**
@@ -117,12 +127,11 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 
 # Performace tuning and Benchmarking
 * As compared to the current TensorFlow-ZenDNN direct integration releases, this release provides on par performance for models, such as RefineDet, Inception, and VGG variants and sub-optimal performance for models, such as ResNet, MobileNet and EfficientNet.
-* TensorFlow-ZenDNN plug-in is supported with ZenDNN v3.3 above. Please see Chapter 5 of the [TensorFlow-ZenDNN Plug-in User Guide](https://www.amd.com/content/dam/amd/en/documents/developer/tensorflow-zendnn-plug-in-user-guide.pdf) for performance tuning guidelines.
+* TensorFlow-ZenDNN plug-in v0.2 is supported with ZenDNN v4.1. Please see the section 2.7 of [ZenDNN User Guide](https://www.amd.com/content/dam/amd/en/documents/developer/zendnn-user-guide-4-1.pdf) for performance tuning guidelines.
 
 Note: AMD recommends using the TF-ZenDNN direct integration binaries available on the [AMD ZenDNN developer resources page](https://www.amd.com/en/developer/zendnn.html) for optimal inference performance.
 
 # Support
 * Please email zendnnsupport@amd.com for questions, issues, and feedback.
+* Please submit your questions, feature requests, and bug reports on the [GitHub issues](https://github.com/amd/ZenDNN-tensorflow-plugin/issues) page.
 
-* Please submit your questions, feature requests, and bug reports on the
-[GitHub issues](https://github.com/amd/ZenDNN-tensorflow-plugin/issues) page.
