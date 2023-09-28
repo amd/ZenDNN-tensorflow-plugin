@@ -123,7 +123,7 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 * [TensorFlow's Pluggable Device blog](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html)
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
 * [Download TensorFlow-ZenDNN Plug-in binary](http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/)
-* [TensorFlow-ZenDNN Plug-in User Guide](https://www.amd.com/content/dam/amd/en/documents/developer/tensorflow-zendnn-plug-in-user-guide.pdf)
+* [TensorFlow-ZenDNN Plug-in User Guide](doc/TensorFlow-ZenDNN-Plugin-user-guide-v0.2.pdf)
 
 # Performace tuning and Benchmarking
 * As compared to the current TensorFlow-ZenDNN direct integration releases, this release provides on par performance for models, such as RefineDet, Inception, and VGG variants and sub-optimal performance for models, such as ResNet, MobileNet and EfficientNet.
