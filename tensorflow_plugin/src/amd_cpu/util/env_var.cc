@@ -21,6 +21,7 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/env_var.h"
 
 #include <stdlib.h>
+
 #include <string>
 
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
@@ -33,15 +34,15 @@ Status ReadBoolFromEnvVar(StringPiece env_var_name, bool default_val,
   *value = default_val;
   const char* tf_env_var_val = getenv(string(env_var_name).c_str());
   if (tf_env_var_val == nullptr) {
-    return Status::OK();
+    return OkStatus();
   }
   string str_value = absl::AsciiStrToLower(tf_env_var_val);
   if (str_value == "0" || str_value == "false") {
     *value = false;
-    return Status::OK();
+    return OkStatus();
   } else if (str_value == "1" || str_value == "true") {
     *value = true;
-    return Status::OK();
+    return OkStatus();
   }
   return errors::InvalidArgument(strings::StrCat(
       "Failed to parse the env-var ${", env_var_name, "} into bool: ",
@@ -49,4 +50,3 @@ Status ReadBoolFromEnvVar(StringPiece env_var_name, bool default_val,
 }
 
 }  // namespace amd_cpu_plugin
-

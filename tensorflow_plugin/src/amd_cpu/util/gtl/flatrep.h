@@ -22,7 +22,9 @@ limitations under the License.
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_GTL_FLATREP_H_
 
 #include <string.h>
+
 #include <utility>
+
 #include "tensorflow_plugin/src/amd_cpu/util/prefetch.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 

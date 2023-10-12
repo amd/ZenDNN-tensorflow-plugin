@@ -70,7 +70,7 @@ Status GetWindowedOutputSizeVerboseV2(int64 input_size, int64 filter_size,
         ", effective_filter_size: ", effective_filter_size,
         ", stride: ", stride, "]");
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 Status GetWindowedOutputSizeVerbose(int64 input_size, int64 filter_size,

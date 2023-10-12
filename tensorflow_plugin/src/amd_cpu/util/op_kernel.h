@@ -27,10 +27,13 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "protos/node_def.pb.h"
 #include "tensorflow/c/kernels.h"
+#include "tensorflow/c/kernels_experimental.h"
 #include "tensorflow/c/ops.h"
 #include "tensorflow_plugin/src/amd_cpu/util/allocator.h"
 #include "tensorflow_plugin/src/amd_cpu/util/cpu_info.h"
+#include "tensorflow_plugin/src/amd_cpu/util/kernel_def_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/logging.h"
 #include "tensorflow_plugin/src/amd_cpu/util/mutex.h"
 #include "tensorflow_plugin/src/amd_cpu/util/plugin_tensor.h"
@@ -530,6 +533,23 @@ class Name : public KernelDefBuilder {
   // TF_RegisterKernelBuilder.
   std::string op_name_;
 };
+
+// If node of node_name, experimental_debug_info, node_op, node_device and
+// node_attrs has a corresponding kernel registered on device_type, returns OK
+// and fill in the kernel def and kernel_class_name. <def> and
+// <kernel_class_name> may be null.
+Status FindKernelDef(
+    const DeviceType& device_type, StringPiece node_name,
+    bool has_experimental_debug_info,
+    const NodeDef_ExperimentalDebugInfo& experimental_debug_info,
+    StringPiece node_op, StringPiece node_device, AttrSlice node_attrs,
+    const KernelDef** def, std::string* kernel_class_name);
+
+// If node_def has a corresponding kernel registered on device_type,
+// returns OK and fill in the kernel def and kernel_class_name. <def> and
+// <kernel_class_name> may be null.
+Status FindKernelDef(const DeviceType& device_type, const NodeDef& node_def,
+                     const KernelDef** def, std::string* kernel_class_name);
 
 namespace register_kernel {
 typedef void (*KernelRegisterFunc)(const char*, const char*);

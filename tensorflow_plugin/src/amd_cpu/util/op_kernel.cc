@@ -24,7 +24,9 @@ limitations under the License.
 
 #include "tensorflow/c/kernels.h"
 #include "tensorflow/c/tf_tensor.h"
+#include "tensorflow_plugin/src/amd_cpu/util/kernel_def_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/plugin_tensor.h"
+#include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
 namespace amd_cpu_plugin {
 
@@ -462,6 +464,165 @@ void RegisterGPUKernels(const char* device_name) {
 }
 
 }  // namespace register_kernel
+
+namespace {
+
+// TODO(itex): Replace with const Node& version below.
+Status FindKernelRegistration(
+    const DeviceType& device_type, StringPiece node_name,
+    bool has_experimental_debug_info,
+    const NodeDef_ExperimentalDebugInfo& experimental_debug_info,
+    StringPiece node_op, AttrSlice node_attrs, const KernelDef** reg,
+    bool* was_attr_mismatch) {
+  *reg = nullptr;
+  *was_attr_mismatch = false;
+
+  TF_Buffer* kernel_list_buf = TF_NewBuffer();
+  TF_Status* tf_status = TF_NewStatus();
+  kernel_list_buf =
+      TF_GetRegisteredKernelsForOp(string(node_op).c_str(), tf_status);
+  Status status = StatusFromTF_Status(tf_status);
+  if (!status.ok()) {
+    return status;
+  }
+
+  KernelList kernel_list;
+  kernel_list.ParseFromArray(kernel_list_buf->data, kernel_list_buf->length);
+
+  TF_DeleteBuffer(kernel_list_buf);
+  TF_DeleteStatus(tf_status);
+
+  for (const auto& kernel_def : kernel_list.kernel()) {
+    // If there is a kernel registered for the op and device_type,
+    // check that the attrs match.
+    bool match;
+
+    if (kernel_def.device_type() != DeviceTypeString(device_type)) continue;
+
+    TF_RETURN_IF_ERROR(KernelAttrsMatch(kernel_def, node_attrs, &match));
+    if (match) {
+      if (*reg != nullptr) {
+        if ((*reg)->priority() == kernel_def.priority()) {
+          return errors::InvalidArgument(
+              "Multiple OpKernel registrations match NodeDef at the same "
+              "priority '",
+              FormatNodeDefForError(node_name, has_experimental_debug_info,
+                                    experimental_debug_info),
+              "': '", (*reg)->ShortDebugString(), "' and '",
+              kernel_def.ShortDebugString(), "'");
+        } else if ((*reg)->priority() > kernel_def.priority()) {
+          continue;
+        }
+        // iter->second's priority is higher than *reg.
+      }
+      *reg = &kernel_def;
+    } else {
+      *was_attr_mismatch = true;
+    }
+  }
+  //  Check if no device specific registrations found. If not, try finding a
+  //  default kernel.
+  //  if (*reg == nullptr &&
+  //      !IsSymbolicExecutionDevice(device_type.type_string())) {
+  if (*reg == nullptr) {
+    // If there is a kernel registered for the op and device_type,
+    // check that the attrs match.
+    for (const auto& kernel_def : kernel_list.kernel()) {
+      if (kernel_def.device_type() != "DEFAULT") continue;
+      bool match;
+      TF_RETURN_IF_ERROR(KernelAttrsMatch(kernel_def, node_attrs, &match));
+      if (match) {
+        if (*reg != nullptr) {
+          return errors::InvalidArgument(
+              "Multiple Default OpKernel registrations match NodeDef '",
+              FormatNodeDefForError(node_name, has_experimental_debug_info,
+                                    experimental_debug_info),
+              "': '", (*reg)->ShortDebugString(), "' and '",
+              kernel_def.ShortDebugString(), "'");
+        }
+        *reg = &kernel_def;
+      } else {
+        *was_attr_mismatch = true;
+      }
+    }
+
+    if (*reg != nullptr) {
+      zendnnInfo(ZENDNN_FWKLOG,
+                 "No device-specific kernels found for NodeDef '",
+                 FormatNodeDefForError(node_name, has_experimental_debug_info,
+                                       experimental_debug_info),
+                 "'", "Will fall back to a default kernel.");
+    }
+  }
+  return OkStatus();
+}
+
+Status FindKernelRegistration(const DeviceType& device_type,
+                              const NodeDef& node_def, const KernelDef** reg,
+                              bool* was_attr_mismatch) {
+  return FindKernelRegistration(
+      device_type, node_def.name(), node_def.has_experimental_debug_info(),
+      node_def.experimental_debug_info(), node_def.op(),
+      AttrSlice(&node_def.attr()), reg, was_attr_mismatch);
+}
+
+}  // namespace
+
+bool KernelDefAvailable(const DeviceType& device_type,
+                        const NodeDef& node_def) {
+  const KernelDef* reg = nullptr;
+  bool was_attr_mismatch;
+  Status result =
+      FindKernelRegistration(device_type, node_def, &reg, &was_attr_mismatch);
+  return result.ok() && reg != nullptr;
+}
+
+// TODO(itex): Change const NodeDef& to const Node&
+Status FindKernelDef(
+    const DeviceType& device_type, StringPiece node_name,
+    bool has_experimental_debug_info,
+    const NodeDef_ExperimentalDebugInfo& experimental_debug_info,
+    StringPiece node_op, StringPiece node_device, AttrSlice node_attrs,
+    const KernelDef** def, string* kernel_class_name) {
+  const KernelDef* reg = nullptr;
+  bool was_attr_mismatch;
+  TF_RETURN_IF_ERROR(FindKernelRegistration(
+      device_type, node_name, has_experimental_debug_info,
+      experimental_debug_info, node_op, node_attrs, &reg, &was_attr_mismatch));
+  if (reg == nullptr) {
+    const std::string device_str = DeviceTypeString(device_type);
+    Status s = errors::NotFound(
+        "No registered '", node_op, "' OpKernel for ", device_str,
+        " devices compatible with node ",
+        FormatNodeDefForError(node_name, has_experimental_debug_info,
+                              experimental_debug_info));
+    if (was_attr_mismatch) {
+      //      errors::AppendToMessage(
+      //          &s, " (OpKernel was found, but attributes didn't match) ",
+      //          "Requested Attributes: ",
+      //          SummarizeAttrsHelper(node_attrs, node_device));
+    }
+    //    // Do not print kernel registrations for other devices when using _JIT
+    //    // devices for compilation.
+    //    if (!absl::StrContains(device_str, "JIT")) {
+    //      errors::AppendToMessage(
+    //          &s, ".  Registered:", KernelsRegisteredForOp(node_op));
+    //    }
+    return s;
+  }
+  if (def != nullptr) *def = reg;
+  //  if (kernel_class_name != nullptr) *kernel_class_name =
+  //  reg->kernel_class_name;
+  return OkStatus();
+}
+
+Status FindKernelDef(const DeviceType& device_type, const NodeDef& node_def,
+                     const KernelDef** def, string* kernel_class_name) {
+  return FindKernelDef(
+      device_type, node_def.name(), node_def.has_experimental_debug_info(),
+      node_def.experimental_debug_info(), node_def.op(), node_def.device(),
+      AttrSlice(&node_def.attr()), def, kernel_class_name);
+}
 
 void CheckNotInComputeAsync(OpKernelContext* ctx,
                             const char* correct_macro_name) {

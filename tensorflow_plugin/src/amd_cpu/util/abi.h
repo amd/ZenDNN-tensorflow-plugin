@@ -22,6 +22,7 @@ limitations under the License.
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_ABI_H_
 
 #include <string>
+
 #include "tensorflow_plugin/src/amd_cpu/util/platform_types.h"
 
 namespace amd_cpu_plugin {

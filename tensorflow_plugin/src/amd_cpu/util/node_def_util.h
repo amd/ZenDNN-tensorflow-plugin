@@ -178,13 +178,13 @@ class AttrSlice {
   // If this AttrSlice has an attached NodeDef, summarize it.  This is for
   // error messages only: we intentionally do not provide direct access to the
   // NodeDef, since it is not always there.
-  // std::string SummarizeNode() const;
+  std::string SummarizeNode() const;
 
   // Iteration over all attrs
   AttrValueMap::const_iterator begin() const { return attrs_->begin(); }
   AttrValueMap::const_iterator end() const { return attrs_->end(); }
 
-  // std::string DebugString() const;
+  std::string DebugString() const;
 
  private:
   const NodeDef* ndef_;

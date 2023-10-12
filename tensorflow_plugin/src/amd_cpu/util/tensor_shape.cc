@@ -107,7 +107,7 @@ Status TensorShapeBase<Shape>::IsValidShape(const TensorShapeProto& proto) {
       return errors::InvalidArgument(
           "An unknown shape must not have any dimensions set.");
     }
-    return Status::OK();
+    return OkStatus();
   }
   int64 num_elements = 1;
   if (proto.dim().size() > MaxDimensions()) {
@@ -136,7 +136,7 @@ Status TensorShapeBase<Shape>::IsValidShape(const TensorShapeProto& proto) {
       }
     }
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 template <class Shape>
@@ -607,7 +607,7 @@ Status MakeShapeHelper(const T* dims, int64 n, Shape* out) {
     }
     out->UnsafeAddDim(dim, new_num_elements);
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 #define MAKE_SHAPE(T, Shape)                                                 \
@@ -655,11 +655,11 @@ Status PartialTensorShape::MergeWith(const PartialTensorShape& shape,
                                      PartialTensorShape* result) const {
   if (unknown_rank()) {
     *result = shape;
-    return Status::OK();
+    return OkStatus();
   }
   if (shape.unknown_rank()) {
     *result = *this;
-    return Status::OK();
+    return OkStatus();
   }
   const int dims_ = dims();
   if (dims_ != shape.dims()) {
@@ -679,7 +679,7 @@ Status PartialTensorShape::MergeWith(const PartialTensorShape& shape,
     }
     result->AddDim(dim0 >= 0 ? dim0 : dim1);
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 bool PartialTensorShape::AsTensorShape(TensorShape* shape) const {
@@ -768,7 +768,7 @@ Status TensorShapeUtils::NumElements(gtl::ArraySlice<int64> shape,
     }
   }
   *num_elements = n;
-  return Status::OK();
+  return OkStatus();
 }
 
 template class TensorShapeBase<TensorShape>;

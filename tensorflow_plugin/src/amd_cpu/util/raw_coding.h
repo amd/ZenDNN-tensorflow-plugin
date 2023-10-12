@@ -22,6 +22,7 @@ limitations under the License.
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_RAW_CODING_H_
 
 #include <string.h>
+
 #include "tensorflow_plugin/src/amd_cpu/util/byte_order.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 

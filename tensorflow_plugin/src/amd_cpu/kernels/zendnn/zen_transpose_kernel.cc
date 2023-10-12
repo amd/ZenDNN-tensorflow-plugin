@@ -108,7 +108,8 @@ class ZenTransposeOp : public OpKernel {
     } else if (!is_conjugate && internal::NonSingletonDimensionsAlign(
                                     input.shape(), permutation)) {
       Tensor output;
-      OP_REQUIRES_OK(context, output.CopyFrom(input, shape));
+      OP_REQUIRES(context, output.CopyFrom(input, shape),
+                  errors::Unknown("Error reshaping Tensor."));
       context->set_output(0, output);
       return;
     }

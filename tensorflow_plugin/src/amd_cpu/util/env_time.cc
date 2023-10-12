@@ -18,10 +18,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "tensorflow_plugin/src/amd_cpu/util/env_time.h"
+
 #include <sys/time.h>
 #include <time.h>
-
-#include "tensorflow_plugin/src/amd_cpu/util/env_time.h"
 
 namespace amd_cpu_plugin {
 

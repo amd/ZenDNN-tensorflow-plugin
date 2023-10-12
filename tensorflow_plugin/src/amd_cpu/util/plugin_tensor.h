@@ -24,33 +24,114 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#include "protos/tensor.pb.h"
+#include "tensorflow/c/c_api.h"
 #include "tensorflow/c/tf_tensor.h"
 #include "tensorflow_plugin/src/amd_cpu/util/logging.h"
+#include "tensorflow_plugin/src/amd_cpu/util/refcount.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_shape.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_types.h"
+#include "tensorflow_plugin/src/amd_cpu/util/tf_buffer.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
 namespace amd_cpu_plugin {
+class TensorProto;
+class TensorBuffer;
+
+/// Interface to access the raw ref-counted data buffer.
+class TensorBuffer : public core::RefCounted {
+ public:
+  explicit TensorBuffer(void* data_ptr) : data_(data_ptr) {}
+  ~TensorBuffer() override {}
+
+  /// \brief data() points to a memory region of size() bytes.
+  ///
+  /// NOTE(mrry): The `data()` method is not virtual for performance reasons.
+  /// It can be called multiple times when the contents of a `Tensor` are
+  /// accessed, and so making it non-virtual allows the body to be inlined.
+  void* data() const { return data_; }
+
+  //  /// \brief Size (in bytes) of the buffer.
+  //  virtual size_t size() const = 0;
+
+  //  /// \brief If this TensorBuffer is sub-buffer of another TensorBuffer,
+  //  /// returns that TensorBuffer. Otherwise, returns this.
+  //  virtual TensorBuffer* root_buffer() = 0;
+
+  //  /// \brief Fills metadata about the allocation into the proto.
+  //  virtual void FillAllocationDescription(
+  //      AllocationDescription* proto) const = 0;
+
+  //  virtual bool GetAllocatedBytes(size_t* out_bytes) const;
+
+  /// \brief Helper method to reinterpret the buffer as an array of `T`.
+  template <typename T>
+  T* base() const {
+    return reinterpret_cast<T*>(data());
+  }
+
+  //  /// \brief Whether this TensorBuffer owns the underlying memory.
+  //  virtual bool OwnsMemory() const { return true; }
+
+ private:
+  void* const data_;
+};
+
 class Tensor {
  public:
-  explicit Tensor(DataType type, const TensorShape& shape, TF_Tensor* buf);
+  explicit Tensor(TF_Tensor* buf);
 
   Tensor() : Tensor(DT_FLOAT) {}
 
   explicit Tensor(DataType type) : shape_(type), buf_(nullptr) {}
 
+  // The Tensor buf_ will be allocated by `type` and `shape`.
+  explicit Tensor(DataType type, const TensorShape& shape);
+
+  explicit Tensor(DataType type, const TensorShape& shape, TF_Tensor* buf);
+
+  // TODO(itex): Combine Tensor(Tensor&) and Tensor(Tensor&&)
+  // into a single function
+  Tensor(const Tensor& other) : shape_(other.shape_), buf_(nullptr) {
+    TF_Status* tf_status = TF_NewStatus();
+    const int64_t dims[1] = {1};
+    buf_ = TF_AllocateTensor(static_cast<TF_DataType>(other.dtype()), dims, 1,
+                             DataTypeSize(other.dtype()));
+    set_dtype(other.dtype());
+    TF_TensorBitcastFrom(other.buf_, static_cast<TF_DataType>(other.dtype()),
+                         buf_, shape_.dim_sizes().data(), shape_.dims(),
+                         tf_status);
+    TF_DeleteStatus(tf_status);
+  }
+
+  Tensor(Tensor&& other) : shape_(std::move(other.shape_)), buf_(nullptr) {
+    const int64_t dims[1] = {1};
+    buf_ = TF_AllocateTensor(static_cast<TF_DataType>(other.dtype()), dims, 1,
+                             DataTypeSize(other.dtype()));
+    TF_Status* tf_status = TF_NewStatus();
+    TF_TensorBitcastFrom(other.buf_, static_cast<TF_DataType>(other.dtype()),
+                         buf_, shape_.dim_sizes().data(), shape_.dims(),
+                         tf_status);
+    TF_DeleteTensor(other.buf_);
+    other.buf_ = nullptr;
+    TF_DeleteStatus(tf_status);
+  }
+
   Tensor& operator=(const Tensor& other) {
-    CopyFromInternal(other, other.shape());
+    CopyFromInternal(other, other.shape_);
+    shape_ = other.shape_;
     return *this;
   }
 
+  // TODO(itex): investigate whether buf_ can be not empty
   Tensor& operator=(Tensor&& t) {
-    CHECK(buf_ == nullptr);
+    // Avoid self-assignment, since we might destroy our underlying buffer.
     if (this != &t) {
+      CopyFromInternal(t, t.shape_);
       shape_ = std::move(t.shape_);
-      buf_ = t.buf_;
+      TF_DeleteTensor(t.buf_);
       t.buf_ = nullptr;
     }
     return *this;
@@ -63,10 +144,49 @@ class Tensor {
     }
   }
 
+  // Difference from Copyfrom, BitCastFrom can explicitly set the DataType
+  // TODO(itex): Combine BitCastFrom and CopyFromInternal into single
+  // function
+  Status BitcastFrom(const Tensor& other, DataType dtype,
+                     const TensorShape& shape) {
+    DCHECK_EQ(shape.num_elements(), other.NumElements());
+
+    // This is a workaround because of `to` in TF_TensorBitcastFrom can't be
+    // `nullptr`. Don't worry about the memory leak. It will be destructed out
+    // of tensor life scope.
+    if (!buf_) {
+      const int64_t dims[1] = {1};
+      buf_ = TF_AllocateTensor(static_cast<TF_DataType>(dtype), dims, 1,
+                               DataTypeSize(dtype));
+      CHECK_NOTNULL(buf_);
+    }
+
+    // copy the shape and dtype.
+    shape_ = shape;
+    set_dtype(dtype);
+    TF_Status* tf_status = TF_NewStatus();
+    TF_TensorBitcastFrom(other.buf_, static_cast<TF_DataType>(dtype), buf_,
+                         shape_.dim_sizes().data(), shape_.dims(), tf_status);
+
+    Status status = StatusFromTF_Status(tf_status);
+    TF_DeleteStatus(tf_status);
+    return status;
+  }
+
+  bool FromProto(const TensorProto& proto);
+  /// \brief Fills in `proto` with `*this` tensor's content.
+  ///
+  /// `AsProtoField()` fills in the repeated field for `proto.dtype()`, while
+  /// `AsProtoTensorContent()` encodes the content in `proto.tensor_content()`
+  /// in a compact form.
+  //  void AsProtoField(TensorProto* proto);
+  void AsProtoTensorContent(TensorProto* proto);
+
   DataType dtype() const { return shape_.data_type(); }
 
   const TensorShape& shape() const { return shape_; }
   const TF_Tensor* GetTFTensor() const { return buf_; }
+  TF_Tensor* GetTFTensor() { return buf_; }
 
   int dims() const { return shape().dims(); }
 
@@ -78,13 +198,13 @@ class Tensor {
     return shape().IsSameSize(b.shape());
   }
 
-  bool IsInitialized() const { return buf_ != nullptr; }
+  bool IsInitialized() const {
+    return buf_ != nullptr && TF_TensorData(buf_) != nullptr;
+  }
 
   size_t TotalBytes() const;
 
   size_t AllocatedBytes() const;
-
-  void CopyFromInternal(const Tensor& other, const TensorShape& shape);
 
   bool IsAligned() const {
     if (buf_ != nullptr) {
@@ -141,9 +261,9 @@ class Tensor {
   ///
   /// These methods allow you to access the data with the dimensions
   /// and sizes of your choice.  You do not need to know the number of
-  /// dimensions of the Tensor to call them.  However, they `CHECK` that
-  /// the type matches and the dimensions requested creates an
-  /// `Eigen::Tensor` with the same number of elements as the tensor.
+  /// dimensions of the Tensor to call them.  However, they `CHECK` that the
+  /// type matches and the dimensions requested creates an `Eigen::Tensor` with
+  /// the same number of elements as the tensor.
   ///
   /// Example:
   ///
@@ -294,17 +414,40 @@ class Tensor {
   typename TTypes<T, NDIMS>::ConstTensor flat_inner_outer_dims(
       int64 begin) const;
 
+  /// A human-readable summary of the tensor suitable for debugging.
+  // `num_values` is the number of actual data values in the tensor
+  // included in the message. If the tensor might be resident in
+  // GPU/TPU memory use DeviceSafeDebugString instead.
+  std::string DebugString(int num_values) const;
+  std::string DebugString() const { return DebugString(3); }
+
+  /// Render the first `max_entries` values in `*this` into a string.
+  std::string SummarizeValue(int64 max_entries, bool print_v2 = false) const;
+
+  // Variant of DebugString() that should be used for possibly non-CPU tensors.
+  // If the tensor is not resident on CPU, we can't read its values as
+  // DebugString() does.
+  std::string DeviceSafeDebugString() const;
+
   /// \brief Copy the tensor from other and reshape it.
   ///
   /// The current shape will be replaced with shape and
   /// type will be replaced with other.dtype().
-  Status CopyFrom(const Tensor& other, const TensorShape& shape);
+  bool CopyFrom(const Tensor& other, const TensorShape& shape) {
+    if (other.NumElements() != shape.num_elements()) return false;
+    CopyFromInternal(other, shape);
+    shape_ = shape;
+    // Manually create shape doesn't have datatype information, we obtain the
+    // type information from src tensor. TF-proper uses the same logic.
+    shape_.set_data_type(other.dtype());
+    return true;
+  }
 
   bool SharesBufferWith(const Tensor& other);
 
+  bool RefCountIsOne();
+
  private:
-  Tensor(const Tensor& other) = delete;
-  Tensor(Tensor&& other) = delete;
   void CheckType(DataType expected_dtype) const;
   void CheckTypeAndIsAligned(DataType expected_dtype) const;
   void CheckIsAlignedAndSingleElement() const;
@@ -328,6 +471,31 @@ class Tensor {
   template <typename T>
   T* base() const {
     return reinterpret_cast<T*>(TF_TensorData(buf_));
+  }
+
+  inline void CopyFromInternal(const Tensor& other, const TensorShape& shape) {
+    DCHECK_EQ(shape.num_elements(), other.NumElements());
+
+    // This is a workaround because of `to` in TF_TensorBitcastFrom can't be
+    // `nullptr`. Don't worry about the memory leak. It will be destructed out
+    // of tensor life scope.
+    if (!buf_) {
+      const int64_t dims[1] = {1};
+      buf_ = TF_AllocateTensor(static_cast<TF_DataType>(other.dtype()), dims, 1,
+                               DataTypeSize(other.dtype()));
+      CHECK_NOTNULL(buf_);
+    }
+
+    // copy the dtype.
+    DataType dtype = other.dtype();
+    set_dtype(dtype);
+
+    TF_Status* tf_status = TF_NewStatus();
+    TF_TensorBitcastFrom(other.buf_, static_cast<TF_DataType>(dtype), buf_,
+                         shape.dim_sizes().data(), shape.dims(), tf_status);
+    Status s = StatusFromTF_Status(tf_status);
+    CHECK_EQ(OkStatus(), s);
+    TF_DeleteStatus(tf_status);
   }
 
  private:
@@ -491,7 +659,7 @@ template <typename T>
 typename TTypes<T>::Scalar Tensor::scalar() {
   static_assert(
       !std::is_same<T, std::string>::value,
-      "std::string is no longer a scalar type, use tensorflow::tstring");
+      "std::string is no longer a scalar type, use amd_cpu_plugin::tstring");
   CheckIsAlignedAndSingleElement();
   return typename TTypes<T>::Scalar(base<T>());
 }
@@ -500,7 +668,7 @@ template <typename T>
 typename TTypes<T>::ConstScalar Tensor::scalar() const {
   static_assert(
       !std::is_same<T, std::string>::value,
-      "std::string is no longer a scalar type, use tensorflow::tstring");
+      "std::string is no longer a scalar type, use amd_cpu_plugin::tstring");
   CheckIsAlignedAndSingleElement();
   return typename TTypes<T>::ConstScalar(base<T>());
 }

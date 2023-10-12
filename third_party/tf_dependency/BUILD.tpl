@@ -132,6 +132,16 @@ template_rule(
 )
 
 template_rule(
+    name = "kernel_def_plugin",
+    src = "include/tensorflow/core/framework/kernel_def.proto",
+    out = "include/protos/kernel_def.proto",
+    substitutions = {
+        "package tensorflow;": "package amd_cpu_plugin;",
+        "tensorflow/core/framework/attr_value.proto": "attr_value.proto",
+    },
+)
+
+template_rule(
     name = "function_plugin",
     src = "include/tensorflow/core/framework/function.proto",
     out = "include/protos/function.proto",
@@ -267,6 +277,14 @@ cc_proto(
 )
 
 cc_proto(
+    name = "kernel_def",
+    src = "kernel_def.proto",
+    deps = [
+        ":attr_value_proto",
+    ],
+)
+
+cc_proto(
     name = "function",
     src = "function.proto",
     deps = [
@@ -316,6 +334,7 @@ cc_library(
         ":graph_proto",
         ":graph_debug_info_proto",
         ":tensor_proto",
+        ":kernel_def_proto",
         ":op_performance_data_proto",
     ],
 )

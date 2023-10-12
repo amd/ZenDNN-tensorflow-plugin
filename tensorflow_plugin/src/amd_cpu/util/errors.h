@@ -78,6 +78,15 @@ inline const strings::AlphaNum& PrepareForStrCat(const strings::AlphaNum& a) {
     }                                              \
   } while (0)
 
+// For propagating errors when calling a function.
+#define TF_ABORT_IF_ERROR(...)                       \
+  do {                                               \
+    ::amd_cpu_plugin::Status _status(__VA_ARGS__);   \
+    if (TF_PREDICT_FALSE(!_status.ok())) {           \
+      zendnnInfo(ZENDNN_FWKLOG, _status.ToString()); \
+    }                                                \
+  } while (0)
+
 // Convenience functions for generating and using error status.
 // Example usage:
 //   status.Update(errors::InvalidArgument("The ", foo, " isn't right."));

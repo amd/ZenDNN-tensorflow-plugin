@@ -51,7 +51,7 @@ Status AllowedTypeValue(DataType dt, const OpDef::AttrDef& attr) {
   const AttrValue& allowed_values(attr.allowed_values());
   for (auto allowed : allowed_values.list().type()) {
     if (dt == allowed) {
-      return Status::OK();
+      return OkStatus();
     }
   }
   string allowed_str;
@@ -71,7 +71,7 @@ Status AllowedStringValue(const string& str, const OpDef::AttrDef& attr) {
   const AttrValue& allowed_values(attr.allowed_values());
   for (const auto& allowed : allowed_values.list().s()) {
     if (str == allowed) {
-      return Status::OK();
+      return OkStatus();
     }
   }
   string allowed_str;
@@ -151,7 +151,7 @@ Status AllowedStringValue(const string& str, const OpDef::AttrDef& attr) {
 //           attr.type());
 //     }
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 const OpDef::AttrDef* FindAttr(StringPiece name, const OpDef& op_def) {
@@ -252,7 +252,7 @@ static Status ValidateArg(const OpDef::ArgDef& arg, const OpDef& op_def,
              DataTypeString(arg.type()), "'. Use 'Ref(type)' instead", suffix);
   }
 
-  return Status::OK();
+  return OkStatus();
 }
 
 bool IsValidOpName(StringPiece sp) {
@@ -352,7 +352,7 @@ bool IsValidOpName(StringPiece sp) {
 //     TF_RETURN_IF_ERROR(ValidateArg(arg, op_def, true, &names));
 //   }
 
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 #undef VALIDATE
@@ -382,7 +382,7 @@ bool IsValidOpName(StringPiece sp) {
 //       }
 //     }
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 namespace {

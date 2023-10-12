@@ -25,6 +25,7 @@ limitations under the License.
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_OP_DEF_UTIL_H_
 
 #include <string>
+
 #include "protos/api_def.pb.h"
 #include "protos/op_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/protobuf.h"

@@ -58,76 +58,75 @@ AttrSlice::AttrSlice(const NodeDef& node_def)
 
 AttrSlice::AttrSlice(const AttrValueMap* a) : ndef_(nullptr), attrs_(a) {}
 
-// string SummarizeAttrsHelper(AttrSlice attrs, StringPiece device) {
-//   string ret;
+string SummarizeAttrsHelper(AttrSlice attrs, StringPiece device) {
+  string ret;
 
-//   // We sort the attrs so the output is deterministic.
-//   std::vector<string> attr_names;
-//   attr_names.reserve(attrs.size());
-//   for (const auto& attr : attrs) {
-//     attr_names.push_back(attr.first);
-//   }
-//   std::sort(attr_names.begin(), attr_names.end());
-//   bool first = true;
-//   for (const string& attr_name : attr_names) {
-//     if (!first) strings::StrAppend(&ret, ", ");
-//     first = false;
-//     strings::StrAppend(&ret, attr_name, "=",
-//                        SummarizeAttrValue(*attrs.Find(attr_name)));
-//   }
+  // We sort the attrs so the output is deterministic.
+  std::vector<string> attr_names;
+  attr_names.reserve(attrs.size());
+  for (const auto& attr : attrs) {
+    attr_names.push_back(attr.first);
+  }
+  std::sort(attr_names.begin(), attr_names.end());
+  bool first = true;
+  for (const string& attr_name : attr_names) {
+    if (!first) strings::StrAppend(&ret, ", ");
+    first = false;
+    strings::StrAppend(&ret, attr_name, "=",
+                       SummarizeAttrValue(*attrs.Find(attr_name)));
+  }
 
-//   // Consider the device to be a final attr with name "_device".
-//   if (!device.empty()) {
-//     if (!first) strings::StrAppend(&ret, ", ");
-//     first = false;
-//     strings::StrAppend(&ret, "_device=\"", device, "\"");
-//   }
-//   return ret;
-// }
+  // Consider the device to be a final attr with name "_device".
+  if (!device.empty()) {
+    if (!first) strings::StrAppend(&ret, ", ");
+    first = false;
+    strings::StrAppend(&ret, "_device=\"", device, "\"");
+  }
+  return ret;
+}
 
-// string AttrSlice::SummarizeNode() const {
-//   return ndef_ ? SummarizeNodeDef(*ndef_)
-//                : strings::StrCat(
-//                      "[", SummarizeAttrsHelper(*this, StringPiece()), "]");
-// }
+string AttrSlice::SummarizeNode() const {
+  return ndef_ ? SummarizeNodeDef(*ndef_)
+               : strings::StrCat(
+                     "[", SummarizeAttrsHelper(*this, StringPiece()), "]");
+}
 
-// string AttrSlice::DebugString() const {
-//   std::vector<string> attr_key_vals;
-//   attr_key_vals.reserve(attrs_->size());
-//   for (const auto& it : *this) {
-//     const string& name = it.first;
-//     const AttrValue& attr_value = it.second;
-//     attr_key_vals.push_back(
-//         absl::StrCat(name, "=", SummarizeAttrValue(attr_value)));
-//   }
-//   return absl::StrJoin(attr_key_vals, ", ");
-// }
+string AttrSlice::DebugString() const {
+  std::vector<string> attr_key_vals;
+  attr_key_vals.reserve(attrs_->size());
+  for (const auto& it : *this) {
+    const string& name = it.first;
+    const AttrValue& attr_value = it.second;
+    attr_key_vals.push_back(
+        strings::StrCat(name, "=", SummarizeAttrValue(attr_value)));
+  }
+  return absl::StrJoin(attr_key_vals, ", ");
+}
 
-// string SummarizeNodeDef(const NodeDef& node_def, int max_inputs_in_summary) {
-//   string ret =
-//   strings::StrCat(errors::FormatNodeNameForError(node_def.name()),
-//                                " = ", node_def.op(), "[");
-//   strings::StrAppend(&ret, SummarizeAttrsHelper(node_def,
-//   node_def.device())); strings::StrAppend(&ret, "](");
+string SummarizeNodeDef(const NodeDef& node_def, int max_inputs_in_summary) {
+  string ret = strings::StrCat(errors::FormatNodeNameForError(node_def.name()),
+                               " = ", node_def.op(), "[");
+  strings::StrAppend(&ret, SummarizeAttrsHelper(node_def, node_def.device()));
+  strings::StrAppend(&ret, "](");
 
-//   // Output inputs, including control inputs, verbatim.
-//   bool first = true;
-//   for (const string& input : node_def.input()) {
-//     if (!first) strings::StrAppend(&ret, ", ");
-//     first = false;
-//     if (max_inputs_in_summary-- == 0) {
-//       strings::StrAppend(&ret, "...");
-//       break;
-//     }
-//     strings::StrAppend(&ret, input);
-//   }
-//   strings::StrAppend(&ret, ")");
-//   return ret;
-// }
+  // Output inputs, including control inputs, verbatim.
+  bool first = true;
+  for (const string& input : node_def.input()) {
+    if (!first) strings::StrAppend(&ret, ", ");
+    first = false;
+    if (max_inputs_in_summary-- == 0) {
+      strings::StrAppend(&ret, "...");
+      break;
+    }
+    strings::StrAppend(&ret, input);
+  }
+  strings::StrAppend(&ret, ")");
+  return ret;
+}
 
-// string SummarizeAttrs(const NodeDef& node_def) {
-//   return SummarizeAttrsHelper(node_def, node_def.device());
-// }
+string SummarizeAttrs(const NodeDef& node_def) {
+  return SummarizeAttrsHelper(node_def, node_def.device());
+}
 
 string FormatNodeDefForError(
     StringPiece node_name, bool has_experimental_debug_info,
@@ -179,7 +178,7 @@ Status AttrSlice::Find(StringPiece attr_name,
                        const AttrValue** attr_value) const {
   *attr_value = Find(attr_name);
   if (*attr_value != nullptr) {
-    return Status::OK();
+    return OkStatus();
   }
   Status s = errors::NotFound("No attr named '", attr_name, "' in NodeDef:");
   // Skip AttachDef for internal attrs since it is a little bit
@@ -218,7 +217,7 @@ bool AttrSlice::EqualAttrs(AttrSlice other, Scratch* scratch) const {
     const auto& v = attr_value->FIELD();                                      \
     __VA_ARGS__;                                                              \
     *value = CAST;                                                            \
-    return Status::OK();                                                      \
+    return OkStatus();                                                        \
   }                                                                           \
   Status GetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,           \
                      std::vector<TYPE>* value) {                              \
@@ -230,7 +229,7 @@ bool AttrSlice::EqualAttrs(AttrSlice other, Scratch* scratch) const {
       __VA_ARGS__;                                                            \
       value->APPEND_OP(CAST);                                                 \
     }                                                                         \
-    return Status::OK();                                                      \
+    return OkStatus();                                                        \
   }
 
 #define DEFINE_TRY_GET_ATTR(TYPE, FIELD, ATTR_TYPE, APPEND_OP, CAST, ...) \
@@ -388,7 +387,7 @@ Status GetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
   for (const auto& v : attr_value->list().type()) {
     value->push_back(static_cast<DataType>(v));
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 // Status GetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
@@ -397,7 +396,7 @@ Status GetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
 //   TF_RETURN_IF_ERROR(attrs.Find(attr_name, &attr_value));
 //   TF_RETURN_IF_ERROR(AttrValueHasType(*attr_value, "tensor"));
 //   *value = &attr_value->tensor();
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 // bool TryGetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
@@ -420,7 +419,7 @@ Status GetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
   TF_RETURN_IF_ERROR(attrs.Find(attr_name, &attr_value));
   TF_RETURN_IF_ERROR(AttrValueHasType(*attr_value, "func"));
   *value = &attr_value->func();
-  return Status::OK();
+  return OkStatus();
 }
 
 bool TryGetNodeAttr(const AttrSlice& attrs, StringPiece attr_name,
@@ -508,7 +507,7 @@ Status AddArgToSig(const NodeDefOrAttrSlice& node_or_attrs,
       (*sig)[i] = MakeRefType((*sig)[i]);
     }
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // namespace
@@ -522,7 +521,7 @@ Status InputTypeForNode(const NodeDef& node_def, const OpDef& op_def,
     if (input_types_size > input_port) {
       const DataType dtype = input_types[input_port];
       *input_type = dtype;
-      return Status::OK();
+      return OkStatus();
     }
   }
   return errors::InvalidArgument("Input ", input_port, " not found for node ",
@@ -534,7 +533,7 @@ Status InputTypesForNode(const NodeDef& node_def, const OpDef& op_def,
   for (const auto& arg : op_def.input_arg()) {
     TF_RETURN_IF_ERROR(AddArgToSig(node_def, arg, inputs));
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 Status OutputTypeForNode(const NodeDef& node_def, const OpDef& op_def,
@@ -546,7 +545,7 @@ Status OutputTypeForNode(const NodeDef& node_def, const OpDef& op_def,
     if (output_types_size > output_port) {
       const DataType dtype = output_types[output_port];
       *output_type = dtype;
-      return Status::OK();
+      return OkStatus();
     }
   }
   return errors::InvalidArgument("Output ", output_port, " not found for node ",
@@ -558,7 +557,7 @@ Status OutputTypesForNode(const NodeDef& node_def, const OpDef& op_def,
   for (const auto& arg : op_def.output_arg()) {
     TF_RETURN_IF_ERROR(AddArgToSig(node_def, arg, outputs));
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 Status OutputTypesForNode(const AttrSlice& attrs, const OpDef& op_def,
@@ -566,7 +565,7 @@ Status OutputTypesForNode(const AttrSlice& attrs, const OpDef& op_def,
   for (const auto& arg : op_def.output_arg()) {
     TF_RETURN_IF_ERROR(AddArgToSig(attrs, arg, outputs));
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 Status InOutTypesForNode(const NodeDef& node_def, const OpDef& op_def,
@@ -580,7 +579,7 @@ Status NumOutputsForNode(const NodeDef& node_def, const OpDef& op_def,
   DataTypeVector outputs;
   TF_RETURN_IF_ERROR(OutputTypesForNode(node_def, op_def, &outputs));
   *num_outputs = outputs.size();
-  return Status::OK();
+  return OkStatus();
 }
 
 // Status ValidateNodeDef(const NodeDef& node_def, const OpDef& op_def) {
@@ -676,7 +675,7 @@ Status NumOutputsForNode(const NodeDef& node_def, const OpDef& op_def,
 //         FormatNodeDefForError(node_def));
 //   }
 
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 namespace {  // Helpers for NameRangesForNode()
@@ -698,7 +697,7 @@ namespace {  // Helpers for NameRangesForNode()
 //         "' incorrectly specified in op definition: ",
 //         SummarizeOpDef(op_def));
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 // Status NameRangesHelper(const AttrSlice& attrs,
@@ -711,7 +710,7 @@ namespace {  // Helpers for NameRangesForNode()
 //     (*result)[arg.name()] = std::make_pair(start, start + num);
 //     start += num;
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 }  // namespace
@@ -725,7 +724,7 @@ namespace {  // Helpers for NameRangesForNode()
 //   if (outputs != nullptr) {
 //     return NameRangesHelper(attrs, op_def.output_arg(), op_def, outputs);
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 void AddDefaultsToNodeDef(const OpDef& op_def, NodeDef* node_def) {
@@ -814,10 +813,10 @@ const StringPiece kColocationGroupPrefixStringPiece(kColocationGroupPrefix);
 Status ValidateOpInput(const string& input_name, bool* is_control_input) {
   *is_control_input = false;
   if (IsValidDataInputName(input_name)) {
-    return Status::OK();
+    return OkStatus();
   } else if (IsValidControlInputName(input_name)) {
     *is_control_input = true;
-    return Status::OK();
+    return OkStatus();
   } else {
     return errors::InvalidArgument("Illegal op input name '", input_name, "'");
   }
@@ -825,7 +824,7 @@ Status ValidateOpInput(const string& input_name, bool* is_control_input) {
 
 Status ValidateNodeName(const string& node_name) {
   if (IsValidNodeName(node_name)) {
-    return Status::OK();
+    return OkStatus();
   } else {
     return errors::InvalidArgument("Illegal op name '", node_name, "'");
   }
@@ -851,7 +850,7 @@ Status ValidateNodeName(const string& node_name) {
 //     }
 //     in_control_inputs = is_control_input;
 //   }
-//   return Status::OK();
+//   return OkStatus();
 // }
 
 Status AttachDef(const Status& status, const NodeDef& node_def,
@@ -938,7 +937,7 @@ Status AddPrefixAndSuffixToNode(StringPiece prefix, StringPiece suffix,
     attr.set_s(frame_name);
   }
 
-  return Status::OK();
+  return OkStatus();
 }
 
 Status MaybeAddPrefixToColocationConstraints(
@@ -946,7 +945,7 @@ Status MaybeAddPrefixToColocationConstraints(
     NodeDef* node_def) {
   auto attr = node_def->mutable_attr()->find(kColocationAttrName);
   if (attr == node_def->mutable_attr()->end()) {
-    return Status::OK();
+    return OkStatus();
   }
   auto constraints_list = attr->second.mutable_list();
   auto constraints_size = constraints_list->s_size();
@@ -959,7 +958,7 @@ Status MaybeAddPrefixToColocationConstraints(
       }
     }
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // namespace amd_cpu_plugin

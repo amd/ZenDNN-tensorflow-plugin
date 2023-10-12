@@ -18,11 +18,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "tensorflow_plugin/src/amd_cpu/util/util.h"
+
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/inlined_vector.h"
 #include "tensorflow_plugin/src/amd_cpu/util/strcat.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
-
-#include "tensorflow_plugin/src/amd_cpu/util/util.h"
 
 namespace amd_cpu_plugin {
 

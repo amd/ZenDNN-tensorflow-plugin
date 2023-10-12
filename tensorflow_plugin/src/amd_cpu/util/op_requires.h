@@ -54,7 +54,7 @@ namespace amd_cpu_plugin {
 
 #define OP_REQUIRES_OK(CTX, ...)                             \
   do {                                                       \
-    ::amd_cpu_plugin::Status _s(__VA_ARGS__);                  \
+    ::amd_cpu_plugin::Status _s(__VA_ARGS__);                \
     if (!TF_PREDICT_TRUE(_s.ok())) {                         \
       CheckNotInComputeAsync((CTX), "OP_REQUIRES_OK_ASYNC"); \
       (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s);  \
@@ -73,7 +73,7 @@ namespace amd_cpu_plugin {
 
 #define OP_REQUIRES_OK_ASYNC(CTX, STATUS, CALLBACK)         \
   do {                                                      \
-    ::amd_cpu_plugin::Status _s(STATUS);                      \
+    ::amd_cpu_plugin::Status _s(STATUS);                    \
     if (!TF_PREDICT_TRUE(_s.ok())) {                        \
       (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s); \
       (CALLBACK)();                                         \
@@ -92,7 +92,7 @@ namespace amd_cpu_plugin {
 
 #define OP_REQUIRES_OK_PTR(CTX, ...)                         \
   do {                                                       \
-    ::amd_cpu_plugin::Status _s(__VA_ARGS__);                  \
+    ::amd_cpu_plugin::Status _s(__VA_ARGS__);                \
     if (!TF_PREDICT_TRUE(_s.ok())) {                         \
       CheckNotInComputeAsync((CTX), "OP_REQUIRES_OK_ASYNC"); \
       (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s);  \
@@ -111,7 +111,7 @@ namespace amd_cpu_plugin {
 
 #define OP_REQUIRES_OK_ASYNC_PTR(CTX, STATUS, CALLBACK)     \
   do {                                                      \
-    ::amd_cpu_plugin::Status _s(STATUS);                      \
+    ::amd_cpu_plugin::Status _s(STATUS);                    \
     if (!TF_PREDICT_TRUE(_s.ok())) {                        \
       (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s); \
       (CALLBACK)();                                         \

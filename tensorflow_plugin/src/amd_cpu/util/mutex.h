@@ -26,20 +26,10 @@ limitations under the License.
 #include <condition_variable>  // NOLINT
 #include <mutex>               // NOLINT
 
+#include "tensorflow_plugin/src/amd_cpu/util/mutex_data.h"
 #include "tensorflow_plugin/src/amd_cpu/util/platform.h"
 #include "tensorflow_plugin/src/amd_cpu/util/thread_annotations.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
-
-// Include appropriate platform-dependent implementation details of mutex etc.
-#if defined(PLATFORM_GOOGLE)
-#include "tensorflow_plugin/src/amd_cpu/util/mutex_data.h"
-#elif defined(PLATFORM_POSIX) || defined(PLATFORM_POSIX_ANDROID) ||    \
-    defined(PLATFORM_GOOGLE_ANDROID) || defined(PLATFORM_POSIX_IOS) || \
-    defined(PLATFORM_GOOGLE_IOS) || defined(PLATFORM_WINDOWS)
-#include "tensorflow_plugin/src/amd_cpu/util/mutex_data.h"
-#else
-#error Define the appropriate PLATFORM_<foo> macro for this platform
-#endif
 
 namespace amd_cpu_plugin {
 

@@ -8,6 +8,7 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
+        "//tensorflow_plugin/src/amd_cpu/graph:cpu_optimizer",
         "//tensorflow_plugin/src/amd_cpu/kernels/zendnn:zen_kernels_impl",
         "//tensorflow_plugin/src/amd_cpu/ops/zendnn:zen_ops_impl",
         "@local_config_tf//:tf_header_lib",

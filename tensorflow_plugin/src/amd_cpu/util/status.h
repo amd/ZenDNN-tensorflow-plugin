@@ -146,7 +146,7 @@ inline std::string* TfCheckOpHelper(::amd_cpu_plugin::Status v,
 #define TF_DCHECK_OK(val) TF_CHECK_OK(val)
 #else
 #define TF_DCHECK_OK(val) \
-  while (false && (::amd_cpu_plugin::Status::OK() == (val))) LOG(FATAL)
+  while (false && (::amd_cpu_plugin::OkStatus() == (val))) LOG(FATAL)
 #endif
 
 // Returns a "status" from "tf_status".

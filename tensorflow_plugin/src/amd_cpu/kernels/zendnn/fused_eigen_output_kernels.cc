@@ -99,7 +99,7 @@ Status InitializeFusedComputation(
     }
   }
 
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // namespace amd_cpu_plugin

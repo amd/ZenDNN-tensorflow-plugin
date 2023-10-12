@@ -1,3 +1,5 @@
+load("//third_party/zen_dnn:build_defs.bzl", "zendnn_deps")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
@@ -22,7 +24,7 @@ cc_library(
         "@local_config_tf//:protos_all",
         "@local_config_tf//:tf_header_lib",
         "@nsync//:nsync_cpp",
-    ],
+    ] + zendnn_deps(),
 )
 
 cc_library(
@@ -56,5 +58,7 @@ cc_library(
     deps = [
         ":platform",
         ":tstring",
+        "@local_config_tf//:protos_all",
+        "@local_config_tf//:tf_header_lib",
     ],
 )

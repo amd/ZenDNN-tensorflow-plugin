@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/util/attr_value_util.h"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,6 +33,7 @@ limitations under the License.
 #include "protos/types.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/hash.h"
+#include "tensorflow_plugin/src/amd_cpu/util/plugin_tensor.h"
 #include "tensorflow_plugin/src/amd_cpu/util/proto_serialization.h"
 #include "tensorflow_plugin/src/amd_cpu/util/protobuf.h"
 #include "tensorflow_plugin/src/amd_cpu/util/str_util.h"
@@ -60,7 +62,197 @@ string SummarizeString(const string& str) {
   }
 }
 
+string SummarizeTensor(const TensorProto& tensor_proto) {
+  Tensor t;
+  if (!t.FromProto(tensor_proto)) {
+    return strings::StrCat(
+        "<Invalid TensorProto: ", tensor_proto.ShortDebugString(), ">");
+  }
+  return t.DebugString();
+}
+
+string SummarizeFunc(const NameAttrList& func) {
+  std::vector<string> entries;
+  for (const auto& p : func.attr()) {
+    entries.push_back(
+        strings::StrCat(p.first, "=", SummarizeAttrValue(p.second)));
+  }
+  std::sort(entries.begin(), entries.end());
+  return strings::StrCat(func.name(), "[", absl::StrJoin(entries, ", "), "]");
+}
+
+const char* EnumName_DataType(::amd_cpu_plugin::DataType value) {
+  switch (value) {
+    case 0:
+      return "DT_INVALID";
+    case 1:
+      return "DT_FLOAT";
+    case 2:
+      return "DT_DOUBLE";
+    case 3:
+      return "DT_INT32";
+    case 4:
+      return "DT_UINT8";
+    case 5:
+      return "DT_INT16";
+    case 6:
+      return "DT_INT8";
+    case 7:
+      return "DT_STRING";
+    case 8:
+      return "DT_COMPLEX64";
+    case 9:
+      return "DT_INT64";
+    case 10:
+      return "DT_BOOL";
+    case 11:
+      return "DT_QINT8";
+    case 12:
+      return "DT_QUINT8";
+    case 13:
+      return "DT_QINT32";
+    case 14:
+      return "DT_BFLOAT16";
+    case 15:
+      return "DT_QINT16";
+    case 16:
+      return "DT_QUINT16";
+    case 17:
+      return "DT_UINT16";
+    case 18:
+      return "DT_COMPLEX128";
+    case 19:
+      return "DT_HALF";
+    case 20:
+      return "DT_RESOURCE";
+    case 21:
+      return "DT_VARIANT";
+    case 22:
+      return "DT_UINT32";
+    case 23:
+      return "DT_UINT64";
+    case 101:
+      return "DT_FLOAT_REF";
+    case 102:
+      return "DT_DOUBLE_REF";
+    case 103:
+      return "DT_INT32_REF";
+    case 104:
+      return "DT_UINT8_REF";
+    case 105:
+      return "DT_INT16_REF";
+    case 106:
+      return "DT_INT8_REF";
+    case 107:
+      return "DT_STRING_REF";
+    case 108:
+      return "DT_COMPLEX64_REF";
+    case 109:
+      return "DT_INT64_REF";
+    case 110:
+      return "DT_BOOL_REF";
+    case 111:
+      return "DT_QINT8_REF";
+    case 112:
+      return "DT_QUINT8_REF";
+    case 113:
+      return "DT_QINT32_REF";
+    case 114:
+      return "DT_BFLOAT16_REF";
+    case 115:
+      return "DT_QINT16_REF";
+    case 116:
+      return "DT_QUINT16_REF";
+    case 117:
+      return "DT_UINT16_REF";
+    case 118:
+      return "DT_COMPLEX128_REF";
+    case 119:
+      return "DT_HALF_REF";
+    case 120:
+      return "DT_RESOURCE_REF";
+    case 121:
+      return "DT_VARIANT_REF";
+    case 122:
+      return "DT_UINT32_REF";
+    case 123:
+      return "DT_UINT64_REF";
+    default:
+      return "";
+  }
+}
+
 }  // namespace
+
+string SummarizeAttrValue(const AttrValue& attr_value) {
+  switch (attr_value.value_case()) {
+    case AttrValue::kS:
+      return SummarizeString(attr_value.s());
+    case AttrValue::kI:
+      return strings::StrCat(attr_value.i());
+    case AttrValue::kF:
+      return strings::StrCat(attr_value.f());
+    case AttrValue::kB:
+      return attr_value.b() ? "true" : "false";
+    case AttrValue::kType:
+      return EnumName_DataType(attr_value.type());
+    case AttrValue::kShape:
+      return PartialTensorShape::DebugString(attr_value.shape());
+    case AttrValue::kTensor:
+      return SummarizeTensor(attr_value.tensor());
+    case AttrValue::kList: {
+      std::vector<string> pieces;
+      if (attr_value.list().s_size() > 0) {
+        for (int i = 0; i < attr_value.list().s_size(); ++i) {
+          pieces.push_back(SummarizeString(attr_value.list().s(i)));
+        }
+      } else if (attr_value.list().i_size() > 0) {
+        for (int i = 0; i < attr_value.list().i_size(); ++i) {
+          pieces.push_back(strings::StrCat(attr_value.list().i(i)));
+        }
+      } else if (attr_value.list().f_size() > 0) {
+        for (int i = 0; i < attr_value.list().f_size(); ++i) {
+          pieces.push_back(strings::StrCat(attr_value.list().f(i)));
+        }
+      } else if (attr_value.list().b_size() > 0) {
+        for (int i = 0; i < attr_value.list().b_size(); ++i) {
+          pieces.push_back(attr_value.list().b(i) ? "true" : "false");
+        }
+      } else if (attr_value.list().type_size() > 0) {
+        for (int i = 0; i < attr_value.list().type_size(); ++i) {
+          pieces.push_back(EnumName_DataType(attr_value.list().type(i)));
+        }
+      } else if (attr_value.list().shape_size() > 0) {
+        for (int i = 0; i < attr_value.list().shape_size(); ++i) {
+          pieces.push_back(
+              TensorShape::DebugString(attr_value.list().shape(i)));
+        }
+      } else if (attr_value.list().tensor_size() > 0) {
+        for (int i = 0; i < attr_value.list().tensor_size(); ++i) {
+          pieces.push_back(SummarizeTensor(attr_value.list().tensor(i)));
+        }
+      } else if (attr_value.list().func_size() > 0) {
+        for (int i = 0; i < attr_value.list().func_size(); ++i) {
+          pieces.push_back(SummarizeFunc(attr_value.list().func(i)));
+        }
+      }
+      constexpr int kMaxListSummarySize = 50;
+      if (pieces.size() >= kMaxListSummarySize) {
+        pieces.erase(pieces.begin() + 5, pieces.begin() + (pieces.size() - 6));
+        pieces[5] = "...";
+      }
+      return strings::StrCat("[", absl::StrJoin(pieces, ", "), "]");
+    }
+    case AttrValue::kFunc: {
+      return SummarizeFunc(attr_value.func());
+    }
+    case AttrValue::kPlaceholder:
+      return strings::StrCat("$", attr_value.placeholder());
+    case AttrValue::VALUE_NOT_SET:
+      return "<Unknown AttrValue type>";
+  }
+  return "<Unknown AttrValue type>";  // Prevent missing return warning
+}
 
 Status AttrValueHasType(const AttrValue& attr_value, StringPiece type) {
   int num_set = 0;
@@ -157,7 +349,7 @@ Status AttrValueHasType(const AttrValue& attr_value, StringPiece type) {
     }
   }
 
-  return Status::OK();
+  return OkStatus();
 }
 
 void SetAttrValue(const AttrValue& value, AttrValue* out) { *out = value; }

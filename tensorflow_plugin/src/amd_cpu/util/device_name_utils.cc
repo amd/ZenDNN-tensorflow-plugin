@@ -235,12 +235,12 @@ Status DeviceNameUtils::CanonicalizeDeviceName(StringPiece fullname,
   if (ParseLocalName(fullname, &parsed_name)) {
     CompleteName(parsed_basename, &parsed_name);
     *canonical_name = ParsedNameToString(parsed_name);
-    return Status::OK();
+    return OkStatus();
   }
   if (ParseFullName(fullname, &parsed_name)) {
     CompleteName(parsed_basename, &parsed_name);
     *canonical_name = ParsedNameToString(parsed_name);
-    return Status::OK();
+    return OkStatus();
   }
   return errors::InvalidArgument("Could not parse ", fullname,
                                  " into a device "
@@ -403,7 +403,7 @@ Status MergeDevNamesImpl(DeviceNameUtils::ParsedName* target,
       } else {
         target->has_id = false;
         target->has_type = false;
-        return Status::OK();
+        return OkStatus();
       }
     } else {
       target->has_type = other.has_type;
@@ -422,7 +422,7 @@ Status MergeDevNamesImpl(DeviceNameUtils::ParsedName* target,
         target->id = other.id;
       } else {
         target->has_id = false;
-        return Status::OK();
+        return OkStatus();
       }
     } else {
       target->has_id = other.has_id;
@@ -430,7 +430,7 @@ Status MergeDevNamesImpl(DeviceNameUtils::ParsedName* target,
     }
   }
 
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // namespace
@@ -595,7 +595,7 @@ std::vector<std::string> DeviceNameUtils::GetLocalNamesForDeviceMappings(
   device.type = "CPU";
   device.id = 0;
   *host_device_name = DeviceNameUtils::ParsedNameToString(device);
-  return Status::OK();
+  return OkStatus();
 }
 
 std::ostream& operator<<(std::ostream& os,
