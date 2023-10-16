@@ -32,7 +32,9 @@ void TF_InitGraph(TP_OptimizerRegistrationParams* params, TF_Status* status) {
   params->optimizer_configs->struct_size = TP_OPTIMIZER_CONFIGS_STRUCT_SIZE;
   params->optimizer->struct_size = TP_OPTIMIZER_STRUCT_SIZE;
 
-  params->optimizer_configs->layout_optimizer = TF_TriState_Off;
+  // Disabling TF Proper's remapper module.
+  params->optimizer_configs->remapping = TF_TriState_Off;
+  // Disabling Auto mixed precision by vanilla and mkl.
   params->optimizer_configs->auto_mixed_precision = TF_TriState_Off;
   params->optimizer_configs->auto_mixed_precision_mkl = TF_TriState_Off;
 

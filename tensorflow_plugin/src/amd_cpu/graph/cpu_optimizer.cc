@@ -21,6 +21,7 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/graph/cpu_optimizer.h"
 
 #include "tensorflow/c/experimental/grappler/grappler.h"
+#include "tensorflow_plugin/src/amd_cpu/graph/remapper/remapper.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/zendnn/zen_layout.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
@@ -49,6 +50,20 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
   GraphDef graph_def;
   SET_STATUS_IF_ERROR(tf_status, BufferToMessage(graph_buf, graph_def));
   GraphDef optimized_graph_def = graph_def;
+  // Optimizations like Gelu require fused ops such as _FusedMatMul,
+  // thus we need two sets of passes of remapper, one to generate fused ops and
+  // the next to replace set patterns.
+  for (int i = 0; i < 2; i++) {
+    // Executing fusions before layout pass opts, i.e before Zen layout pass if
+    // that is enabled.
+    SET_STATUS_IF_ERROR(
+        tf_status,
+        RunRemapper((static_cast<Optimizer*>(optimizer))->device_name, item,
+                    graph_def, &optimized_graph_def));
+    optimized_graph_def.Swap(&graph_def);
+  }
+  DumpGraphDefToFile("remapped_graph", graph_def, "./");
+
   SET_STATUS_IF_ERROR(
       tf_status, RunZenLayout((static_cast<Optimizer*>(optimizer))->device_name,
                               item, graph_def, &optimized_graph_def));

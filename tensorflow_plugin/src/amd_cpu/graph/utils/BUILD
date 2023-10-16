@@ -32,6 +32,19 @@ cc_library(
 )
 
 cc_library(
+    name = "symbolic_shapes",
+    srcs = ["symbolic_shapes.cc"],
+    hdrs = [
+        "symbolic_shapes.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@local_config_tf//:tf_header_lib",
+    ],
+)
+
+cc_library(
     name = "function",
     srcs = ["function.cc"],
     hdrs = [
@@ -104,6 +117,17 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@local_config_tf//:tf_header_lib",
+    ],
+)
+
+cc_library(
+    name = "pattern_utils",
+    srcs = ["pattern_utils.cc"],
+    hdrs = ["pattern_utils.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":graph_view",
+        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )
 

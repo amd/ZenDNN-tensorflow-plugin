@@ -159,17 +159,17 @@ void OpKernelContext::CtxFailure(const Status& s) {
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 void OpKernelContext::CtxFailure(const char* file, int line, const Status& s) {
-  LOG(WARNING) << file << ": " << line << s;
+  zendnnInfo(ZENDNN_FWKLOG, file, ": ", line, s);
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelContext::CtxFailureWithWarning(const Status& s) {
-  LOG(WARNING) << s;
+  zendnnInfo(ZENDNN_FWKLOG, s);
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 void OpKernelContext::CtxFailureWithWarning(const char* file, int line,
                                             const Status& s) {
-  LOG(WARNING) << file << line << s;
+  zendnnInfo(ZENDNN_FWKLOG, file, line, s);
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
@@ -332,18 +332,18 @@ void OpKernelConstruction::CtxFailure(const Status& s) {
 
 void OpKernelConstruction::CtxFailure(const char* file, int line,
                                       const Status& s) {
-  LOG(WARNING) << file << ":" << line << s;
+  zendnnInfo(ZENDNN_FWKLOG, file, ":", line, s);
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelConstruction::CtxFailureWithWarning(const Status& s) {
-  LOG(WARNING) << s;
+  zendnnInfo(ZENDNN_FWKLOG, s);
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelConstruction::CtxFailureWithWarning(const char* file, int line,
                                                  const Status& s) {
-  LOG(WARNING) << file << ": " << line << s;
+  zendnnInfo(ZENDNN_FWKLOG, file, ": ", line, s);
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 

@@ -5,6 +5,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//tensorflow_plugin/src/amd_cpu/graph/zendnn:zen_layout",
+        "//tensorflow_plugin/src/amd_cpu/graph/remapper"
     ],
     alwayslink = True,
 )
