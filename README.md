@@ -1,7 +1,7 @@
 # TensorFlow-ZenDNN Plug-in For AMD CPUs
-TensorFlow v2.5 provides a [PluggableDevice mechanism](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html) that enables modular, plug-and-play integration of device-specific code. AMD adopted PluggableDevice when implementing the TensorFlow-ZenDNN plug-in for AMD EPYC<sup>TM</sup> CPUs and released with the TensorFlow 2.12 ([See the blog announcement](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)). TensorFlow-ZenDNN plug-in adds custom kernel implementations and operations specific to AMD EPYC<sup>TM</sup> CPUs to TensorFlow through its kernel and op registration C APIs.
+TensorFlow provides a [PluggableDevice mechanism (from v2.5)](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html) that enables modular, plug-and-play integration of device-specific code. AMD adopted PluggableDevice when implementing the TensorFlow-ZenDNN plug-in for it's EPYC<sup>TM</sup> CPUs ([See the blog announcement](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)). TensorFlow-ZenDNN plug-in adds custom kernel implementations and operations specific to AMD EPYC<sup>TM</sup> CPUs to TensorFlow through its kernel and op registration C APIs.
 
-TensorFlow-ZenDNN plug-in is a supplemental package to be installed alongside standard TensorFlow packages starting from TF version 2.12 onwards. From a TensorFlow developer’s perspective, the TensorFlow-ZenDNN plug-in approach simplifies the process of leveraging ZenDNN optimizations.
+TensorFlow-ZenDNN plug-in is a supplemental package to be installed alongside standard TensorFlow packages. From a TensorFlow developer’s perspective, the TensorFlow-ZenDNN plug-in approach simplifies the process of leveraging ZenDNN optimizations.
 
 The following is a high-level block diagram for the TensorFlow-ZenDNN plug-in package which utilizes [ZenDNN](https://github.com/amd/ZenDNN) as the core inference library:
 
@@ -19,7 +19,7 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 | [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=3.1 |
 | Git | >=1.8 |
 | Python | >=3.9 and <=3.11 |
-| [TensorFlow](https://www.tensorflow.org/) | >=2.12 |
+| [TensorFlow](https://www.tensorflow.org/) | ==2.14 |
 
 # Installation Guide
 
