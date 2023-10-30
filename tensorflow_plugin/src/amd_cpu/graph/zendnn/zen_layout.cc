@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/zendnn/zen_layout.h"
 
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -174,6 +175,19 @@ Status RunNativeLayout(const char* device_name, const GrapplerItem& item,
         zendnnInfo(ZENDNN_FWKLOG, "NativeLayoutPass: found node ", node_name,
                    " with op ", op_name, " but rewrite failed.");
       }
+    }
+  }
+
+  // Setting the reset value of last Zen node to true.
+  for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
+    const auto* node_view = ctx.graph_view.GetNode(node_index);
+    const auto* node_def = node_view->node();
+    const string& op_name = node_def->op();
+
+    if (regex_search(op_name, std::regex("^_Zen"))) {
+      const AttrValue* attr = node_view->GetAttr("reset");
+      SetAttrValue(true, const_cast<AttrValue*>(attr));
+      break;
     }
   }
 
