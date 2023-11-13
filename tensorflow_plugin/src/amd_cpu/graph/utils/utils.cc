@@ -121,7 +121,7 @@ Status CreateWritableFile(const string& dirname, const string& name,
     return errors::InvalidArgument("DUMP_GRAPH_PREFIX not specified");
   }
 
-  // TODO(itex): Integrate proper's FileSystem to create file.
+  // TODO(plugin): Integrate proper's FileSystem to create file.
   // TF_RETURN_IF_ERROR(env->RecursivelyCreateDir(dir));
   // *filepath = io::JoinPath(dir, MakeUniqueFilename(name, suffix));
   *filepath = StrCat(dir, "/", MakeUniqueFilename(name, suffix));

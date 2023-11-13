@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 /* Copyright (c) 2021-2022 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,9 +50,8 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
   SET_STATUS_IF_ERROR(tf_status, BufferToMessage(graph_buf, graph_def));
   GraphDef optimized_graph_def = graph_def;
   SET_STATUS_IF_ERROR(
-      tf_status,
-      RunNativeLayout((static_cast<Optimizer*>(optimizer))->device_name, item,
-                      graph_def, &optimized_graph_def));
+      tf_status, RunZenLayout((static_cast<Optimizer*>(optimizer))->device_name,
+                              item, graph_def, &optimized_graph_def));
 
   // Serialize output GraphDef into optimized_graph_buf.
   SET_STATUS_IF_ERROR(

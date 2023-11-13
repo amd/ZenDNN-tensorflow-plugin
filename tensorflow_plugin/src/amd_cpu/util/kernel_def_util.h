@@ -1,6 +1,9 @@
-/* Copyright (c) 2021 Intel Corporation
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
 
-Copyright 2018 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

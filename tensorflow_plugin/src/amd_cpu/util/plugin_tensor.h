@@ -92,8 +92,8 @@ class Tensor {
 
   explicit Tensor(DataType type, const TensorShape& shape, TF_Tensor* buf);
 
-  // TODO(itex): Combine Tensor(Tensor&) and Tensor(Tensor&&)
-  // into a single function
+  // TODO(plugin): Combine Tensor(Tensor&) and Tensor(Tensor&&)
+  // into a single function.
   Tensor(const Tensor& other) : shape_(other.shape_), buf_(nullptr) {
     TF_Status* tf_status = TF_NewStatus();
     const int64_t dims[1] = {1};
@@ -125,7 +125,7 @@ class Tensor {
     return *this;
   }
 
-  // TODO(itex): investigate whether buf_ can be not empty
+  // TODO(plugin): investigate whether buf_ can be not empty.
   Tensor& operator=(Tensor&& t) {
     // Avoid self-assignment, since we might destroy our underlying buffer.
     if (this != &t) {
@@ -144,9 +144,9 @@ class Tensor {
     }
   }
 
-  // Difference from Copyfrom, BitCastFrom can explicitly set the DataType
-  // TODO(itex): Combine BitCastFrom and CopyFromInternal into single
-  // function
+  // Difference from Copyfrom, BitCastFrom can explicitly set the DataType.
+  // TODO(plugin): Combine BitCastFrom and CopyFromInternal into single
+  // function.
   Status BitcastFrom(const Tensor& other, DataType dtype,
                      const TensorShape& shape) {
     DCHECK_EQ(shape.num_elements(), other.NumElements());

@@ -1,6 +1,9 @@
-/* Copyright (c) 2021-2022 Intel Corporation
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
 
-Copyright 2015 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,9 +19,9 @@ limitations under the License.
 ==============================================================================*/
 
 // Endian-neutral encoding:
-// * Fixed-length numbers are encoded with least-significant byte first
-// * In addition we support variable length "varint" encoding
-// * Strings are encoded prefixed by their length in varint format
+// * Fixed-length numbers are encoded with least-significant byte first.
+// * In addition we support variable length "varint" encoding.
+// * Strings are encoded prefixed by their length in varint format.
 
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_CODING_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_CODING_H_
@@ -40,7 +43,7 @@ static const int kMaxVarint32Bytes = 5;
 static const int kMaxVarint64Bytes = 10;
 
 // Lower-level versions of Put... that write directly into a character buffer
-// REQUIRES: dst has enough space for the value being written
+// REQUIRES: dst has enough space for the value being written.
 extern void EncodeFixed16(char* dst, uint16 value);
 extern void EncodeFixed32(char* dst, uint32 value);
 extern void EncodeFixed64(char* dst, uint64 value);
@@ -60,7 +63,7 @@ extern bool GetVarint64(StringPiece* input, uint64* value);
 extern const char* GetVarint32Ptr(const char* p, const char* limit, uint32* v);
 extern const char* GetVarint64Ptr(const char* p, const char* limit, uint64* v);
 
-// Internal routine for use by fallback path of GetVarint32Ptr
+// Internal routine for use by fallback path of GetVarint32Ptr.
 extern const char* GetVarint32PtrFallback(const char* p, const char* limit,
                                           uint32* value);
 extern const char* GetVarint32Ptr(const char* p, const char* limit,
@@ -68,7 +71,7 @@ extern const char* GetVarint32Ptr(const char* p, const char* limit,
 extern char* EncodeVarint32(char* dst, uint32 v);
 extern char* EncodeVarint64(char* dst, uint64 v);
 
-// Returns the length of the varint32 or varint64 encoding of "v"
+// Returns the length of the varint32 or varint64 encoding of "v".
 extern int VarintLength(uint64_t v);
 
 }  // namespace core

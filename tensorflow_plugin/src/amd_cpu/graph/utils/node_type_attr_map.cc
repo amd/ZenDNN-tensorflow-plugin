@@ -245,7 +245,7 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
     const AttrValue& attr_value = attr.second;
     const OpDef::AttrDef* attr_def = FindAttr(attr_name, op_def);
     if (!attr_def) {
-      // TODO(itex): remove this workaround, once stock-tf supports "dtype"
+      // TODO(plugin): remove this workaround, once stock-tf supports "dtype"
       // attribute for "QuantizeV2" op
       if (node.op() == "QuantizeV2" && attr_name == "dtype") {
         zendnnInfo(ZENDNN_FWKLOG, node.op(), " ", node.name(),
@@ -254,7 +254,7 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
         continue;
       }
 
-      // TODO(itex): remove this workaround. These attributes are misadded by
+      // TODO(plugin): remove this workaround. These attributes are misadded by
       // INC
       if ((node.op() == "_MklFusedBatchMatMulV2" && attr_name == "epsilon") ||
           ((node.op() == "QuantizedMaxPool" ||

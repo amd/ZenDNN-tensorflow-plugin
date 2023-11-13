@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 /* Copyright (c) 2021 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,4 +43,3 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
 }  // namespace amd_cpu_plugin
 
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_CPU_OPTIMIZER_H_
-

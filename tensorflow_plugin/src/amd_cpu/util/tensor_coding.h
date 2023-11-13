@@ -1,6 +1,9 @@
-/* Copyright (c) 2021-2022 Intel Corporation
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
 
-Copyright 2016 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2016 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,7 +64,7 @@ void EncodeStringList(const tstring* strings, int64_t n, std::string* out);
 // Returns true if successful, false on parse error.
 bool DecodeStringList(const std::string& src, tstring* strings, int64_t n);
 
-// Assigns base[0..bytes-1] to *s
+// Assigns base[0..bytes-1] to *s.
 void CopyFromArray(std::string* s, const char* base, size_t bytes);
 
 // Encodes sequences of strings and serialized protocol buffers into a string.
@@ -129,7 +132,7 @@ void EncodeStringList(const tstring* strings, int64_t n, absl::Cord* out);
 bool DecodeStringList(const absl::Cord& src, std::string* strings, int64_t n);
 bool DecodeStringList(const absl::Cord& src, tstring* strings, int64_t n);
 
-// Assigns base[0..bytes-1] to *c
+// Assigns base[0..bytes-1] to *c.
 void CopyFromArray(absl::Cord* c, const char* base, size_t bytes);
 
 std::unique_ptr<StringListEncoder> NewStringListEncoder(absl::Cord* out);

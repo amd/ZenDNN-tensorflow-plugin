@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 /* Copyright (c) 2021-2022 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");

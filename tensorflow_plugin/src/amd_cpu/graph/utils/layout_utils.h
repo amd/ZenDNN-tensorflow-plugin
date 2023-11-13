@@ -51,9 +51,6 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view);
 // Op-specific functions to copy attributes from old node to new node
 //////////////////////////////////////////////////////////////////////////
 
-void CopyAttrsCast(const utils::MutableNodeView* orig_node_view,
-                   NodeDef* new_node);
-
 // Generic function to copy all attributes from original node to target.
 // graph_view is needed to get information from input node of orig_node
 void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,

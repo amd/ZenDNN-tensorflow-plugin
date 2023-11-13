@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 /* Copyright (c) 2021-2022 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,9 +37,9 @@ limitations under the License.
 namespace amd_cpu_plugin {
 namespace graph {
 
-struct NativeFormatContext {
-  explicit NativeFormatContext(const GrapplerItem& item, GraphDef* g_def,
-                               Status* status)
+struct ZenFormatContext {
+  explicit ZenFormatContext(const GrapplerItem& item, GraphDef* g_def,
+                            Status* status)
       : graph_view(g_def, status), nodes_to_preserve(item.NodesToPreserve()) {
     TF_ABORT_IF_ERROR(node_type_map.Init(*g_def));
   }
@@ -47,24 +52,24 @@ struct NativeFormatContext {
 /// Structure to specify the name of an original node, its new name after
 /// rewrite, the number of inputs to the original node, the function to
 /// be used to copy attributes for the op, and the rule (if any) which
-/// must hold for rewriting the node
+/// must hold for rewriting the node.
 typedef struct {
-  string name;      // Original name of op of the node in the graph
-  string new_name;  // New name of the op of the node in the graph
+  string name;      // Original name of op of the node in the graph.
+  string new_name;  // New name of the op of the node in the graph.
   // A function handler to copy attributes from an old node to a new node.
   std::function<void(const utils::MutableNodeView*, NodeDef*)> copy_attrs;
-  // A rule under which to rewrite this node
+  // A rule under which to rewrite this node.
   std::function<bool(const utils::MutableNodeView&)> rewrite_rule;
-} NativeFormatInfo;
+} ZenFormatInfo;
 
-const NativeFormatInfo* CheckForNodeNativeFormat(
+const ZenFormatInfo* CheckForNodeZenFormat(
     const utils::MutableNodeView& node_view);
 
-Status RewriteNode(NativeFormatContext* ctx, int node_index,
-                   const NativeFormatInfo* ri, const NodeMap& node_map);
+Status RewriteNode(ZenFormatContext* ctx, int node_index,
+                   const ZenFormatInfo* ri, const NodeMap& node_map);
 
-Status RunNativeLayout(const char* device_name, const GrapplerItem& item,
-                       const GraphDef& graph_def, GraphDef* optimized_graph);
+Status RunZenLayout(const char* device_name, const GrapplerItem& item,
+                    const GraphDef& graph_def, GraphDef* optimized_graph);
 
 }  // namespace graph
 }  // namespace amd_cpu_plugin

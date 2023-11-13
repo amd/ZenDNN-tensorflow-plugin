@@ -155,7 +155,7 @@ void OpKernelContext::set_output(int index, const Tensor& tensor) {
 /// all below CtxFailure will pass back the TF_Status created by plugin.
 /// so we need not to delete it, which will be controlled by TF.
 void OpKernelContext::CtxFailure(const Status& s) {
-  VLOG(1) << s;
+  zendnnInfo(ZENDNN_FWKLOG, s);
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 void OpKernelContext::CtxFailure(const char* file, int line, const Status& s) {
@@ -326,7 +326,7 @@ Status OpKernelConstruction::GetAttr<std::vector<float>>(
 }
 
 void OpKernelConstruction::CtxFailure(const Status& s) {
-  VLOG(1) << s;
+  zendnnInfo(ZENDNN_FWKLOG, s);
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
@@ -467,7 +467,7 @@ void RegisterGPUKernels(const char* device_name) {
 
 namespace {
 
-// TODO(itex): Replace with const Node& version below.
+// TODO(plugin): Replace with const Node& version below.
 Status FindKernelRegistration(
     const DeviceType& device_type, StringPiece node_name,
     bool has_experimental_debug_info,
@@ -577,7 +577,7 @@ bool KernelDefAvailable(const DeviceType& device_type,
   return result.ok() && reg != nullptr;
 }
 
-// TODO(itex): Change const NodeDef& to const Node&
+// TODO(plugin): Change const NodeDef& to const Node&.
 Status FindKernelDef(
     const DeviceType& device_type, StringPiece node_name,
     bool has_experimental_debug_info,
@@ -626,6 +626,6 @@ Status FindKernelDef(const DeviceType& device_type, const NodeDef& node_def,
 
 void CheckNotInComputeAsync(OpKernelContext* ctx,
                             const char* correct_macro_name) {
-  VLOG(0) << __FILE__ << ":" << __LINE__ << "need impl!";
+  zendnnInfo(ZENDNN_FWKLOG, __FILE__, ":", __LINE__, "need impl!");
 }
 }  // namespace amd_cpu_plugin

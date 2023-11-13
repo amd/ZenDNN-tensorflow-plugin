@@ -36,8 +36,8 @@ namespace graph {
 
 namespace {
 
-const std::vector<NativeFormatInfo>* GetNativeFormatInfo() {
-  static std::vector<NativeFormatInfo> rinfo{
+const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
+  static std::vector<ZenFormatInfo> rinfo{
       {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, AlwaysRewrite},
       {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
        AlwaysRewrite},
@@ -65,15 +65,15 @@ const std::vector<NativeFormatInfo>* GetNativeFormatInfo() {
 }
 }  // namespace
 
-const NativeFormatInfo* CheckForNodeNativeFormat(
+const ZenFormatInfo* CheckForNodeZenFormat(
     const utils::MutableNodeView& node_view) {
   NodeDef& node_def = *(node_view.node());
   if (!IsLayoutRewriteSupportedDataType(node_def)) return nullptr;
 
   // We now check if rewrite rule applies for this op. If rewrite rule passes
-  // for this op, then we rewrite it to Native op.
-  // Find matching NativeFormatInfo and then check that rewrite rule applies.
-  const std::vector<NativeFormatInfo>* rinfo = GetNativeFormatInfo();
+  // for this op, then we rewrite it to Zen op.
+  // Find matching ZenFormatInfo and then check that rewrite rule applies.
+  const std::vector<ZenFormatInfo>* rinfo = GetZenFormatInfo();
   for (auto ri = rinfo->cbegin(); ri != rinfo->cend(); ++ri) {
     if (node_def.op() == ri->name && ri->rewrite_rule(node_view)) {
       return &*ri;
@@ -91,8 +91,8 @@ const NativeFormatInfo* CheckForNodeNativeFormat(
 //
 // Input node may be deleted in case of rewrite. Attempt to use the node
 // after the call can result in undefined behaviors.
-Status RewriteNode(NativeFormatContext* ctx, const int node_index,
-                   const NativeFormatInfo* ri, const NodeMap& node_map) {
+Status RewriteNode(ZenFormatContext* ctx, const int node_index,
+                   const ZenFormatInfo* ri, const NodeMap& node_map) {
   const auto* node_view = ctx->graph_view.GetNode(node_index);
   const auto* node_def = node_view->node();
 
@@ -112,13 +112,6 @@ Status RewriteNode(NativeFormatContext* ctx, const int node_index,
   AddNodeAttr("out_links", NumNonControlOutputs((*node_def), node_map),
               &new_node_def);
 
-  // TODO(yifeng): Remove this check after formal solution
-  // for is_filter_const setting is done.
-  if (ri->name == ri->new_name) {
-    bool is_filter_const = false;
-    CHECK(TryGetNodeAttr(new_node_def, "is_filter_const", &is_filter_const));
-  }
-
   // Incoming data edges from 'orig_node' node to new 'new_node' node are
   // already copied in BuildNode. We need to handle control edges now.
   for (int idx = 0; idx < node_view->NumControllingFanins(); idx++) {
@@ -128,7 +121,7 @@ Status RewriteNode(NativeFormatContext* ctx, const int node_index,
 
   utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
 
-  // apply mutation
+  // apply mutation.
   Status status;
   mutation->AddNode(std::move(new_node_def), &status);
   TF_ABORT_IF_ERROR(std::move(status));
@@ -136,22 +129,22 @@ Status RewriteNode(NativeFormatContext* ctx, const int node_index,
   return OkStatus();
 }
 
-Status RunNativeLayout(const char* device_name, const GrapplerItem& item,
-                       const GraphDef& graph_def, GraphDef* optimized_graph) {
+Status RunZenLayout(const char* device_name, const GrapplerItem& item,
+                    const GraphDef& graph_def, GraphDef* optimized_graph) {
   Status status;
   GraphDef multable_graph_def = graph_def;
   NodeMap node_map(&multable_graph_def);
-  NativeFormatContext ctx(item, &multable_graph_def, &status);
+  ZenFormatContext ctx(item, &multable_graph_def, &status);
 
   // Processing graph in reverse-topological sorted order allows to remap
   // longer chains of dependent ops in one pass.
   TF_ABORT_IF_ERROR(
       ctx.graph_view.SortTopologically(/*ignore_cycles=*/false, {}));
 
-  // Skip nodes that were invalidated
+  // Skip nodes that were invalidated.
   int num_nodes = multable_graph_def.node_size();
 
-  zendnnInfo(ZENDNN_FWKLOG, "NativeLayoutPass: Start to rewrite nodes.");
+  zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: Start to rewrite nodes.");
 
   for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
     const auto* node_view = ctx.graph_view.GetNode(node_index);
@@ -159,20 +152,17 @@ Status RunNativeLayout(const char* device_name, const GrapplerItem& item,
     // Check if node can run on current optimizer device.
     if (!NodeIsOnDevice(device_name, node_def)) continue;
     // Don't rewrite fetch node because must keep its name unchanged.
-    // TODO(itex): Rewrite fetch nodes if meeting performance regression.
-    // if (ctx.nodes_to_preserve.count(node_def->name()) > 0) continue;
-    // zendnnInfo(ZENDNN_FWKLOG, "Node is not on preserve list.");
-    const NativeFormatInfo* ri = nullptr;
+    const ZenFormatInfo* ri = nullptr;
     // We will first search if node is to be rewritten.
-    if ((ri = CheckForNodeNativeFormat(*node_view)) != nullptr) {
+    if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
       const string& node_name = node_def->name();
       const string& op_name = node_def->op();
 
       if (RewriteNode(&ctx, node_index, ri, node_map) == OkStatus()) {
-        zendnnInfo(ZENDNN_FWKLOG, "NativeLayoutPass: rewrote node ", node_name,
-                   " with op ", op_name, " for Native layout optimization.");
+        zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: rewrote node ", node_name,
+                   " with op ", op_name, " for Zen layout optimization.");
       } else {
-        zendnnInfo(ZENDNN_FWKLOG, "NativeLayoutPass: found node ", node_name,
+        zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: found node ", node_name,
                    " with op ", op_name, " but rewrite failed.");
       }
     }

@@ -1,6 +1,9 @@
-/* Copyright (c) 2021 Intel Corporation
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
 
-Copyright 2015 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -78,7 +81,7 @@ void PutFixed64(string* dst, uint64 value) {
 }
 
 char* EncodeVarint32(char* dst, uint32 v) {
-  // Operate on characters as unsigneds
+  // Operate on characters as unsigneds.
   unsigned char* ptr = reinterpret_cast<unsigned char*>(dst);
   static const int B = 128;
   if (v < (1 << 7)) {
@@ -167,7 +170,7 @@ const char* GetVarint32PtrFallback(const char* p, const char* limit,
     uint32 byte = *(reinterpret_cast<const unsigned char*>(p));
     p++;
     if (byte & 128) {
-      // More bytes are present
+      // More bytes are present.
       result |= ((byte & 127) << shift);
     } else {
       result |= (byte << shift);
@@ -196,7 +199,7 @@ const char* GetVarint64Ptr(const char* p, const char* limit, uint64* value) {
     uint64 byte = *(reinterpret_cast<const unsigned char*>(p));
     p++;
     if (byte & 128) {
-      // More bytes are present
+      // More bytes are present.
       result |= ((byte & 127) << shift);
     } else {
       result |= (byte << shift);

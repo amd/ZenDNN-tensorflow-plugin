@@ -76,7 +76,7 @@ struct Helper<tstring> {
   }
 };
 
-// TODO(itex): when support ResourceHandle and Variant, please add two
+// TODO(plugin): when support ResourceHandle and Variant, please add two
 // struct. template <> struct Helper<ResourceHandle> {
 //   // Proto message uses RepeatedFieldType to hold repeated T.
 //   typedef protobuf::RepeatedPtrField<string> RepeatedFieldType;
@@ -327,9 +327,10 @@ bool Tensor::FromProto(const TensorProto& proto) {
       break;                                                   \
   }
 
-#define CASES(TYPE_ENUM, STMTS)                                       \
-  CASES_WITH_DEFAULT(TYPE_ENUM, STMTS, VLOG(FATAL) << "Type not set"; \
-                     , VLOG(FATAL) << "Unexpected type: " << TYPE_ENUM;)
+#define CASES(TYPE_ENUM, STMTS)                                    \
+  CASES_WITH_DEFAULT(                                              \
+      TYPE_ENUM, STMTS, zendnnInfo(ZENDNN_FWKLOG, "Type not set"); \
+      , zendnnInfo(ZENDNN_FWKLOG, "Unexpected type: ", TYPE_ENUM);)
 
 void Tensor::AsProtoTensorContent(TensorProto* proto) {
   proto->Clear();
@@ -405,7 +406,7 @@ void PrintOneDim(int dim_index, const gtl::InlinedVector<int64, 4>& shape,
   }
 }
 
-// Appends the spacing between elements for a given dim onto a result string
+// Appends the spacing between elements for a given dim onto a result string.
 void PrintDimSpacing(int dim_index, int num_dims, string* result) {
   if (dim_index == num_dims - 1) {
     strings::StrAppend(result, " ");
@@ -561,7 +562,7 @@ string Tensor::SummarizeValue(int64 max_entries, bool print_v2) const {
       return SummarizeArray<tstring>(limit, num_elts, shape_, data, print_v2);
       break;
     default: {
-      // All irregular cases
+      // All irregular cases.
       string ret;
       if (print_v2) {
         strings::StrAppend(&ret, "[");
@@ -570,7 +571,7 @@ string Tensor::SummarizeValue(int64 max_entries, bool print_v2) const {
         if (i > 0) strings::StrAppend(&ret, " ");
         switch (dtype()) {
           case DT_VARIANT: {
-            VLOG(0) << "Variant type not supported.";
+            zendnnInfo(ZENDNN_FWKLOG, "Variant type not supported.");
           } break;
           default:
             strings::StrAppend(&ret, "?");

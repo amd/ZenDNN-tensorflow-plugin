@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 /* Copyright (c) 2021-2022 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +18,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTILS_TF_BUFFER_H_
-#define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTILS_TF_BUFFER_H_
+#ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_TF_BUFFER_H_
+#define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_TF_BUFFER_H_
 
 #include "tensorflow/c/c_api.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"

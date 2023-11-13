@@ -56,20 +56,6 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
 // Op-specific functions to copy attributes from old node to new node
 //////////////////////////////////////////////////////////////////////////
 
-// _OneDnnCast has another attr T.
-void CopyAttrsCast(const utils::MutableNodeView* orig_node_view,
-                   NodeDef* new_node) {
-  CopyAttrsAll(orig_node_view, new_node);
-
-  DataType DstT;
-  TF_CHECK_OK(GetNodeAttr(*(orig_node_view->node()), "DstT", &DstT));
-
-  // Layout pass always check datatype by attr name T, So we need add T
-  // attribution for _OneDnnCast.
-  auto* new_attr = new_node->mutable_attr();
-  SetAttrValue(DstT, &(*new_attr)["T"]);
-}
-
 void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,
                   NodeDef* new_node) {
   // Setup ZenDNN specific attributes.
@@ -78,7 +64,7 @@ void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,
   CopyAllAttrs(*(orig_node_view->node()), new_node);
 }
 
-// Copies the attributes from Conv2D op to ZenConv2D op. 'padding' and
+// Copies the attributes from Conv2D op to _ZenConv2D op. 'padding' and
 // 'explicit_paddings' attributes are updated accordingly to PadConv2D fusion.
 void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
                         NodeDef* new_node) {
@@ -104,7 +90,7 @@ void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
 
   // 'padding_update' determines if padding attributes needs to be modified.
   bool padding_update = false;
-  // TODO(aakar) : Add pad fusion later.
+  // TODO(plugin) : Add pad fusion later.
   // PadConv2D fusion can be done for VALID and EXPLICIT padding.
   // if (padding != "SAME") {
   // Check if PadConv2D fusion can be done and get the padding values.
@@ -136,7 +122,7 @@ void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
   SetAttrValue(dilations, &(*new_attr)["dilations"]);
 }
 
-// Copy the attributes from FusedConv2D op to ZenFusedConv2D op. 'padding' and
+// Copy the attributes from FusedConv2D op to _ZenFusedConv2D op. 'padding' and
 // 'explicit_paddings' attributes are updated according to PadFusedConv2D
 // fusion.
 void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
@@ -169,7 +155,7 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
 
   // 'padding_update' determines if padding attributes needs to be modified.
   bool padding_update = false;
-  // TODO(aakar) : Add pad fusion later.
+  // TODO(plugin) : Add pad fusion later.
   // PadFusedConv2D fusion can be done for VALID and EXPLICIT padding.
   // if (padding != "SAME") {
   // Check if PadFusedConv2D fusion can be done and get the padding values.
