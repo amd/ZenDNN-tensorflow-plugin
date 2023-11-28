@@ -47,9 +47,11 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
           fused_ops == std::vector<string>{"Relu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Relu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Relu6"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "LeakyRelu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Add"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"} ||
-          fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"});
+          fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"} ||
+          fused_ops == std::vector<string>{"FusedBatchNorm", "LeakyRelu"});
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -130,6 +132,7 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
   DataType T;
   int num_args;
   float epsilon;
+  float leakyrelu_alpha;
   string data_format;
   string padding;
   std::vector<string> fused_ops;
@@ -152,6 +155,10 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
   TF_CHECK_OK(GetNodeAttr(*orig_node_def, "data_format", &data_format));
   TF_CHECK_OK(GetNodeAttr(*orig_node_def, "dilations", &dilations));
   TF_CHECK_OK(GetNodeAttr(*orig_node_def, "epsilon", &epsilon));
+  if (HasNodeAttr(*orig_node_def, "leakyrelu_alpha")) {
+    TF_CHECK_OK(
+        GetNodeAttr(*orig_node_def, "leakyrelu_alpha", &leakyrelu_alpha));
+  }
 
   // 'padding_update' determines if padding attributes needs to be modified.
   bool padding_update = false;
@@ -189,6 +196,9 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
   SetAttrValue(data_format, &(*new_attr)["data_format"]);
   SetAttrValue(dilations, &(*new_attr)["dilations"]);
   SetAttrValue(epsilon, &(*new_attr)["epsilon"]);
+  if (HasNodeAttr(*orig_node_def, "leakyrelu_alpha")) {
+    SetAttrValue(leakyrelu_alpha, &(*new_attr)["leakyrelu_alpha"]);
+  }
 }
 
 bool IsLayoutRewriteSupportedDataType(const NodeDef& node_def) {

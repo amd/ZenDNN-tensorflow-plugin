@@ -322,7 +322,8 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
                           int stride_h, int stride_w, void *bias_array,
                           void *output_array, int out_height, int out_width,
                           bool relu_fused, bool batchnorm_fused, bool add_fused,
-                          void *bn_scale, void *bn_mean, void *bn_offset) {
+                          void *bn_scale, void *bn_mean, void *bn_offset,
+                          const float alpha) {
   // GEMM based convolution.
   memory::dims src_dims = {batch_size, channels, height, width};
   memory::dims weights_dims = {output_channels, channels, kernel_h, kernel_w};
@@ -342,7 +343,7 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
     conv_params.post_op_params.push_back({"sum", {1.0}});
   }
   if (relu_fused) {
-    conv_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
+    conv_params.post_op_params.push_back({"relu", {1.0, alpha, 0.0}});
   }
   if (batchnorm_fused) {
     conv_params.post_op_params.push_back({"batchnorm", {}});
@@ -943,7 +944,8 @@ void ZenConvolution2DBatchNormOrRelu(
     void *batch_norm_mean, void *batch_norm_offset, void *elementwise_input,
     void *output_array, int out_height, int out_width, bool relu_fused,
     bool batchnorm_fused, bool is_eager, bool reorder_before,
-    bool reorder_after, void *cached_filter_data_, void *context) {
+    bool reorder_after, void *cached_filter_data_, void *context,
+    const float alpha) {
   using tag = memory::format_tag;
   using dt = memory::data_type;
 
@@ -1165,13 +1167,13 @@ void ZenConvolution2DBatchNormOrRelu(
       }
     }
     if (reorder_after && blocked) {
-      zenPostOps(zen_env_obj,
-                 static_cast<float *>(conv1_dst_memory.get_data_handle()),
-                 const_cast<const float *>(elementwise_input_new), out_height,
-                 out_width, output_channels, 0, 0, NULL, relu_fused, false,
-                 static_cast<const float *>(batch_norm_scale), no_of_threads,
-                 static_cast<const float *>(batch_norm_offset),
-                 static_cast<const float *>(batch_norm_mean), batch_size);
+      zenPostOps(
+          zen_env_obj, static_cast<float *>(conv1_dst_memory.get_data_handle()),
+          const_cast<const float *>(elementwise_input_new), out_height,
+          out_width, output_channels, 0, 0, NULL, relu_fused, false,
+          static_cast<const float *>(batch_norm_scale), no_of_threads,
+          static_cast<const float *>(batch_norm_offset),
+          static_cast<const float *>(batch_norm_mean), batch_size, alpha);
 
       reorder(conv1_dst_memory, conv1_dst_memory_new)
           .execute(s, conv1_dst_memory, conv1_dst_memory_new);
@@ -1189,12 +1191,12 @@ void ZenConvolution2DBatchNormOrRelu(
         uint64_t bias_offset = 0;
         for (int i = 0; i < batch_size; ++i) {
           bias_offset = (out_height * out_width) * output_channels * i;
-          zenPostOps(zen_env_obj, static_cast<float *>(output_array),
-                     const_cast<const float *>(elementwise_input_new),
-                     out_height, out_width, output_channels, output_channels,
-                     bias_offset, bias, relu_fused, false,
-                     static_cast<const float *>(batch_norm_scale),
-                     no_of_threads);
+          zenPostOps(
+              zen_env_obj, static_cast<float *>(output_array),
+              const_cast<const float *>(elementwise_input_new), out_height,
+              out_width, output_channels, output_channels, bias_offset, bias,
+              relu_fused, false, static_cast<const float *>(batch_norm_scale),
+              no_of_threads, NULL /* offset */, NULL /* mean */, 1, alpha);
         }
       } else {
         zenPostOps(zen_env_obj, static_cast<float *>(output_array),
@@ -1202,7 +1204,8 @@ void ZenConvolution2DBatchNormOrRelu(
                    out_width, output_channels, 0, 0, NULL, relu_fused, false,
                    static_cast<const float *>(batch_norm_scale), no_of_threads,
                    static_cast<const float *>(batch_norm_offset),
-                   static_cast<const float *>(batch_norm_mean), batch_size);
+                   static_cast<const float *>(batch_norm_mean), batch_size,
+                   alpha);
       }
     }
   } else {

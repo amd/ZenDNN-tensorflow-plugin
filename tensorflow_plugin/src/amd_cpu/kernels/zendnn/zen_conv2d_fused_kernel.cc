@@ -52,17 +52,28 @@ class ZenFusedConv2DOp : public OpKernel {
         {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
         {FCT::kBiasAddWithRelu6, {"BiasAdd", "Relu6"}},
         {FCT::kBiasAddWithElu, {"BiasAdd", "Elu"}},
+        {FCT::kBiasAddWithLeakyRelu, {"BiasAdd", "LeakyRelu"}},
         {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
         {FCT::kBiasAddWithAddAndRelu, {"BiasAdd", "Add", "Relu"}},
         {FCT::kFusedBatchNorm, {"FusedBatchNorm"}},
         {FCT::kFusedBatchNormWithRelu, {"FusedBatchNorm", "Relu"}},
         {FCT::kFusedBatchNormWithRelu6, {"FusedBatchNorm", "Relu6"}},
         {FCT::kFusedBatchNormWithElu, {"FusedBatchNorm", "Elu"}},
+        {FCT::kFusedBatchNormWithLeakyRelu, {"FusedBatchNorm", "LeakyRelu"}},
     };
 
     OP_REQUIRES_OK(context, InitializeFusedComputation(
                                 context, "_ZenConv2D", patterns,
                                 &fused_computation_, &fused_computation_args_));
+    if (fused_computation_ == FCT::kBiasAddWithLeakyRelu ||
+        fused_computation_ == FCT::kFusedBatchNormWithLeakyRelu) {
+      OP_REQUIRES_OK(context, context->GetAttr("leakyrelu_alpha", &alpha_));
+    } else {
+      // LeakyRelu fusion not found. Setting leakyrelu alpha to 0.0f in all
+      // other cases when the alpha will not be used because it is only
+      // connected to LeakyRelu activation.
+      alpha_ = 0.0f;
+    }
   }
 
   void Compute(OpKernelContext* context) override {
@@ -158,7 +169,7 @@ class ZenFusedConv2DOp : public OpKernel {
           context, input, filter, fused_computation_, fused_computation_args_,
           dimensions, output, zendnn_params_.is_eager,
           zendnn_params_.reorder_before, zendnn_params_.reorder_after,
-          &cached_filter_data_, is_depthwise);
+          &cached_filter_data_, is_depthwise, alpha_);
     }
 
     // If ZenMemPool Optimization is enabled(default), update the state of
@@ -181,6 +192,7 @@ class ZenFusedConv2DOp : public OpKernel {
 
  private:
   Conv2DParameters params_;
+  float alpha_;
   Tensor cached_filter_data_ TF_GUARDED_BY(mu_);
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;

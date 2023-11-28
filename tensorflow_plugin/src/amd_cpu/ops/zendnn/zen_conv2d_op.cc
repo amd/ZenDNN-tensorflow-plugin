@@ -226,6 +226,7 @@ void RegisterZenFusedConv2DSum() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
   TF_OpDefinitionBuilderAddAttr(op_builder, "fused_ops: list(string) = []");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "leakyrelu_alpha: float = 0.2");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
