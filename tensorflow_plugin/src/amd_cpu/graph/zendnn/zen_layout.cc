@@ -51,6 +51,8 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       {"_FusedMatMul", "_ZenFusedMatMul", CopyAttrsAll, AlwaysRewrite},
       {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsAll, AlwaysRewrite},
       {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsAll, AlwaysRewrite},
+      {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsAll,
+       AlwaysRewrite},
       // We are not supporting BLOCKED format execution.
       {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll, AlwaysRewrite},
       {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll, AlwaysRewrite},

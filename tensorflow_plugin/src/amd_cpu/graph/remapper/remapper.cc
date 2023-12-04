@@ -295,8 +295,8 @@ bool IsBiasSemanticAdd(const RemapperContext& ctx,
 }
 
 // The function to set shapes is used in TF Proper's fused op creation
-// extensively, but is not neccesary in fused op creation in plugin except for
-// BatchNorm fusions. 
+// extensively, but is not necessary in fused op creation in plugin except for
+// BatchNorm fusions.
 // TODO(plugin) : Validate the necessity of the same.
 void AddInputShapesAttr(const RemapperContext& ctx, int node_index) {
   const auto* node_view = ctx.graph_view.GetNode(node_index);
@@ -1091,6 +1091,155 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
           found_gelu_approximate_pattern_bf16);
 }
 
+bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
+                          std::map<string, int>* matched_nodes_map,
+                          std::set<int>* remove_node_indices,
+                          std::vector<string>* input_node_names) {
+  using utils::MatchingDirection;
+  using utils::NodeStatus;
+  int found_pattern_index = 0;  // Default = 0 means no pattern found.
+  std::vector<utils::OpTypePattern> fusion_patterns;
+  // clang-format off
+  fusion_patterns.push_back(
+    {"Add|AddV2", "output", NodeStatus::kReplace,
+      {
+        {"Mul", "mul", NodeStatus::kRemove,
+          {
+            {"BatchMatMulV2", "batch_matmul", NodeStatus::kRemove},
+            {"*", "multiplicand", NodeStatus::kRemain}
+          }
+        },
+        {"*", "addend", NodeStatus::kRemain}
+      }
+    }
+  );
+
+  fusion_patterns.push_back(
+    {"Add|AddV2", "output", NodeStatus::kReplace,
+      {
+        {"BatchMatMulV2", "batch_matmul", NodeStatus::kRemove,
+          {
+            {"Mul", "mul", NodeStatus::kRemove,
+              {
+                {"*", "mul_input0", NodeStatus::kRemain},
+                {"Const|Cast", "multiplicand", NodeStatus::kRemain}
+              }
+            },
+            {"*", "bmm_input1", NodeStatus::kRemain}
+          }
+        },
+        {"*", "addend", NodeStatus::kRemain}
+      }
+    }
+  );
+
+  fusion_patterns.push_back(
+    {"Add|AddV2", "output", NodeStatus::kReplace,
+      {
+        {"*", "addend", NodeStatus::kRemain},
+        {"Mul", "mul", NodeStatus::kRemove,
+          {
+            {"BatchMatMulV2", "batch_matmul", NodeStatus::kRemove},
+            {"*", "multiplicand", NodeStatus::kRemain}
+          }
+        }
+      }
+    }
+  );
+  // clang-format on
+
+  utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
+      &(ctx->graph_view));
+
+  bool found_op_type_match = false;
+
+  for (int pattern_iterator = 0; pattern_iterator < fusion_patterns.size();
+       pattern_iterator++) {
+    matched_nodes_map->clear();
+    remove_node_indices->clear();
+    found_op_type_match = graph_matcher.GetMatchedNodes(
+        fusion_patterns[pattern_iterator], ctx->nodes_to_preserve,
+        ctx->graph_view.GetNode(node_index), matched_nodes_map,
+        remove_node_indices);
+    if (found_op_type_match) {
+      found_pattern_index = pattern_iterator + 1;
+      break;
+    }
+  }
+
+  // ZenDNN is not optimized for all shapes with regard to binary-post ops
+  // fusion. Allow limited cases only for now that are optimized, (i)
+  // multiplicand is scalar, (ii) BatchMatmulV2 output is 4D tensor, and (iii)
+  // addend is 4D tensor with second dim_size = 1.
+  if (!found_op_type_match) return false;
+  if (!ctx->inferred_graph_properties) {
+    Status s = ctx->graph_properties.InferStatically(
+        /*assume_valid_feeds=*/true,
+        /*aggressive_shape_inference=*/false,
+        /*include_input_tensor_values=*/false,
+        /*include_output_tensor_values=*/true);
+    if (!s.ok()) return false;
+    ctx->inferred_graph_properties = true;
+  }
+  std::vector<OpInfo_TensorProperties> multiplicand_props;
+  NodeDef* multiplicand_node_def =
+      ctx->graph_view.GetNode(matched_nodes_map->at("multiplicand"))->node();
+  TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
+      multiplicand_node_def->name(), &multiplicand_props));
+  if (NumCoefficients(multiplicand_props[0].shape()) != 1) return false;
+
+  NodeDef* batch_matmul_node_def =
+      ctx->graph_view.GetNode(matched_nodes_map->at("batch_matmul"))->node();
+  DCHECK(IsAnyBatchMatMul(*batch_matmul_node_def));  // Expected BatchMatMul op.
+  if (!NodeIsOnCpu(batch_matmul_node_def)) return false;
+
+  std::vector<OpInfo_TensorProperties> batch_matmul_props;
+  TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
+      batch_matmul_node_def->name(), &batch_matmul_props));
+  if (Rank(batch_matmul_props[0].shape()) != 4) return false;
+
+  std::vector<OpInfo_TensorProperties> addend_props;
+  NodeDef* addend_node_def =
+      ctx->graph_view.GetNode(matched_nodes_map->at("addend"))->node();
+  TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
+      addend_node_def->name(), &addend_props));
+  auto addend_shape = addend_props[0].shape();
+  if (!(Rank(addend_shape) == 4 && addend_shape.dim(1).size() == 1)) {
+    return false;
+  }
+  input_node_names->clear();
+  input_node_names->resize(4);
+  if (found_pattern_index == 1 || found_pattern_index == 3) {
+    input_node_names->at(0) = batch_matmul_node_def->input(0);
+  } else if (found_pattern_index == 2) {
+    auto* mul_input0_node_def =
+        ctx->graph_view.GetNode(matched_nodes_map->at("mul_input0"))->node();
+    input_node_names->at(0) = mul_input0_node_def->name();
+  }
+  input_node_names->at(1) = batch_matmul_node_def->input(1);
+  input_node_names->at(2) = multiplicand_node_def->name();
+  input_node_names->at(3) = addend_node_def->name();
+  return found_op_type_match;
+}
+
+void CopyBatchMatMulAttributes(const NodeDef& batchmatmul,
+                               NodeDef* fused_batch_matmul) {
+  DCHECK(IsAnyBatchMatMul(batchmatmul)) << "Input node must be a BatchMatMul";
+
+  auto* attr = fused_batch_matmul->mutable_attr();
+  auto& src_attr = batchmatmul.attr();
+
+  (*attr)["T"] = src_attr.at("T");
+  (*attr)["adj_x"] = src_attr.at("adj_x");
+  (*attr)["adj_y"] = src_attr.at("adj_y");
+
+  // TODO(plugin): Validate if "input_shapes" is necessary for ZenDNN ops.
+  auto input_shapes = src_attr.find("_input_shapes");
+  if (input_shapes != src_attr.end()) {
+    (*attr)["_input_shapes"] = input_shapes->second;
+  }
+}
+
 void CopyConv2DAttributes(const NodeDef& conv2d, NodeDef* fused_conv2d,
                           const NodeDef* activation = nullptr) {
   DCHECK(IsConv2D(conv2d)) << "Input node must be a Conv2D";
@@ -1587,6 +1736,43 @@ Status AddFusedMatMulBiasAddAndGelu(
   return OkStatus();
 }
 
+Status AddFusedBatchMatMul(RemapperContext* ctx,
+                           const std::map<string, int>& matched_nodes_map,
+                           const std::set<int>& remove_node_indices,
+                           const std::vector<string>& input_node_names,
+                           std::vector<bool>* invalidated_nodes,
+                           std::vector<bool>* nodes_to_delete) {
+  auto* output_node =
+      ctx->graph_view.GetNode(matched_nodes_map.at("output"))->node();
+  auto* batch_matmul_node =
+      ctx->graph_view.GetNode(matched_nodes_map.at("batch_matmul"))->node();
+
+  NodeDef fused_node;
+  fused_node.set_name(output_node->name());
+  // Note: The op and kernel definition for the "_FusedBatchMatMulV2" op is not
+  // present. We are sure that it will be rewritten with
+  // "_ZenFusedBatchMatMulV2" from zen layout pass.
+  fused_node.set_op("_FusedBatchMatMulV2");
+
+  fused_node.set_device(batch_matmul_node->device());
+  for (const auto& name : input_node_names) fused_node.add_input(name);
+
+  CopyBatchMatMulAttributes(*batch_matmul_node, &fused_node);
+  SetFusedOpAttributes(&fused_node, {"Mul", "Add"}, /*num_args=*/2);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_node), &status);
+  TF_RETURN_IF_ERROR(status);
+  TF_RETURN_IF_ERROR(mutation->Apply());
+  (*invalidated_nodes)[matched_nodes_map.at("output")] = true;
+
+  for (const auto& node_idx : remove_node_indices) {
+    (*nodes_to_delete)[node_idx] = true;
+  }
+  return OkStatus();
+}
+
 }  // namespace
 
 Status RunRemapper(const char* device_name, const GrapplerItem& item,
@@ -1730,6 +1916,20 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         TF_ABORT_IF_ERROR(AddFusedMatMulBiasAddAndGelu(
             &ctx, matched_nodes_map, remove_node_indices, &invalidated_nodes,
             &nodes_to_delete, is_gelu_approximate));
+        continue;
+      }
+
+      // Remap BatchMatMul + Mul + AddV2 into the _FusedBatchMatMul.
+      matched_nodes_map.clear();
+      remove_node_indices.clear();
+      std::vector<string> input_node_names;
+      input_node_names.clear();
+      if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
+                               &remove_node_indices, &input_node_names)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found _FusedBatchMatMul.");
+        TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
+            &ctx, matched_nodes_map, remove_node_indices, input_node_names,
+            &invalidated_nodes, &nodes_to_delete));
         continue;
       }
 

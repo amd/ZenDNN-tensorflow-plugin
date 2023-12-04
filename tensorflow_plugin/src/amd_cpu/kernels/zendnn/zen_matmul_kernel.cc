@@ -142,6 +142,9 @@ class ZenMatMulOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: _ZenMatMul (TF kernel): In Compute!");
+
     const Tensor &a = context->input(0);
     const Tensor &b = context->input(1);
     // Check that the dimensions of the two matrices are valid.
@@ -280,6 +283,9 @@ class ZenMatMulOp : public OpKernel {
       zen_pool_buffer->ZenMemPoolFree(context, a_ptr);
       zen_pool_buffer->ZenMemPoolFree(context, b_ptr);
     }
+
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: _ZenMatMul (TF kernel): Compute Is Successful!");
   }
 
  private:

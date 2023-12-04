@@ -33,7 +33,7 @@ namespace amd_cpu_plugin {
 
 // The second parameter v2_bcast is set to true if we are using V2 otherwise we
 // set it to false.
-template <typename Scalar, bool v2_bcast>
+template <typename Scalar, bool v2_bcast, bool is_mul_add_fusion_enabled>
 class ZenBatchMatMulOp : public OpKernel {
  public:
   virtual ~ZenBatchMatMulOp() {}
@@ -185,9 +185,11 @@ class ZenBatchMatMulOp : public OpKernel {
     std::vector<const Scalar *> a_array;
     std::vector<const Scalar *> b_array;
     std::vector<Scalar *> c_array;
+    std::vector<const float *> add_array;
     a_array.reserve(batch_size);
     b_array.reserve(batch_size);
     c_array.reserve(batch_size);
+    add_array.reserve(out->dim_size(0));
 
     if (!bcast.IsBroadcastingRequired()) {
       for (int64 i = 0; i < batch_size; i++) {
@@ -209,10 +211,26 @@ class ZenBatchMatMulOp : public OpKernel {
     }
 
     bool cblasRowMajor = 1;
-    zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
-                   &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
-                   &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                   &ldc_array[0], 1, &group_size[0]);
+    if (is_mul_add_fusion_enabled) {
+      const Tensor &mul_tensor = context->input(2);
+      const Tensor &add_tensor = context->input(3);
+      float mul_node = mul_tensor.flat<float>().data()[0];
+      auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
+      for (int64 i = 0; i < out->dim_size(0); i++) {
+        add_array.push_back(&add_reshaped(i, 0, 0));
+      }
+      zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
+                     &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
+                     &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
+                     &ldc_array[0], 1, &group_size[0],
+                     is_mul_add_fusion_enabled, &add_array[0], mul_node,
+                     out->dim_size(0));
+    } else {
+      zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
+                     &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
+                     &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
+                     &ldc_array[0], 1, &group_size[0]);
+    }
 
     // If ZenMemPool Optimization is enabled(default), update the state of
     // memory pool based on input_array address.
@@ -237,10 +255,14 @@ class ZenBatchMatMulOp : public OpKernel {
 #define REGISTER_BATCH_MATMUL_KERNELS(TYPE)                                   \
   REGISTER_KERNEL_BUILDER(                                                    \
       Name("_ZenBatchMatMul").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"),   \
-      ZenBatchMatMulOp<TYPE, false>);                                         \
+      ZenBatchMatMulOp<TYPE, false, false>);                                  \
   REGISTER_KERNEL_BUILDER(                                                    \
       Name("_ZenBatchMatMulV2").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
-      ZenBatchMatMulOp<TYPE, true>);
+      ZenBatchMatMulOp<TYPE, true, false>);                                   \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchMatMulV2")                      \
+                              .Device(DEVICE_CPU)                             \
+                              .TypeConstraint<TYPE>("T"),                     \
+                          ZenBatchMatMulOp<TYPE, true, true>);
 
 TF_CALL_float(REGISTER_BATCH_MATMUL_KERNELS)
 
