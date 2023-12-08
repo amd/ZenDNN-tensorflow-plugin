@@ -108,9 +108,19 @@ Status RewriteNode(ZenFormatContext* ctx, const int node_index,
 
   ri->copy_attrs(node_view, &new_node_def);
 
-  AddNodeAttr("in_links", NumNonControlInputs(*node_def), &new_node_def);
-  AddNodeAttr("out_links", NumNonControlOutputs((*node_def), node_map),
-              &new_node_def);
+  // Non-control inputs also include const type inputs like "kernel" and "bias".
+  // For pluggable device, NodeDef can only provide name of the inputs, which
+  // makes it difficult to differentiate, as in_links is not used, it does not
+  // affect execution of mempool.
+  int num_non_control_inputs = NumNonControlInputs(*node_def);
+  // Non-control outputs are correctly configured, but the graph provided to
+  // plugin, does not contain "_Retval" node at this phase, hence we increment
+  // the out_links value for the leaf nodes.
+  int num_non_control_outputs = NumNonControlOutputs((*node_def), node_map);
+  if (num_non_control_outputs==0) num_non_control_outputs++;
+
+  AddNodeAttr("in_links", num_non_control_inputs, &new_node_def);
+  AddNodeAttr("out_links", num_non_control_outputs, &new_node_def);
 
   // Incoming data edges from 'orig_node' node to new 'new_node' node are
   // already copied in BuildNode. We need to handle control edges now.
