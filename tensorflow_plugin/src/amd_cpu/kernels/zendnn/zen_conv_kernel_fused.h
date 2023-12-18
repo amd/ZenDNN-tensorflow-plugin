@@ -86,9 +86,15 @@ struct LaunchZenFusedConv2DOp {
                 errors::Unimplemented("Fused conv implementation does not "
                                       "support grouped convolutions for now."));
 
-    BiasAddArgs<T> bias_add_args;
+    const Tensor &bias = context->input(2);
     if (BiasAddArgs<T>::IsSupported(fusion)) {
-      OP_REQUIRES_OK(context, InitBiasAddArgs(context, &bias_add_args));
+      for (int i = 0; i < bias.dims() - 1; i++) {
+        OP_REQUIRES(
+            context, bias.dim_size(i) == 1,
+            errors::InvalidArgument("For bias_dims > 1, all except the "
+                                    "last dimension (channel) must be 1, got: ",
+                                    bias.shape().DebugString()));
+      }
     }
 
     FusedBatchNormArgs<T> fused_batch_norm_args;
@@ -117,8 +123,8 @@ struct LaunchZenFusedConv2DOp {
         OP_REQUIRES_OK(context, errors::Internal("Fusion type is undefined"));
         break;
       case FusedComputationType::kBiasAdd: {
+        T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        float *bias_arr = const_cast<float *>(bias_add_args.bias_add_data);
         primitive_attr conv_attr;
         if (is_depthwise) {
           ZenConvolution2DDepthwise(
@@ -164,14 +170,14 @@ struct LaunchZenFusedConv2DOp {
             dimensions.filter_cols, dimensions.pad_rows_before,
             dimensions.pad_cols_before, dimensions.pad_rows_after,
             dimensions.pad_cols_after, dimensions.stride_rows,
-            dimensions.stride_cols, bias_add_args.bias_add_data, output_array,
-            dimensions.out_rows, dimensions.out_cols);
+            dimensions.stride_cols, bias_arr, output_array, dimensions.out_rows,
+            dimensions.out_cols);
 #endif
         break;
       }
       case FusedComputationType::kBiasAddWithRelu: {
+        T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        float *bias_arr = const_cast<float *>(bias_add_args.bias_add_data);
         primitive_attr conv_attr;
         // [Configure post-ops]
         const float ops_scale = 1.f;
@@ -225,14 +231,14 @@ struct LaunchZenFusedConv2DOp {
             dimensions.filter_cols, dimensions.pad_rows_before,
             dimensions.pad_cols_before, dimensions.pad_rows_after,
             dimensions.pad_cols_after, dimensions.stride_rows,
-            dimensions.stride_cols, bias_add_args.bias_add_data, output_array,
-            dimensions.out_rows, dimensions.out_cols);
+            dimensions.stride_cols, bias_arr, output_array, dimensions.out_rows,
+            dimensions.out_cols);
 #endif
         break;
       }
       case FusedComputationType::kBiasAddWithRelu6: {
+        T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        float *bias_arr = const_cast<float *>(bias_add_args.bias_add_data);
         primitive_attr conv_attr;
         // [Configure post-ops]
         const float ops_scale = 1.f;
@@ -288,8 +294,7 @@ struct LaunchZenFusedConv2DOp {
             dimensions.out_depth, dimensions.filter_rows,
             dimensions.filter_cols, dimensions.pad_rows_before,
             dimensions.pad_cols_before, dimensions.pad_rows_after,
-            dimensions.pad_cols_after, dimensions.stride_rows,
-            dimensions.stride_cols, bias_add_args.bias_add_data, output_array,
+            dimensions.pad_cols_after, bias_arr, output_array,
             dimensions.out_rows, dimensions.out_cols);
 #endif
         break;
@@ -298,8 +303,8 @@ struct LaunchZenFusedConv2DOp {
         OP_REQUIRES_OK(context, errors::Internal("Fusion type not supported"));
         break;
       case FusedComputationType::kBiasAddWithAdd: {
+        T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        float *bias_arr = const_cast<float *>(bias_add_args.bias_add_data);
         if (is_depthwise) {
           // TODO(zendnn) : Handle this in graph layout pass and fall back to
           // TF-Vanilla for this.
@@ -344,8 +349,8 @@ struct LaunchZenFusedConv2DOp {
         break;
       }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
+        T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        float *bias_arr = const_cast<float *>(bias_add_args.bias_add_data);
         if (is_depthwise) {
           // TODO(zendnn): Handle this in graph layout pass and fall back to
           // TF-Vanilla for this.

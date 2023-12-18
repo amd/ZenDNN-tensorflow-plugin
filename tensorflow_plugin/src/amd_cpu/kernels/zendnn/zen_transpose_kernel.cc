@@ -120,9 +120,8 @@ class ZenTransposeOp : public OpKernel {
     // Output tensor.
     Tensor *output = nullptr;
     zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool = zen_env_obj.zenEnableMemPool &&
-                             !zendnn_params_.is_eager &&
-                             context->expected_output_dtype(0) == DT_FLOAT;
+    int zen_enable_mempool =
+        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
     ZenMemoryPool<T> *zen_pool_buffer = NULL;
 
     // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
@@ -131,7 +130,7 @@ class ZenTransposeOp : public OpKernel {
     // Cases where tensors in pool are not free or requested size is more than
     // available tensor size in Pool, control will fall back to default way of
     // allocation i.e. with allocate_output(..).
-    if (zen_enable_mempool) {
+    if (zen_enable_mempool % MEMPOOL_TYPE) {
       unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
       zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
       if (zen_pool_buffer) {
@@ -139,11 +138,20 @@ class ZenTransposeOp : public OpKernel {
             context, &output, shape, zendnn_params_.out_links,
             zendnn_params_.reset, out_type);
         if (status) {
-          zen_enable_mempool = false;
+          zen_enable_mempool = 0;
         }
       } else {
-        zen_enable_mempool = false;
+        zen_enable_mempool = 0;
       }
+    } else if (zen_enable_mempool) {
+      // Caching the output buffer and reusing it with persistent tensor.
+      int res = cached_data_.NumElements();
+      if (res <= 0 || res != input.NumElements()) {
+        context->allocate_temp(DataType::DT_FLOAT, input.shape(),
+                               &cached_data_);
+      }
+      output = &cached_data_;
+      context->set_output(0, *output);
     }
     if (!zen_enable_mempool) {
       OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
@@ -156,8 +164,8 @@ class ZenTransposeOp : public OpKernel {
 
     // If ZenMemPool Optimization is enabled(default), update the state of
     // memory pool based on input_array address.
-    if (zen_env_obj.zenEnableMemPool && !zendnn_params_.is_eager &&
-        (input.dtype() == DT_FLOAT) && zen_pool_buffer) {
+    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
+        !zendnn_params_.is_eager && zen_pool_buffer) {
       float *input_array =
           const_cast<float *>(input.template flat<float>().data());
       zen_pool_buffer->ZenMemPoolFree(context,
@@ -171,6 +179,13 @@ class ZenTransposeOp : public OpKernel {
  private:
   /* ZenDNN specific */
   ZendnnParameters zendnn_params_;
+  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
+  // held when accessing the annotated variable. GUARDED_VAR indicates that
+  // a shared variable is guarded by some unspecified mutex, for use in rare
+  // cases where a valid mutex expression cannot be specified.
+  //
+  // Tensor to hold output buffer memory.
+  Tensor cached_data_ TF_GUARDED_BY(mu_);
 };
 
 // inv = ZenInvertPermutationOp(T<int32/int64> p) takes a permutation of

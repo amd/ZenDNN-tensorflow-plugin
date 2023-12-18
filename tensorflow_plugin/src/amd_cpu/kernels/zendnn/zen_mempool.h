@@ -37,6 +37,9 @@
 // TODO(zendnn): Test with increased limit and tune it accordingly.
 #define ZEN_TENSOR_POOL_LIMIT 32
 
+// Mempool Divisor to get appropriate Mempool Type.
+#define MEMPOOL_TYPE 3
+
 // ZEN_TENSOR_SIZE_FACTOR increased the max size required for storing the max
 // o/p of graph. Currently with CNN and NLP(Bert, WideDeep, DLRM) models, this
 // is fixed with 1.

@@ -101,9 +101,8 @@ class ZenFusedConv2DOp : public OpKernel {
                          "Please use another data format."));
     }
 
-    int zen_enable_mempool = zen_env_obj.zenEnableMemPool &&
-                             !zendnn_params_.is_eager &&
-                             context->expected_output_dtype(0) == DT_FLOAT;
+    int zen_enable_mempool =
+        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
     ZenMemoryPool<T>* zen_pool_buffer = NULL;
 
     if ((fused_computation_ == FusedComputationType::kBiasAddWithAdd) ||
@@ -111,7 +110,7 @@ class ZenFusedConv2DOp : public OpKernel {
       const Tensor& add_tensor = context->input(3);
       context->set_output(0, add_tensor);
       output = context->mutable_output(0);
-      if (zen_enable_mempool) {
+      if (zen_enable_mempool % MEMPOOL_TYPE) {
         unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
         zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
         if (zen_pool_buffer) {
@@ -128,7 +127,7 @@ class ZenFusedConv2DOp : public OpKernel {
       // Cases where tensors in pool are not free or requested size is more than
       // available tensor size in Pool, control will fall back to default way of
       // allocation i.e. with allocate_output(..)
-      if (zen_enable_mempool) {
+      if (zen_enable_mempool % MEMPOOL_TYPE) {
         unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
         zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
         if (zen_pool_buffer) {
@@ -136,13 +135,13 @@ class ZenFusedConv2DOp : public OpKernel {
               context, &output, out_shape, zendnn_params_.out_links,
               zendnn_params_.reset, out_type);
           if (status) {
-            zen_enable_mempool = false;
+            zen_enable_mempool = 0;
           }
         } else {
-          zen_enable_mempool = false;
+          zen_enable_mempool = 0;
         }
       }
-      if (!zen_enable_mempool) {
+      if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
         OP_REQUIRES_OK(context,
                        context->allocate_output(0, out_shape, &output));
       }
@@ -164,8 +163,8 @@ class ZenFusedConv2DOp : public OpKernel {
 
     // If ZenMemPool Optimization is enabled(default), update the state of
     // memory pool based on input_array address.
-    if (zen_env_obj.zenEnableMemPool && !zendnn_params_.is_eager &&
-        (input.dtype() == DT_FLOAT) && zen_pool_buffer) {
+    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
+        !zendnn_params_.is_eager && zen_pool_buffer) {
       T* input_array = const_cast<T*>(input.template flat<T>().data());
       zen_pool_buffer->ZenMemPoolFree(context,
                                       reinterpret_cast<float*>(input_array));

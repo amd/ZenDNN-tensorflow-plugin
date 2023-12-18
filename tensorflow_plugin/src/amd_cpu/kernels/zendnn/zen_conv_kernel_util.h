@@ -28,11 +28,11 @@
 // TensorFlow plug-in headers
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
+using std::string;
 using zendnn::convolution_forward;
 using zendnn::primitive_attr;
 using zendnn::prop_kind;
 using zendnn::stream;
-using std::string;
 
 namespace amd_cpu_plugin {
 
