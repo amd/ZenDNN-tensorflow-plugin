@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -47,6 +47,17 @@ Status ReadBoolFromEnvVar(StringPiece env_var_name, bool default_val,
   return errors::InvalidArgument(strings::StrCat(
       "Failed to parse the env-var ${", env_var_name, "} into bool: ",
       tf_env_var_val, ". Use the default value: ", default_val));
+}
+
+Status ReadStringFromEnvVar(StringPiece env_var_name, StringPiece default_val,
+                            string* value) {
+  const char* tf_env_var_val = getenv(string(env_var_name).c_str());
+  if (tf_env_var_val != nullptr) {
+    *value = tf_env_var_val;
+  } else {
+    *value = string(default_val);
+  }
+  return OkStatus();
 }
 
 }  // namespace amd_cpu_plugin

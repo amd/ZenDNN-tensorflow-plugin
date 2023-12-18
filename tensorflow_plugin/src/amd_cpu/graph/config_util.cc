@@ -3,7 +3,7 @@
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
-/* Copyright 2015 The TensorFlow Authors. All Rights Reserved.
+/* Copyright (c) 2022 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,20 +18,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_UTIL_H_
-#define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_UTIL_H_
+#include "tensorflow_plugin/src/amd_cpu/graph/config_util.h"
 
-#include <string>
-
-#include "tensorflow_plugin/src/amd_cpu/util/tensor_shape.h"
+#include <cstring>
 
 namespace amd_cpu_plugin {
+namespace {
+ConfigProto& Configs() {
+  static ConfigProto config;
+  return config;
+}
+}  // namespace
 
-bool IsZenDnnEnabled();
-bool IsZenDnnBF16Enabled();
+void zen_set_config(const ConfigProto& config) { Configs() = config; }
 
-std::string SliceDebugString(const TensorShape& shape, const int64 flat);
+ConfigProto zen_get_config() { return Configs(); }
+
+bool isxehpc_value;
+ConfigProto zen_get_isxehpc() {
+  ConfigProto isxehpc_proto;
+  GraphOptions* isxehpc_graph = isxehpc_proto.mutable_graph_options();
+  isxehpc_graph->set_device_isxehpc(isxehpc_value);
+  return isxehpc_proto;
+}
 
 }  // namespace amd_cpu_plugin
-
-#endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_UTIL_H_

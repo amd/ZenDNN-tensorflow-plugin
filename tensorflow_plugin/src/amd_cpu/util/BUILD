@@ -19,6 +19,11 @@ cc_library(
     deps = [
         "//tensorflow_plugin/src/amd_cpu/util/gtl:gtl_libs",
         "//third_party/eigen3",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/types:optional",
         "@double_conversion//:double-conversion",
         "@eigen_archive//:eigen",
         "@local_config_tf//:protos_all",

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -32,6 +32,11 @@ namespace amd_cpu_plugin {
 // returned.
 Status ReadBoolFromEnvVar(StringPiece env_var_name, bool default_val,
                           bool* value);
+
+// Returns a string into "value" from the environmental variable "env_var_name".
+// If it is unset, the default value is used.
+Status ReadStringFromEnvVar(StringPiece env_var_name, StringPiece default_val,
+                            std::string* value);
 
 }  // namespace amd_cpu_plugin
 

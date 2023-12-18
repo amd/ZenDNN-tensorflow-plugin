@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -393,7 +393,8 @@ bool FindContractionWithBiasAddAndAdd(const RemapperContext& ctx,
 
   if (!IsAddN(*node_def) && !IsAddWithNoBroadcast(ctx, *node_def)) return false;
 
-  if (!HasDataType(node_def, DT_FLOAT)) return false;
+  if (!HasDataType(node_def, DT_FLOAT) && !HasDataType(node_def, DT_BFLOAT16))
+    return false;
 
   ContractionWithBiasAdd base;
   matched->port_id = 0;
@@ -567,8 +568,9 @@ bool FindContractionWithBiasAndAddActivation(
   if (node_def == nullptr) return false;
   if (!IsSupportedActivation(*node_def)) return false;
 
-  // ZenDNN activation op only supports float on CPU.
-  if (!HasDataType(node_def, DT_FLOAT)) return false;
+  // ZenDNN activation op only supports float and bfloat16 on CPU.
+  if (!HasDataType(node_def, DT_FLOAT) && !HasDataType(node_def, DT_BFLOAT16))
+    return false;
 
   // And input to activation must match ContractionWithBiasAddAndAdd pattern.
   if (node_view->NumRegularFanins() < 1) return false;
@@ -1042,7 +1044,8 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
     NodeDef* matmul_node =
         ctx->graph_view.GetNode(matched_nodes_map->at("matmul"))->node();
 
-    if (!HasDataType(matmul_node, DT_FLOAT)) return false;
+    if (!HasDataType(node_def, DT_FLOAT) && !HasDataType(node_def, DT_BFLOAT16))
+      return false;
     // Currently, the fusion is not supported on CPU for transpose_a in the
     // MatMul op.
     bool cpu_ok = matmul_node->attr().contains("transpose_a") &&
@@ -1100,6 +1103,11 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
                           std::map<string, int>* matched_nodes_map,
                           std::set<int>* remove_node_indices,
                           std::vector<string>* input_node_names) {
+  const auto* node_view = ctx->graph_view.GetNode(node_index);
+  const auto* node_def = node_view->node();
+  if (node_def == nullptr) return false;
+  // The fusion is only supported for FP32.
+  if (!HasDataType(node_def, DT_FLOAT)) return false;
   using utils::MatchingDirection;
   using utils::NodeStatus;
   int found_pattern_index = 0;  // Default = 0 means no pattern found.

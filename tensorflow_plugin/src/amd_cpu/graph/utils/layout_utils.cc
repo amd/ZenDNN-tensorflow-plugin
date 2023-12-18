@@ -225,8 +225,12 @@ bool IsLayoutRewriteSupportedDataType(const string& op_name,
     return (T == DT_INT32) || (T == DT_INT64);
   } else if (op_name == "ConjugateTranspose") {
     return (T == DT_COMPLEX64) || (T == DT_COMPLEX128);
-  } else {
+  } else if (op_name == "Mul" || op_name == "Sub" ||
+             op_name == "SquaredDifference" || op_name == "Add" ||
+             op_name == "AddV2" || op_name == "Maximum") {
     return (T == DT_FLOAT);
+  } else {
+    return (T == DataType::DT_FLOAT || T == DataType::DT_BFLOAT16);
   }
 }
 

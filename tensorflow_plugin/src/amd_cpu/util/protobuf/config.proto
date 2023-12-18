@@ -1,0 +1,109 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
+/* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
+
+syntax = "proto3";
+
+package amd_cpu_plugin;
+
+enum Toggle {
+  DEFAULT = 0;
+  ON = 1;
+  OFF = 2;
+}
+
+enum ZenDataType {
+  DEFAULT_DATA_TYPE = 0;
+  BFLOAT16 = 2;
+}
+
+message GraphOptions {
+  // (default is ON).
+  Toggle layout_opt = 2;
+  // Remapping (default is ON)
+  // Remap subgraphs onto more efficient implementations.
+  Toggle remapper = 3;
+  // Optimize data types for ZEN (default is OFF).
+  // This will try to use bfloat16 on CPUs,
+  // which is faster. Note that this can change the numerical stability of the
+  // graph.
+  Toggle auto_mixed_precision = 4;
+  AutoMixedPrecisionOptions auto_mixed_precision_options = 5;
+
+  // Auto sharding (default is OFF)
+  // Shard single device graph on multiple devices.
+  Toggle sharding = 6;
+  ShardingConfig sharding_config = 7;
+  // Get device isXeHPC().
+  bool device_isxehpc = 8;
+}
+
+message ConfigProto {
+ GraphOptions graph_options = 1;
+ DebugOptions debug_options = 2;
+}
+
+message AutoMixedPrecisionOptions {
+  // AutoMixedPrecisionOptions. For AutoMixedPrecision, we have four lists:
+  // allowlist, denylist, inferlist and clearlist, add_* add ops corresponding list.
+  // but you must remove these ops from original list.
+  // for example. AvgPool in InferList. if you add AvgPool to AllowList,
+  // you should add_allowlist = "AvgPool" and remove_inferlist = "AvgPool".
+  string allowlist_add = 1;
+  string inferlist_add = 2;
+  string clearlist_add = 3;
+  string denylist_add= 4;
+  string allowlist_remove = 5;
+  string inferlist_remove = 6;
+  string clearlist_remove = 7;
+  string denylist_remove = 8;
+
+  // convert all float32 ops to bfloat16.
+  bool unsafe_force_all = 9;
+  // Set data type for AutoMixedPrecision.
+  ZenDataType data_type = 10;
+}
+
+message DebugOptions {
+  // Save auto mixed precision "pre-optimization" and "post-optimization" graph
+  // to log path.
+  string auto_mixed_precision_log_path = 1;
+  // Run the graph with sync mode (default is OFF).
+  Toggle xpu_force_sync = 2;
+}
+
+message ShardingConfig {
+  bool auto_mode = 1;
+  // A list of devices and their configs to run auto sharding.
+  repeated ShardingDevices devices = 2;
+}
+
+message ShardingDevices {
+  // Automatically select best config based on cost model.
+  string device_type = 1;
+  // Device number for each device type that is allowed for auto sharding.
+  int32 device_num = 2;
+  // Batch size on each device.
+  int32 batch_size = 3;
+  // Accumulate stage number is used for gradient accumulation, which means
+  // running a configured number of steps without updating the model variables
+  // while accumulating the gradients of those steps and then using the
+  // accumulated gradients to compute the variable updates.
+  int32 stage_num = 4;
+}

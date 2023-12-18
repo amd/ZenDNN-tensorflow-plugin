@@ -1,3 +1,8 @@
+load(
+    "//tensorflow_plugin/src/amd_cpu/util:build_config.bzl",
+    "tf_proto_library",
+)
+
 package(
     licenses = ["notice"],  # Apache 2.0
 )
@@ -14,4 +19,14 @@ cc_library(
         "@local_config_tf//:tf_header_lib",
     ],
     alwayslink = True,
+)
+
+tf_proto_library(
+    name = "protos_all",
+    srcs = [],
+    cc_api_version = 2,
+    protodeps = [
+        "//tensorflow_plugin/src/amd_cpu/util/protobuf:for_core_protos",
+    ],
+    visibility = ["//visibility:public"],
 )

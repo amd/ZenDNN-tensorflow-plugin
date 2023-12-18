@@ -4,8 +4,21 @@ cc_library(
     hdrs = ["cpu_optimizer.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//tensorflow_plugin/src/amd_cpu/graph/auto_mixed_precision",
+        "//tensorflow_plugin/src/amd_cpu/graph/graph_view",
+        "//tensorflow_plugin/src/amd_cpu/graph/remapper",
         "//tensorflow_plugin/src/amd_cpu/graph/zendnn:zen_layout",
-        "//tensorflow_plugin/src/amd_cpu/graph/remapper"
+    ],
+    alwayslink = True,
+)
+
+cc_library(
+    name = "config_util",
+    srcs = ["config_util.cc"],
+    hdrs = ["config_util.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tensorflow_plugin/src/amd_cpu:protos_all_cc",
     ],
     alwayslink = True,
 )

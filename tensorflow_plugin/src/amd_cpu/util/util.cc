@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -43,6 +43,23 @@ bool IsZenDnnEnabled() {
     }
   });
   return ZenDNN_enabled;
+}
+
+bool IsZenDnnBF16Enabled() {
+  static absl::once_flag once;
+  static bool tf_zendnn_plugin_bf16 = false;
+  absl::call_once(once, [&] {
+    auto status = ReadBoolFromEnvVar(
+        "TF_ZENDNN_PLUGIN_BF16", tf_zendnn_plugin_bf16, &tf_zendnn_plugin_bf16);
+
+    if (!status.ok()) {
+      zendnnInfo(ZENDNN_FWKLOG,
+                 "TF_ZENDNN_PLUGIN_BF16 is not set to either '0', 'false', "
+                 "or '1', 'true'. Using the default setting: ",
+                 tf_zendnn_plugin_bf16);
+    }
+  });
+  return tf_zendnn_plugin_bf16;
 }
 
 std::string SliceDebugString(const TensorShape& shape, const int64 flat) {
