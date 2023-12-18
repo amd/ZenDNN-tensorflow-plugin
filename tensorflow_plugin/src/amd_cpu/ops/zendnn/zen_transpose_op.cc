@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ void RegisterZenTranspose() {
   TF_OpDefinitionBuilderAddInput(op_builder, "x: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "perm: Tperm");
   TF_OpDefinitionBuilderAddOutput(op_builder, "y: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: type");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tperm: {int32, int64} = DT_INT32");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
@@ -64,7 +64,7 @@ void RegisterZenConjugateTranspose() {
   TF_OpDefinitionBuilderAddInput(op_builder, "x: T");
   TF_OpDefinitionBuilderAddInput(op_builder, "perm: Tperm");
   TF_OpDefinitionBuilderAddOutput(op_builder, "y: T");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: type");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tperm: {int32, int64} = DT_INT32");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");

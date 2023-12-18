@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -79,11 +79,11 @@ limitations under the License.
 #define TF_CALL_uint64(m) m(::amd_cpu_plugin::uint64)
 #define TF_CALL_bool(m) m(bool)  // NOLINT(readability/casting)
 
-#define TF_CALL_qint8(m)     // m(::amd_cpu_plugin::qint8)
-#define TF_CALL_quint8(m)    // m(::amd_cpu_plugin::quint8)
-#define TF_CALL_qint32(m)    // m(::amd_cpu_plugin::qint32)
-#define TF_CALL_bfloat16(m)  // m(Eigen::bfloat16)
-#define TF_CALL_qint16(m)    // m(::amd_cpu_plugin::qint16)
+#define TF_CALL_qint8(m)   // m(::amd_cpu_plugin::qint8)
+#define TF_CALL_quint8(m)  // m(::amd_cpu_plugin::quint8)
+#define TF_CALL_qint32(m)  // m(::amd_cpu_plugin::qint32)
+#define TF_CALL_bfloat16(m) m(Eigen::bfloat16)
+#define TF_CALL_qint16(m)  // m(::amd_cpu_plugin::qint16)
 
 #define TF_CALL_quint16(m)  // m(::amd_cpu_plugin::quint16)
 #define TF_CALL_uint16(m) m(::amd_cpu_plugin::uint16)

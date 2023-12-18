@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ void RegisterZenSoftmax() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "softmax: T");
   TF_OpDefinitionBuilderAddAttr(
       op_builder, "data_format: {'N', 'NC', 'TNC', 'NHWC'} = 'NHWC'");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float} = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");

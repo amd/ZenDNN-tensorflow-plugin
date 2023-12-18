@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -115,7 +115,9 @@ class ZenTransposeOp : public OpKernel {
     }
 
     // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
+    bool is_input_float = std::is_same<T, float>::value;
+    ZenTensorType out_type =
+        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 
     // Output tensor.
     Tensor *output = nullptr;
@@ -144,11 +146,12 @@ class ZenTransposeOp : public OpKernel {
         zen_enable_mempool = 0;
       }
     } else if (zen_enable_mempool) {
+      DataType out_type =
+          (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
       // Caching the output buffer and reusing it with persistent tensor.
       int res = cached_data_.NumElements();
       if (res <= 0 || res != input.NumElements()) {
-        context->allocate_temp(DataType::DT_FLOAT, input.shape(),
-                               &cached_data_);
+        context->allocate_temp(out_type, input.shape(), &cached_data_);
       }
       output = &cached_data_;
       context->set_output(0, *output);
@@ -166,12 +169,11 @@ class ZenTransposeOp : public OpKernel {
     // memory pool based on input_array address.
     if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
         !zendnn_params_.is_eager && zen_pool_buffer) {
-      float *input_array =
-          const_cast<float *>(input.template flat<float>().data());
-      zen_pool_buffer->ZenMemPoolFree(context,
-                                      const_cast<float *>(input_array));
-    }
+      T *input_array = const_cast<T *>(input.template flat<T>().data());
 
+      zen_pool_buffer->ZenMemPoolFree(context,
+                                      reinterpret_cast<void *>(input_array));
+    }
     zendnnInfo(ZENDNN_FWKLOG,
                "ZEN-OP-DEF: _ZenTranspose (TF kernel): Compute Is Successful!");
   }

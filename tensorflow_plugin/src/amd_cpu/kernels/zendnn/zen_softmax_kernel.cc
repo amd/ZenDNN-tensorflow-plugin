@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -25,6 +25,7 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
+#include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
@@ -68,7 +69,9 @@ class ZenSoftmaxOp : public OpKernel {
     }
 
     // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
+    bool is_input_float = std::is_same<T, float>::value;
+    ZenTensorType out_type =
+        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 
     // Allocating memory for output tensor.
     // Output tensor shape is same as input.
@@ -101,10 +104,12 @@ class ZenSoftmaxOp : public OpKernel {
         zen_enable_mempool = 0;
       }
     } else if (zen_enable_mempool) {
+      DataType out_type =
+          (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
       // Caching the output buffer and reusing it with persistent tensor.
       int res = cached_data_.NumElements();
       if (res <= 0 || res != out_shape.num_elements()) {
-        context->allocate_temp(DataType::DT_FLOAT, out_shape, &cached_data_);
+        context->allocate_temp(out_type, out_shape, &cached_data_);
       }
       output = &cached_data_;
       context->set_output(0, *output);
@@ -149,13 +154,14 @@ class ZenSoftmaxOp : public OpKernel {
 
     // Create softmax memory for src, dst.
     using dt = memory::data_type;
+    auto dtype = (is_input_float) ? dt::f32 : dt::bf16;
     memory src_memory =
-        memory({{src_dims}, dt::f32, layout_type}, eng, input_array);
+        memory({{src_dims}, dtype, layout_type}, eng, input_array);
     memory dst_memory =
-        memory({{output_dims}, dt::f32, layout_type}, eng, output_array);
+        memory({{output_dims}, dtype, layout_type}, eng, output_array);
 
     // Create memory descriptor for src.
-    memory::desc src_md = memory::desc({src_dims}, dt::f32, layout_type);
+    memory::desc src_md = memory::desc({src_dims}, dtype, layout_type);
 
     // Create forward and primitive descriptor for softmax op.
     softmax_forward::desc softmax_fwd_desc =
@@ -177,7 +183,7 @@ class ZenSoftmaxOp : public OpKernel {
     if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
         !zendnn_params_.is_eager && zen_pool_buffer) {
       zen_pool_buffer->ZenMemPoolFree(context,
-                                      reinterpret_cast<float*>(input_array));
+                                      reinterpret_cast<void*>(input_array));
     }
 
     zendnnInfo(ZENDNN_FWKLOG,
@@ -196,8 +202,13 @@ class ZenSoftmaxOp : public OpKernel {
   Tensor cached_data_ TF_GUARDED_BY(mu_);
 };
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenSoftmaxOp<float>);
+#define REGISTER_SOFTMAX_KERNELS(TYPE)                                  \
+  REGISTER_KERNEL_BUILDER(                                              \
+      Name("_ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      ZenSoftmaxOp<TYPE>);
+
+TF_CALL_float(REGISTER_SOFTMAX_KERNELS);
+TF_CALL_bfloat16(REGISTER_SOFTMAX_KERNELS);
+#undef REGISTER_SOFT_MAX_KERNELS
 
 }  // namespace amd_cpu_plugin
