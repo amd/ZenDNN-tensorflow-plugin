@@ -28,7 +28,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
-using zendnn::inner_product_forward;
+using zendnn::matmul;
 using zendnn::primitive_attr;
 
 namespace amd_cpu_plugin {
@@ -46,17 +46,20 @@ struct ZenMatMulParams {
     std::vector<float> param;
   };
   std::vector<PostOpParam> post_op_params;
+  bool is_biasadd;
 
   ZenMatMulParams(memory::dims src_dims, memory::dims weight_dims,
                   memory::dims bias_dims, memory::dims dst_dims,
                   memory::format_tag src_format = memory::format_tag::any,
-                  memory::format_tag weight_format = memory::format_tag::any)
+                  memory::format_tag weight_format = memory::format_tag::any,
+                  bool is_biasadd = false)
       : src_dims(src_dims),
         weight_dims(weight_dims),
         bias_dims(bias_dims),
         dst_dims(dst_dims),
         src_format(src_format),
-        weight_format(weight_format) {}
+        weight_format(weight_format),
+        is_biasadd(is_biasadd) {}
 };
 
 template <typename Tinput, typename Tweight, typename Tbias, typename Toutput>
@@ -76,26 +79,30 @@ class ZenMatMulPrimitive : public ZenPrimitive {
   ~ZenMatMulPrimitive() {}
 
   void Execute(const Tinput *src_data, const Tweight *weight_data,
-               const Tbias *bias_data, Toutput *dst_data) {
+               const Tbias *bias_data, Toutput *dst_data,
+               bool is_biasadd = false) {
     // Set data handle.
     context_.src_mem->set_data_handle(
         static_cast<void *>(const_cast<Tinput *>(src_data)));
     context_.weight_mem->set_data_handle(
         static_cast<void *>(const_cast<Tweight *>(weight_data)));
-    context_.bias_mem->set_data_handle(
-        static_cast<void *>(const_cast<Tbias *>(bias_data)));
+    if (is_biasadd) {
+      context_.bias_mem->set_data_handle(
+          static_cast<void *>(const_cast<Tbias *>(bias_data)));
+    }
     context_.dst_mem->set_data_handle(static_cast<void *>(dst_data));
     // Execute matmul primitive.
     execute_primitives(context_.net, context_.fwd_stream, context_.net_args);
     // Reset data handle back.
     context_.src_mem->set_data_handle(DummyData);
     context_.weight_mem->set_data_handle(DummyData);
-    context_.bias_mem->set_data_handle(DummyData);
+    if (is_biasadd) {
+      context_.bias_mem->set_data_handle(DummyData);
+    }
     context_.dst_mem->set_data_handle(DummyData);
   }
 
-  std::shared_ptr<inner_product_forward::primitive_desc> GetPrimitiveDesc()
-      const {
+  std::shared_ptr<matmul::primitive_desc> GetPrimitiveDesc() const {
     return context_.matmul_pd;
   }
 
@@ -113,10 +120,10 @@ class ZenMatMulPrimitive : public ZenPrimitive {
     std::shared_ptr<memory> bias_mem;
     std::shared_ptr<memory> dst_mem;
     // Operation descriptor.
-    std::shared_ptr<inner_product_forward::desc> matmul_desc;
+    std::shared_ptr<matmul::desc> matmul_desc;
     // Primitive descriptor.
-    std::shared_ptr<inner_product_forward::primitive_desc> matmul_pd;
-    // Inner-product primitive.
+    std::shared_ptr<matmul::primitive_desc> matmul_pd;
+    // Matmul primitive.
     std::shared_ptr<primitive> matmul_fwd;
 
     std::shared_ptr<stream> fwd_stream;
@@ -149,13 +156,18 @@ class ZenMatMulPrimitive : public ZenPrimitive {
     context_.dst_md.reset(new memory::desc({matmul_params.dst_dims},
                                            memory::data_type::f32,
                                            memory::format_tag::nc));
-    context_.bias_md.reset(new memory::desc({matmul_params.bias_dims},
-                                            memory::data_type::f32,
-                                            memory::format_tag::x));
-    // Create descriptor for matmul.
-    context_.matmul_desc.reset(new inner_product_forward::desc(
-        prop_kind::forward_inference, *context_.src_md, *context_.weight_md,
-        *context_.bias_md, *context_.dst_md));
+    if (matmul_params.is_biasadd) {
+      context_.bias_md.reset(new memory::desc({matmul_params.bias_dims},
+                                              memory::data_type::f32,
+                                              memory::format_tag::nc));
+      // Create descriptor for matmul.
+      context_.matmul_desc.reset(
+          new matmul::desc(*context_.src_md, *context_.weight_md,
+                           *context_.bias_md, *context_.dst_md));
+    } else {
+      context_.matmul_desc.reset(new matmul::desc(
+          *context_.src_md, *context_.weight_md, *context_.dst_md));
+    }
 
     // Create primitive descriptor for matmul.
     // Check if there is any fusion as post-ops.
@@ -190,11 +202,11 @@ class ZenMatMulPrimitive : public ZenPrimitive {
         }
       }
       post_ops_attr.set_post_ops(post_ops);
-      context_.matmul_pd.reset(new inner_product_forward::primitive_desc(
+      context_.matmul_pd.reset(new matmul::primitive_desc(
           *context_.matmul_desc, post_ops_attr, cpu_engine_));
     } else {
-      context_.matmul_pd.reset(new inner_product_forward::primitive_desc(
-          *context_.matmul_desc, cpu_engine_));
+      context_.matmul_pd.reset(
+          new matmul::primitive_desc(*context_.matmul_desc, cpu_engine_));
     }
 
     // Create memory primitive based on dummy data.
@@ -204,15 +216,23 @@ class ZenMatMulPrimitive : public ZenPrimitive {
         context_.matmul_pd.get()->weights_desc(), cpu_engine_, DummyData));
     context_.dst_mem.reset(new memory(context_.matmul_pd.get()->dst_desc(),
                                       cpu_engine_, DummyData));
-    context_.bias_mem.reset(new memory(context_.matmul_pd.get()->bias_desc(),
-                                       cpu_engine_, DummyData));
+    if (matmul_params.is_biasadd) {
+      context_.bias_mem.reset(new memory(context_.matmul_pd.get()->bias_desc(),
+                                         cpu_engine_, DummyData));
+    }
 
     // Create primitive for matmul.
-    context_.matmul_fwd.reset(new inner_product_forward(*context_.matmul_pd));
-    context_.net_args.push_back({{ZENDNN_ARG_SRC, *context_.src_mem},
-                                 {ZENDNN_ARG_WEIGHTS, *context_.weight_mem},
-                                 {ZENDNN_ARG_BIAS, *context_.bias_mem},
-                                 {ZENDNN_ARG_DST, *context_.dst_mem}});
+    context_.matmul_fwd.reset(new matmul(*context_.matmul_pd));
+    if (matmul_params.is_biasadd) {
+      context_.net_args.push_back({{ZENDNN_ARG_SRC, *context_.src_mem},
+                                   {ZENDNN_ARG_WEIGHTS, *context_.weight_mem},
+                                   {ZENDNN_ARG_BIAS, *context_.bias_mem},
+                                   {ZENDNN_ARG_DST, *context_.dst_mem}});
+    } else {
+      context_.net_args.push_back({{ZENDNN_ARG_SRC, *context_.src_mem},
+                                   {ZENDNN_ARG_WEIGHTS, *context_.weight_mem},
+                                   {ZENDNN_ARG_DST, *context_.dst_mem}});
+    }
     context_.net.push_back(*context_.matmul_fwd);
     return;
   }
