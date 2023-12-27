@@ -20,11 +20,30 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/util/util.h"
 
+#include "absl/base/call_once.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/inlined_vector.h"
 #include "tensorflow_plugin/src/amd_cpu/util/strcat.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
+#include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
 namespace amd_cpu_plugin {
+
+bool IsZenDnnEnabled() {
+  static absl::once_flag once;
+  static bool ZenDNN_enabled = false;
+  absl::call_once(once, [&] {
+    auto status = ReadBoolFromEnvVar("TF_ENABLE_ZENDNN_OPTS", ZenDNN_enabled,
+                                     &ZenDNN_enabled);
+
+    if (!status.ok()) {
+      zendnnInfo(ZENDNN_FWKLOG,
+                 "TF_ENABLE_ZENDNN_OPTS is not set to either '0', 'false', "
+                 "'1', or 'true'. Using the default setting: ",
+                 ZenDNN_enabled);
+    }
+  });
+  return ZenDNN_enabled;
+}
 
 std::string SliceDebugString(const TensorShape& shape, const int64 flat) {
   // Special case rank 0 and 1

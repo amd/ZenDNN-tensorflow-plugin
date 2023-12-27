@@ -26,7 +26,11 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_shape.h"
 
 namespace amd_cpu_plugin {
+
+bool IsZenDnnEnabled();
+
 std::string SliceDebugString(const TensorShape& shape, const int64 flat);
-}
+
+}  // namespace amd_cpu_plugin
 
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_UTIL_H_

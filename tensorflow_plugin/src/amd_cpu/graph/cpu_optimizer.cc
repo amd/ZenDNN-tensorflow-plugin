@@ -26,6 +26,7 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/graph/zendnn/zen_layout.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tf_buffer.h"
+#include "tensorflow_plugin/src/amd_cpu/util/util.h"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -50,24 +51,27 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
   GraphDef graph_def;
   SET_STATUS_IF_ERROR(tf_status, BufferToMessage(graph_buf, graph_def));
   GraphDef optimized_graph_def = graph_def;
-  // Optimizations like Gelu require fused ops such as _FusedMatMul,
-  // thus we need two sets of passes of remapper, one to generate fused ops and
-  // the next to replace set patterns.
-  for (int i = 0; i < 2; i++) {
-    // Executing fusions before layout pass opts, i.e before Zen layout pass if
-    // that is enabled.
+
+  if (IsZenDnnEnabled()) {
+    // Optimizations like Gelu require fused ops such as _FusedMatMul,
+    // thus we need two sets of passes of remapper, one to generate fused ops
+    // and the next to replace set patterns.
+    for (int i = 0; i < 2; i++) {
+      // Executing fusions before layout pass opts, i.e before Zen layout pass
+      // if that is enabled.
+      SET_STATUS_IF_ERROR(
+          tf_status,
+          RunRemapper((static_cast<Optimizer*>(optimizer))->device_name, item,
+                      graph_def, &optimized_graph_def));
+      optimized_graph_def.Swap(&graph_def);
+    }
+    DumpGraphDefToFile("remapped_graph", graph_def, "./");
+
     SET_STATUS_IF_ERROR(
         tf_status,
-        RunRemapper((static_cast<Optimizer*>(optimizer))->device_name, item,
-                    graph_def, &optimized_graph_def));
-    optimized_graph_def.Swap(&graph_def);
+        RunZenLayout((static_cast<Optimizer*>(optimizer))->device_name, item,
+                     graph_def, &optimized_graph_def));
   }
-  DumpGraphDefToFile("remapped_graph", graph_def, "./");
-
-  SET_STATUS_IF_ERROR(
-      tf_status, RunZenLayout((static_cast<Optimizer*>(optimizer))->device_name,
-                              item, graph_def, &optimized_graph_def));
-
   // Serialize output GraphDef into optimized_graph_buf.
   SET_STATUS_IF_ERROR(
       tf_status, MessageToBuffer(optimized_graph_def, optimized_graph_buf));
