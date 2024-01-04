@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
 import tensorflow as tf
-import numpy as np
 tf.compat.v1.disable_eager_execution()
-a = tf.constant(np.arange(1, 25, dtype=np.float32), shape=[2, 2, 2, 3])
-b = tf.constant(np.arange(25, 49, dtype=np.float32), shape=[2, 2, 3, 2])
+a = tf.random.normal(shape=[1, 24, 24, 8], dtype=tf.float32, seed=5)
+b = tf.random.normal(shape=[1, 24, 8, 24], dtype=tf.float32, seed=5)
 
 with tf.device("/CPU:0"):
-    c = tf.raw_ops.BatchMatMul(x=a, y=b)
+  c = tf.raw_ops.BatchMatMul(x=a, y=b)
 
-sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(allow_soft_placement=False, log_device_placement=True))
+sess = tf.compat.v1.Session(
+    config=tf.compat.v1.ConfigProto(
+        allow_soft_placement=False,
+        log_device_placement=True))
 print(sess.run(c))

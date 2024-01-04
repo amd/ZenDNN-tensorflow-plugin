@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
-from tensorflow.keras.layers import Input, DepthwiseConv2D, MaxPooling2D
-from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.layers import DepthwiseConv2D
+from tensorflow.keras.models import Sequential
 import numpy as np
 
 np.random.seed(1988)
@@ -44,8 +44,7 @@ model.add(
 model.set_weights([np.random.rand(*w.shape) for w in model.get_weights()])
 
 # Test the keras model
-x = np.random.rand(1,input_dim,input_dim,3)
+x = np.random.rand(1, input_dim, input_dim, 3)
 model.summary()
 model_out = model.predict(x)
 print('Model output shape:', model_out.shape)
-#print(model_out)

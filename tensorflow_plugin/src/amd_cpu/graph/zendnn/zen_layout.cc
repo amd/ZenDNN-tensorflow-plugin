@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -119,7 +119,7 @@ Status RewriteNode(ZenFormatContext* ctx, const int node_index,
   // plugin, does not contain "_Retval" node at this phase, hence we increment
   // the out_links value for the leaf nodes.
   int num_non_control_outputs = NumNonControlOutputs((*node_def), node_map);
-  if (num_non_control_outputs==0) num_non_control_outputs++;
+  if (num_non_control_outputs == 0) num_non_control_outputs++;
 
   AddNodeAttr("in_links", num_non_control_inputs, &new_node_def);
   AddNodeAttr("out_links", num_non_control_outputs, &new_node_def);

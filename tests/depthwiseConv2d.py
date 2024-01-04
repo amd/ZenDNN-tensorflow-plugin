@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,37 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
-from tensorflow.keras.layers import Input, DepthwiseConv2D, MaxPooling2D
-from tensorflow.keras.models import Model, Sequential
-import numpy as np
+import tensorflow as tf
 
-np.random.seed(1988)
-input_dim = 16
-input_shape = (input_dim, input_dim, 3)
-depth_multiplier = 1
-kernel_height = 3
-kernel_width = 3
+tf.compat.v1.disable_eager_execution()
 
-# Define a model
-model = Sequential()
-model.add(
-    DepthwiseConv2D(
-        depth_multiplier=depth_multiplier,
-        kernel_size=(kernel_height, kernel_width),
-        input_shape=input_shape,
-        padding="valid",
-        strides=(1, 1),
-    )
-)
+x = tf.random.normal(shape=[1, 3, 2, 1], dtype=tf.float32, seed=5)
+kernel = tf.random.normal(shape=[2, 1, 1, 2], dtype=tf.float32, seed=5)
 
-# Set some random weights
-model.set_weights([np.random.rand(*w.shape) for w in model.get_weights()])
+with tf.device("/CPU:0"):
+  model = tf.nn.depthwise_conv2d(x, kernel, strides=[1, 1, 1, 1],
+                       padding='VALID')
 
-# Test the keras model
-x = np.random.rand(1,input_dim,input_dim,3)
-model.summary()
-model_out = model.predict(x)
-print('Model output shape:', model_out.shape)
-#print(model_out)
+sess = tf.compat.v1.Session(
+    config=tf.compat.v1.ConfigProto(
+        allow_soft_placement=False,
+        log_device_placement=True))
+print(sess.run(model))

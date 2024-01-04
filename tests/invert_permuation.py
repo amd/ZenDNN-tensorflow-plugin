@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,19 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
 #!/usr/bin/env python
 # coding=utf-8
 import tensorflow as tf
-import numpy as np
 tf.compat.v1.disable_eager_execution()
 a = tf.constant([3, 4, 0, 2, 1])
 
 print(a)
 
+# TODO (Plugin) : Verify that the kernel test execution is
+# using the Pluggable device implementation.
 with tf.device("/CPU:0"):
-    b = tf.math.invert_permutation(a)
+  b = tf.math.invert_permutation(a)
 
-sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(allow_soft_placement=False, log_device_placement=True))
+sess = tf.compat.v1.Session(
+    config=tf.compat.v1.ConfigProto(
+        allow_soft_placement=False,
+        log_device_placement=True))
 print(sess.run(b))

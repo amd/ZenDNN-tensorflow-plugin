@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
 #!/usr/bin/env python
 # coding=utf-8
 import tensorflow as tf
-import numpy as np
 tf.compat.v1.disable_eager_execution()
-a = tf.constant([[1 + 2j, 2 + 3j, 3 + 4j],
-                 [4 + 5j, 5 + 6j, 6 + 7j]])
+
+@tf.function
+def get_tensor(x):
+  return x
+
+a = get_tensor(tf.constant([[1.9 + 2.4j, 2.5 + 3.0j, 3.5 + 4.6j],
+                            [4.2 + 5.6j, 5.1 + 6.2j, 6.7 + 7.9j]]))
 
 with tf.device("/CPU:0"):
-    b = tf.transpose(a, conjugate=True)
+  b = tf.transpose(a, conjugate=True)
 
-sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(allow_soft_placement=False, log_device_placement=True))
+sess = tf.compat.v1.Session(
+    config=tf.compat.v1.ConfigProto(
+        allow_soft_placement=False,
+        log_device_placement=True))
 print(sess.run(b))

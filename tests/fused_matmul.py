@@ -1,5 +1,5 @@
-#*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# ******************************************************************************
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,20 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#*******************************************************************************
+# ******************************************************************************
 
-from tensorflow.keras.layers import Input, Conv2D, Flatten, Dense
-from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.layers import Input, Flatten, Dense
+from tensorflow.keras.models import Sequential
 import numpy as np
 
-input_shape=(28,28,1)
+input_shape = (28, 28, 1)
 
 model = Sequential()
 model.add(Input(shape=input_shape))
 model.add(Flatten())
-model.add(Dense(10, activation="relu",use_bias=True,bias_initializer='zeros'))
+model.add(
+    Dense(
+        10,
+        activation="relu",
+        use_bias=True,
+        bias_initializer='zeros'))
 model.summary()
 
-x = np.random.rand(1,28,28,1)
+x = np.random.rand(1, 28, 28, 1)
 model_out = model.predict(x)
 print('Model output shape:', model_out.shape)
