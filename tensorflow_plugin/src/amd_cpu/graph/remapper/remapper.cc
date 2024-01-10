@@ -408,6 +408,11 @@ bool FindContractionWithBiasAddAndAdd(const RemapperContext& ctx,
     }
   }
 
+  // We do not yet have support for DepthWiseConv2D fusion.
+  const auto* contraction_def =
+      ctx.graph_view.GetNode(base.contraction)->node();
+  if (IsDepthwiseConv2dNative(*contraction_def)) return false;
+
   // We successfully found a Conv2D+BiasAdd+{AddN,Add} pattern.
   matched->contraction = base.contraction;
   matched->bias_add = base.bias_add;
@@ -1408,7 +1413,7 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   return OkStatus();
 }
 
-// Contractoin + BiasAdd + Activation.
+// Contraction + BiasAdd + Activation.
 Status AddFusedContractionNode(
     RemapperContext* ctx, const ContractionWithBiasAddAndActivation& matched,
     std::vector<bool>* invalidated_nodes, std::vector<bool>* nodes_to_delete) {

@@ -357,13 +357,7 @@ struct LaunchZenFusedConv2DOp {
       case FusedComputationType::kBiasAddWithAdd: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        if (is_depthwise) {
-          // TODO(zendnn) : Handle this in graph layout pass and fall back to
-          // TF-Vanilla for this.
-          OP_REQUIRES_OK(
-              context,
-              errors::Internal("DepthWise Fusion with ADD is not supported"));
-        } else if (blocked || blocked_nhwc) {
+        if (blocked || blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
           // [Configure post-ops]
@@ -403,14 +397,7 @@ struct LaunchZenFusedConv2DOp {
       case FusedComputationType::kBiasAddWithAddAndRelu: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
 #if NEW_API
-        if (is_depthwise) {
-          // TODO(zendnn): Handle this in graph layout pass and fall back to
-          // TF-Vanilla for this.
-          OP_REQUIRES_OK(
-              context,
-              errors::Internal(
-                  "DepthWise Fusion with ADD and Relu is not supported"));
-        } else if (blocked || blocked_nhwc) {
+        if (blocked || blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
           // [Configure post-ops]
@@ -458,13 +445,7 @@ struct LaunchZenFusedConv2DOp {
             const_cast<float *>(fused_batch_norm_args.estimated_mean_data);
         float *batch_norm_offset_data =
             const_cast<float *>(fused_batch_norm_args.offset_data);
-        if (is_depthwise) {
-          // TODO(zendnn): Handle this in graph layout pass and fall back to
-          // TF-Vanilla for this.
-          OP_REQUIRES_OK(
-              context, errors::Internal(
-                           "DepthWise Fusion with BatchNorm is not supported"));
-        } else if (blocked || blocked_nhwc) {
+        if (blocked || blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -516,14 +497,7 @@ struct LaunchZenFusedConv2DOp {
             const_cast<float *>(fused_batch_norm_args.estimated_mean_data);
         float *batch_norm_offset_data =
             const_cast<float *>(fused_batch_norm_args.offset_data);
-        if (is_depthwise) {
-          // TODO(zendnn): Handle this in graph layout pass and fall back to
-          // TF-Vanilla for this.
-          OP_REQUIRES_OK(
-              context,
-              errors::Internal(
-                  "DepthWise Fusion with BatchNorm and Relu is not supported"));
-        } else if (blocked || blocked_nhwc) {
+        if (blocked || blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -581,13 +555,7 @@ struct LaunchZenFusedConv2DOp {
         T *batch_norm_offset_data =
             const_cast<T *>(fused_batch_norm_args.offset_data);
         const float ops_alpha = fused_batch_norm_args.leakyrelu_alpha;
-        if (is_depthwise) {
-          // TODO(zendnn): Handle this in graph layout pass and fall back to
-          // TF-Vanilla for this.
-          OP_REQUIRES_OK(context,
-                         errors::Internal("DepthWise fusion with BatchNorm and "
-                                          "LeakyRelu is not supported"));
-        } else if (blocked || blocked_nhwc) {
+        if (blocked || blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
