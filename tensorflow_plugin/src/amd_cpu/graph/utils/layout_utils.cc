@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -37,7 +37,22 @@ namespace graph {
 
 bool AlwaysRewrite(const utils::MutableNodeView& node_view) { return true; }
 
+bool RewriteSupportedDataType(const utils::MutableNodeView& node_view) {
+  const NodeDef& node_def = *(node_view.node());
+  const string& op_name = node_def.op();
+
+  DataType T;
+  AttrSlice attr_list(node_def);
+  if (!TryGetNodeAttr(attr_list, "T", &T)) {
+    return false;
+  }
+
+  return IsLayoutRewriteSupportedDataType(op_name, T);
+}
+
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
+  if (!RewriteSupportedDataType(node_view)) return false;
+
   const NodeDef& node_def = *(node_view.node());
   std::vector<string> fused_ops;
   GetNodeAttr(node_def, "fused_ops", &fused_ops);
@@ -201,16 +216,18 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
   }
 }
 
-bool IsLayoutRewriteSupportedDataType(const NodeDef& node_def) {
-  // Prevent rewritting if current op doesn't have attr `T`. Should bypass op
-  // without `T` if want to rewrite it.
-  DataType T;
-  AttrSlice attr_list(node_def);
-  if (!TryGetNodeAttr(attr_list, "T", &T)) {
-    return false;
+bool IsLayoutRewriteSupportedDataType(const string& op_name,
+                                      const DataType& T) {
+  if (op_name == "Reshape" || op_name == "Transpose") {
+    return (T == DT_INT32) || (T == DT_INT64) || (T == DT_COMPLEX64) ||
+           (T == DT_COMPLEX128) || (T == DT_FLOAT);
+  } else if (op_name == "InvertPermutation") {
+    return (T == DT_INT32) || (T == DT_INT64);
+  } else if (op_name == "ConjugateTranspose") {
+    return (T == DT_COMPLEX64) || (T == DT_COMPLEX128);
+  } else {
+    return (T == DT_FLOAT);
   }
-
-  return (T == DataType::DT_FLOAT);
 }
 
 OpDef GetOpDef(const NodeDef& node_def) {

@@ -38,31 +38,38 @@ namespace {
 
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
   static std::vector<ZenFormatInfo> rinfo{
-      {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, AlwaysRewrite},
+      {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
       {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
-       AlwaysRewrite},
+       RewriteSupportedDataType},
       {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
        RewriteFusedConv2D},
       {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
        CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
-      {"MaxPool", "_ZenMaxPool", CopyAttrsAll, AlwaysRewrite},
-      {"AvgPool", "_ZenAvgPool", CopyAttrsAll, AlwaysRewrite},
-      {"MatMul", "_ZenMatMul", CopyAttrsAll, AlwaysRewrite},
-      {"_FusedMatMul", "_ZenFusedMatMul", CopyAttrsAll, AlwaysRewrite},
-      {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsAll, AlwaysRewrite},
-      {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsAll, AlwaysRewrite},
+      {"MaxPool", "_ZenMaxPool", CopyAttrsAll, RewriteSupportedDataType},
+      {"AvgPool", "_ZenAvgPool", CopyAttrsAll, RewriteSupportedDataType},
+      {"MatMul", "_ZenMatMul", CopyAttrsAll, RewriteSupportedDataType},
+      {"_FusedMatMul", "_ZenFusedMatMul", CopyAttrsAll,
+       RewriteSupportedDataType},
+      {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsAll,
+       RewriteSupportedDataType},
+      {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsAll,
+       RewriteSupportedDataType},
       {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsAll,
-       AlwaysRewrite},
+       RewriteSupportedDataType},
       // We are not supporting BLOCKED format execution.
-      {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll, AlwaysRewrite},
-      {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll, AlwaysRewrite},
-      {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll, AlwaysRewrite},
-      {"Softmax", "_ZenSoftmax", CopyAttrsAll, AlwaysRewrite},
+      {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll,
+       RewriteSupportedDataType},
+      {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll,
+       RewriteSupportedDataType},
+      {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll,
+       RewriteSupportedDataType},
+      {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
+      {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
       {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
-       AlwaysRewrite},
-      {"Transpose", "_ZenTranspose", CopyAttrsAll, AlwaysRewrite},
+       RewriteSupportedDataType},
+      {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
       {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
-       AlwaysRewrite}};
+       RewriteSupportedDataType}};
   return &rinfo;
 }
 }  // namespace
@@ -70,7 +77,6 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
 const ZenFormatInfo* CheckForNodeZenFormat(
     const utils::MutableNodeView& node_view) {
   NodeDef& node_def = *(node_view.node());
-  if (!IsLayoutRewriteSupportedDataType(node_def)) return nullptr;
 
   // We now check if rewrite rule applies for this op. If rewrite rule passes
   // for this op, then we rewrite it to Zen op.

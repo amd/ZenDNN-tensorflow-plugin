@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ void RegisterZenSoftmaxOp();
 void RegisterZenFusedBatchNormOps();
 void RegisterZenTransposeOps();
 void RegisterZenBatchMatMulOps();
+void RegisterZenReshapeOp();
 
 void RegisterZenOps();
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_OPS_ZENDNN_ZEN_OPS_INIT_H_

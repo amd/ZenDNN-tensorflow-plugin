@@ -143,6 +143,20 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "zen_reshape_kernel",
+    srcs = ["zen_reshape_kernel.cc"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":zen_kernel_common",
+        ":zen_mempool",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+    ] + zendnn_deps(),
+    alwayslink = True,
+)
+
 ZEN_KERNELS = [
     ":zen_softmax_kernel",
     ":zen_conv2d_kernel",
@@ -151,6 +165,7 @@ ZEN_KERNELS = [
     ":zen_fused_batchnorm_kernel",
     ":zen_transpose_kernel",
     ":zen_batch_matmul_kernels",
+    ":zen_reshape_kernel",
 ]
 
 cc_library(

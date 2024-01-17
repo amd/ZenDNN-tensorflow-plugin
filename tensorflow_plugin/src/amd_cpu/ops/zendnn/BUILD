@@ -101,6 +101,20 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "zen_reshape_op",
+    srcs = ["zen_reshape_op.cc"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":shape_inference_fns",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@local_config_tf//:tf_header_lib",
+    ] + zendnn_deps(),
+    alwayslink = True,
+)
+
 ZEN_OPS = [
     ":zen_conv2d_op",
     ":zen_matmul_ops",
@@ -109,6 +123,7 @@ ZEN_OPS = [
     ":zen_fused_batchnorm_ops",
     ":zen_transpose_op",
     ":zen_batch_matmul_ops",
+    ":zen_reshape_op",
 ]
 
 cc_library(

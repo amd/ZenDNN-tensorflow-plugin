@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -32,17 +32,11 @@ namespace amd_cpu_plugin {
 namespace graph {
 
 //////////////////////////////////////////////////////////////////////////
-// DataType Check
-//////////////////////////////////////////////////////////////////////////
-bool IsLayoutRewriteSupportedDataType(const NodeDef& node_def);
-
-//////////////////////////////////////////////////////////////////////////
 // Rewrite functions
 //////////////////////////////////////////////////////////////////////////
 
-// Default rewrite rule to be used in scenario 1 for rewrite.
-// @return - true (since we want to always rewrite)
-bool AlwaysRewrite(const utils::MutableNodeView& node_view);
+// Returns true if the rewite is supported for the data type.
+bool RewriteSupportedDataType(const utils::MutableNodeView& node_view);
 
 // FusedConv2D is rewritten only for a limited number of fused post-ops.
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view);
@@ -66,7 +60,11 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
 // Helper function to handle layout process
 //////////////////////////////////////////////////////////////////////////
 
+// Copy all zen specific attributes.
 void CopyZenAttrs(const NodeDef& orig_node, NodeDef* new_node);
+
+// Returns true if rewite of "op_name" is supported with data type "T".
+bool IsLayoutRewriteSupportedDataType(const string& op_name, const DataType& T);
 
 // Sub function to copy attrs from original node to new node.
 void CopyAllAttrs(const NodeDef& orig_node, NodeDef* new_node);
