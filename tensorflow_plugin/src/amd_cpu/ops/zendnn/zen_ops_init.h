@@ -27,6 +27,7 @@ void RegisterZenFusedBatchNormOps();
 void RegisterZenTransposeOps();
 void RegisterZenBatchMatMulOps();
 void RegisterZenReshapeOp();
+void RegisterZenCwiseOps();
 
 void RegisterZenOps();
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_OPS_ZENDNN_ZEN_OPS_INIT_H_

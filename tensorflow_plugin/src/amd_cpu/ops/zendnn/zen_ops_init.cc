@@ -27,4 +27,5 @@ void RegisterZenOps() {
   RegisterZenTransposeOps();
   RegisterZenBatchMatMulOps();
   RegisterZenReshapeOp();
+  RegisterZenCwiseOps();
 }

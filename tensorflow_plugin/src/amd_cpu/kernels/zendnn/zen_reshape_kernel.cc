@@ -42,6 +42,9 @@ class ZenReshapeOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: _ZenReshape (TF kernel): In Compute!");
+
     const Tensor& input = context->input(0);
     const Tensor& sizes = context->input(1);
     // Preliminary validation of sizes.
@@ -126,6 +129,9 @@ class ZenReshapeOp : public OpKernel {
             context, in0_ptr, zendnn_params_.out_links, zendnn_params_.reset);
       }
     }
+
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: _ZenReshape (TF kernel): Compute Is Successful!");
   }
 
  private:

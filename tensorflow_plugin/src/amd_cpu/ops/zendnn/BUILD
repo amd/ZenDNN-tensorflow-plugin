@@ -102,6 +102,20 @@ cc_library(
 )
 
 cc_library(
+    name = "zen_cwise_ops",
+    srcs = ["zen_cwise_ops.cc"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":shape_inference_fns",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@local_config_tf//:tf_header_lib",
+    ] + zendnn_deps(),
+    alwayslink = True,
+)
+
+cc_library(
     name = "zen_reshape_op",
     srcs = ["zen_reshape_op.cc"],
     copts = tf_copts(),
@@ -124,6 +138,7 @@ ZEN_OPS = [
     ":zen_transpose_op",
     ":zen_batch_matmul_ops",
     ":zen_reshape_op",
+    ":zen_cwise_ops",
 ]
 
 cc_library(

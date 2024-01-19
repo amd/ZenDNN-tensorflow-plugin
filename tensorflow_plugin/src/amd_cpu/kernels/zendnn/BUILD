@@ -15,6 +15,20 @@ cc_library(
 )
 
 cc_library(
+    name = "fill_functor",
+    srcs = ["fill_functor.cc"],
+    hdrs = ["fill_functor.h"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "//third_party/eigen3",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
     name = "zen_kernel_common",
     srcs = ["zen_kernel_common.h"],
     copts = tf_copts(),
@@ -157,6 +171,22 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "zen_cwise_ops_common_kernel",
+    srcs = ["zen_cwise_ops_common_kernel.cc"],
+    hdrs = ["zen_cwise_ops_common.h"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fill_functor",
+        ":zen_kernel_common",
+        ":zen_mempool",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+    ] + zendnn_deps(),
+    alwayslink = True,
+)
+
 ZEN_KERNELS = [
     ":zen_softmax_kernel",
     ":zen_conv2d_kernel",
@@ -166,6 +196,7 @@ ZEN_KERNELS = [
     ":zen_transpose_kernel",
     ":zen_batch_matmul_kernels",
     ":zen_reshape_kernel",
+    ":zen_cwise_ops_common_kernel",
 ]
 
 cc_library(
