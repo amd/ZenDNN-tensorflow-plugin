@@ -237,15 +237,8 @@ class ZenFusedBatchNormOp : public OpKernel {
     // Allocate output (dst) tensor.
     TensorShape tf_shape_dst = tf_shape_src;
 
-    // TODO(zendnn): Remove the hard reset on enabling ZenMemPool.
-    // Enbaling ZenMemPool with zenEnableMemPool=2 affects the accuracy, but
-    // provides 5-6% boost in performance for some sizes.
-    // Hence after fixing the bug with zenEnableMemPool=2 enabling, the followng
-    // hard resetting code shall be removed.
     int zen_enable_mempool =
-        ((zen_env_obj.zenEnableMemPool == 2) || zendnn_params_.is_eager)
-            ? 0
-            : zen_env_obj.zenEnableMemPool;
+        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
     ZenMemoryPool<T> *zen_pool_buffer;
 
     // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
