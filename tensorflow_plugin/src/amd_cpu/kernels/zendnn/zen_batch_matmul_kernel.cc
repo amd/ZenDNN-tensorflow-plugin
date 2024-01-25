@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 
 // TensorFlow plug-in headers.
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/matmul_bcast.h"
@@ -30,6 +31,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
 namespace amd_cpu_plugin {
+
+typedef Eigen::ThreadPoolDevice CPUDevice;
 
 // The second parameter v2_bcast is set to true if we are using V2 otherwise we
 // set it to false.
@@ -172,9 +175,8 @@ class ZenBatchMatMulOp : public OpKernel {
       return;
     }
     if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "ZEN-OP-DEF: INFO : One of the inputs has Zero elements, "
-                 "Returning the control!");
+      functor::SetZeroFunctor<CPUDevice, Scalar> f;
+      f(context->eigen_cpu_device(), out->flat<Scalar>());
       return;
     }
 
@@ -218,26 +220,21 @@ class ZenBatchMatMulOp : public OpKernel {
     }
 
     bool cblasRowMajor = 1;
+    float mul_node = 1;
     if (is_mul_add_fusion_enabled) {
       const Tensor &mul_tensor = context->input(2);
       const Tensor &add_tensor = context->input(3);
-      float mul_node = mul_tensor.flat<float>().data()[0];
+      mul_node = mul_tensor.flat<float>().data()[0];
       auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
       for (int64 i = 0; i < out->dim_size(0); i++) {
         add_array.push_back(&add_reshaped(i, 0, 0));
       }
-      zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
-                     &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
-                     &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                     &ldc_array[0], 1, &group_size[0],
-                     is_mul_add_fusion_enabled, &add_array[0], mul_node,
-                     out->dim_size(0));
-    } else {
-      zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
-                     &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
-                     &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                     &ldc_array[0], 1, &group_size[0]);
     }
+    zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
+                   &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
+                   &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
+                   &ldc_array[0], 1, &group_size[0], is_mul_add_fusion_enabled,
+                   &add_array[0], mul_node, out->dim_size(0));
 
     // If ZenMemPool Optimization is enabled(default), update the state of
     // memory pool based on input_array address.

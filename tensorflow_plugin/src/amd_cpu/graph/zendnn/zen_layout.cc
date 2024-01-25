@@ -74,7 +74,10 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
       {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
        RewriteSupportedDataType},
-      {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
+      // TODO(plugin): Disabling _ZenTranspose for this release (i.e., v1.0) as
+      // we are observing performance drop with it. Find the solution for it and
+      // enable the below rewrite.
+      // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
       {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
        RewriteSupportedDataType}};
   return &rinfo;

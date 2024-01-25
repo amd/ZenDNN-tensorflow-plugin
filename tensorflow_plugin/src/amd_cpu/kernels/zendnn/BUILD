@@ -86,6 +86,7 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
+        ":fill_functor",
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
         ":zen_mempool",
@@ -101,6 +102,7 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
+        ":fill_functor",
         ":zen_kernel_common",
         ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",

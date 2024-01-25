@@ -22,6 +22,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_matmul_kernel_util.h"
@@ -250,8 +251,10 @@ class ZenMatMulOp : public OpKernel {
       // Set zero functor is not available directly for plugin, hence it is
       // by-passed here. This implementation can be brought to plugin code in
       // subsequent releases, if necessary.
-      // functor::SetZeroFunctor<Device, T> f;
-      // f(context->eigen_device<Device>(), out->flat<T>());
+      if (is_fused) {
+        functor::SetZeroFunctor<Device, T> f;
+        f(context->eigen_cpu_device(), out->flat<T>());
+      }
       return;
     }
 
