@@ -23,6 +23,7 @@ limitations under the License.
 #include <utility>
 
 #include "tensorflow_plugin/src/amd_cpu/graph/remapper/constant_names.h"
+#include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_common_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/layout_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/pattern_utils.h"
@@ -196,6 +197,17 @@ struct PadWithContraction {
   int contraction = kMissingIndex;
 };
 
+struct KerasDenseLayerFwd {
+  KerasDenseLayerFwd() = default;
+  KerasDenseLayerFwd(int matmul, int reshape, int bias, int activation)
+      : matmul(matmul), reshape(reshape), bias(bias), activation(activation) {}
+
+  int matmul = kMissingIndex;
+  int reshape = kMissingIndex;
+  int bias = kMissingIndex;
+  int activation = kMissingIndex;
+};
+
 bool IsAddWithNoBroadcast(const RemapperContext& ctx, const NodeDef& node) {
   if (!IsAdd(node)) return false;
 
@@ -316,6 +328,125 @@ void AddInputShapesAttr(const RemapperContext& ctx, int node_index) {
     auto* attr = node_def->mutable_attr();
     SetAttrValue(attr_input_shape, &(*attr)["_input_shapes"]);
   }
+}
+
+bool FindKerasDenseLayerFwd(const RemapperContext& ctx, int node_index,
+                            KerasDenseLayerFwd* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  // Root of the pattern must be a Reshape.
+  // Find reshape + biasadd + activation.
+  int bias_index = kMissingIndex;
+  int activation_index = kMissingIndex;
+  const auto* reshape = node_view->node();
+  if (!reshape || !IsReshape(*reshape) || HasControlFaninOrFanout(*node_view) ||
+      IsInPreserveSet(ctx, node_view->node()))
+    return false;
+
+  if (node_view->NumRegularFanouts() != 1) return false;
+  const auto& reshape_fanout_0 = node_view->GetRegularFanouts()[0];
+  if (reshape_fanout_0.size() != 1) return false;
+
+  const auto* biasadd = reshape_fanout_0[0].node_view();
+  if (!IsBiasAdd(*biasadd->node()) || HasControlFaninOrFanout(*biasadd) ||
+      IsInPreserveSet(ctx, biasadd->node()))
+    return false;
+  bias_index = biasadd->node_index();
+  if (biasadd->NumRegularFanouts() == 1) {
+    const auto& biasadd_fanout_0 = biasadd->GetRegularFanouts()[0];
+    if (biasadd_fanout_0.size() == 1) {
+      const auto* relu = biasadd_fanout_0[0].node_view();
+      if (IsSupportedActivation(*relu->node()) &&
+          !HasControlFaninOrFanout(*relu) &&
+          !IsInPreserveSet(ctx, relu->node())) {
+        activation_index = relu->node_index();
+      }
+    }
+  }
+
+  int bias_dim = 0;
+  int weight_dim = 0;
+  if (biasadd->NumRegularFanins() != 2) return false;
+  auto* readvariable = biasadd->GetRegularFanin(1).node_view();
+  // If pb is frozen.
+  if (IsConstant(*readvariable->node())) {
+    const TensorProto& bias_val =
+        readvariable->node()->attr().at("value").tensor();
+    const TensorShape bias_shape(bias_val.tensor_shape());
+    bias_dim = bias_shape.num_elements();
+  }
+
+  // _Arg -> ReadVariableOp -> (Cast) ->BiasAdd.
+  if (bias_dim == 0) {
+    if (IsCast(*readvariable->node())) {
+      readvariable = readvariable->GetRegularFanin(0).node_view();
+    }
+    if (!IsReadVariableOp(*readvariable->node())) return false;
+    const auto* arg_bias = readvariable->GetRegularFanin(0).node_view()->node();
+
+    if (IsArg(*arg_bias)) {
+      const AttrValue attr_bshape = arg_bias->attr().at("_handle_shapes");
+      if (attr_bshape.list().shape().empty()) return false;
+      const TensorShapeProto& bshape_proto = attr_bshape.list().shape(0);
+      if (bshape_proto.unknown_rank()) return false;
+      bias_dim = TensorShape(bshape_proto).dim_size(0);
+    } else if (IsVarHandle(*arg_bias)) {
+      const AttrValue attr_bshape = arg_bias->attr().at("shape");
+
+      const TensorShapeProto& bshape_proto = attr_bshape.shape();
+      if (bshape_proto.unknown_rank() ||
+          IsUnknown(bshape_proto.dim(bshape_proto.dim_size() - 1)))
+        return false;
+      bias_dim = TensorShape(bshape_proto).dim_size(0);
+    } else {
+      return false;
+    }
+  }
+  // Arg -> ReadVariableOp -> (Cast) ->MatMul -> reshape.
+  if (node_view->NumRegularFanins() != 2) return false;
+  const auto* matmul = node_view->GetRegularFanin(0).node_view();
+  if (!IsMatMul(*matmul->node())) return false;
+  auto* readvariable2 = matmul->GetRegularFanin(1).node_view();
+
+  // If pb is frozen.
+  if (IsConstant(*readvariable2->node())) {
+    const TensorProto& weight_val =
+        readvariable2->node()->attr().at("value").tensor();
+    const TensorShape weight_shape(weight_val.tensor_shape());
+    weight_dim = weight_shape.dim_size(1);
+  }
+
+  if (weight_dim == 0) {
+    if (IsCast(*readvariable2->node())) {
+      readvariable2 = readvariable2->GetRegularFanin(0).node_view();
+    }
+    if (!IsReadVariableOp(*readvariable2->node())) return false;
+    const auto* arg_weight =
+        readvariable2->GetRegularFanin(0).node_view()->node();
+    if (IsArg(*arg_weight)) {
+      const AttrValue attr_wshape = arg_weight->attr().at("_handle_shapes");
+      if (attr_wshape.list().shape().empty()) return false;
+      const TensorShapeProto& wshape_proto = attr_wshape.list().shape(0);
+      if (!Is2D(wshape_proto)) return false;
+      weight_dim = TensorShape(wshape_proto).dim_size(1);
+    } else if (IsVarHandle(*arg_weight)) {
+      const AttrValue attr_wshape = arg_weight->attr().at("shape");
+      const TensorShapeProto& wshape_proto = attr_wshape.shape();
+      if (!Is2D(wshape_proto)) return false;
+      if (IsUnknown(wshape_proto.dim(wshape_proto.dim_size() - 1)))
+        return false;
+      weight_dim = TensorShape(wshape_proto).dim_size(1);
+    } else {
+      return false;
+    }
+  }
+
+  if (bias_dim != weight_dim) return false;
+
+  const KerasDenseLayerFwd pattern{matmul->node_index(),
+                                   node_view->node_index(), bias_index,
+                                   activation_index};
+  *matched = pattern;
+  return true;
 }
 
 bool FindContractionWithBias(const RemapperContext& ctx, int node_index,
@@ -1320,6 +1451,89 @@ void CopyMatMulAttributes(const NodeDef& matmul, NodeDef* fused_matmul,
   // }
 }
 
+void CopyReshapeAttributes(const NodeDef& reshape, NodeDef* node) {
+  DCHECK(IsReshape(reshape)) << "Input node must be a Reshape";
+
+  auto* attr = node->mutable_attr();
+  auto& src_attr = reshape.attr();
+
+  (*attr)["T"] = src_attr.at("T");
+  (*attr)["Tshape"] = src_attr.at("Tshape");
+}
+
+Status AddKerasDenseLayerFwd(RemapperContext* ctx,
+                             const KerasDenseLayerFwd& matched,
+                             std::vector<bool>* invalidated_nodes,
+                             std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& matmul = graph->node(matched.matmul);
+  const NodeDef& reshape = graph->node(matched.reshape);
+  const NodeDef& bias = graph->node(matched.bias);
+  NodeDef new_shape;
+  NodeDef fused_node;
+  if (matched.activation != kMissingIndex) {
+    const NodeDef& activation = graph->node(matched.activation);
+    fused_node.set_op(kFusedMatMul);
+    fused_node.set_name(bias.name());
+    fused_node.set_device(matmul.device());
+    fused_node.add_input(matmul.input(0));
+    fused_node.add_input(matmul.input(1));
+    fused_node.add_input(bias.input(1));
+    CopyMatMulAttributes(matmul, &fused_node);
+    SetFusedOpAttributesWithActivation(&fused_node, &activation, {"BiasAdd"});
+    NodeDef new_reshape;
+    new_reshape.set_op(kReshape);
+    new_reshape.set_device(reshape.device());
+    new_reshape.set_name(activation.name());
+    new_reshape.add_input(bias.name());
+    new_reshape.add_input(reshape.input(1));
+    CopyReshapeAttributes(reshape, &new_reshape);
+
+    utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+    Status status;
+
+    mutation->AddNode(std::move(fused_node), &status);
+    mutation->AddNode(std::move(new_reshape), &status);
+    (*invalidated_nodes)[matched.activation] = true;
+    (*invalidated_nodes)[matched.bias] = true;
+    (*nodes_to_delete)[matched.reshape] = true;
+    (*nodes_to_delete)[matched.matmul] = true;
+
+    TF_ABORT_IF_ERROR(status);
+    TF_ABORT_IF_ERROR(mutation->Apply());
+    return Status::OK();
+  } else {
+    fused_node.set_op(kFusedMatMul);
+    fused_node.set_name(reshape.name());
+    fused_node.set_device(matmul.device());
+    fused_node.add_input(matmul.input(0));
+    fused_node.add_input(matmul.input(1));
+    fused_node.add_input(bias.input(1));
+    CopyMatMulAttributes(matmul, &fused_node);
+    SetFusedOpAttributes(&fused_node, {"BiasAdd"});
+    NodeDef new_reshape;
+    new_reshape.set_op(kReshape);
+    new_reshape.set_device(reshape.device());
+    new_reshape.set_name(bias.name());
+    new_reshape.add_input(reshape.name());
+    new_reshape.add_input(reshape.input(1));
+    CopyReshapeAttributes(reshape, &new_reshape);
+
+    utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+    Status status;
+
+    mutation->AddNode(std::move(fused_node), &status);
+    mutation->AddNode(std::move(new_reshape), &status);
+    (*invalidated_nodes)[matched.bias] = true;
+    (*invalidated_nodes)[matched.reshape] = true;
+    (*nodes_to_delete)[matched.matmul] = true;
+
+    TF_ABORT_IF_ERROR(status);
+    TF_ABORT_IF_ERROR(mutation->Apply());
+    return Status::OK();
+  }
+}
+
 // Contraction + BiasAdd.
 Status AddFusedContractionNode(RemapperContext* ctx,
                                const ContractionWithBiasAdd& matched,
@@ -1847,6 +2061,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
     zendnnInfo(ZENDNN_FWKLOG, " Processing ", node_def->op(), " ",
                node_def->name());
     {
+      // Keras Dense layer fwd fusion.
+      KerasDenseLayerFwd keras_dense_layer_fwd;
+      if (FindKerasDenseLayerFwd(ctx, i, &keras_dense_layer_fwd)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found KerasDenseLayerFwd pattern.");
+        TF_ABORT_IF_ERROR(AddKerasDenseLayerFwd(
+            &ctx, keras_dense_layer_fwd, &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
+
       // Remap Conv2D+BiasAdd+Add+Activation into the _FusedConv2D.
       ContractionWithBiasAndAddActivation contract_with_bias_and_add_activation;
       if (FindContractionWithBiasAndAddActivation(

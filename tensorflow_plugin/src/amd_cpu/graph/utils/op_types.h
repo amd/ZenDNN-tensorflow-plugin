@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -224,6 +224,7 @@ bool IsTruncateMod(const NodeDef& node);
 bool IsUnique(const NodeDef& node);
 bool IsUnpack(const NodeDef& node);
 bool IsVariable(const NodeDef& node);
+bool IsVarHandle(const NodeDef& node);
 bool IsWhile(const NodeDef& node);
 bool IsXdivy(const NodeDef& node);
 bool IsXlaLaunch(const NodeDef& node);

@@ -7,6 +7,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//tensorflow_plugin/src/amd_cpu/graph/utils:graph_common_utils",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:graph_properties",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:graph_view",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:grappler_item",

@@ -75,6 +75,17 @@ cc_library(
 )
 
 cc_library(
+    name = "graph_common_utils",
+    srcs = ["graph_common_utils.cc"],
+    hdrs = ["graph_common_utils.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":graph_view",
+        ":op_types",
+    ],
+)
+
+cc_library(
     name = "op_types",
     srcs = ["op_types.cc"],
     hdrs = ["op_types.h"],

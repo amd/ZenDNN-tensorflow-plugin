@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -724,6 +724,11 @@ bool IsVariable(const NodeDef& node) {
   return op == "Variable" || op == "VariableV2" || op == "AutoReloadVariable" ||
          op == "VarHandleOp" || op == "ReadVariableOp" ||
          op == "_VarHandlesOp" || op == "_ReadVariablesOp";
+}
+
+bool IsVarHandle(const NodeDef& node) {
+  const auto& op = node.op();
+  return op == "VarHandleOp";
 }
 
 bool IsWhile(const NodeDef& node) {
