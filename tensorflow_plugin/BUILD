@@ -9,6 +9,16 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "libamdcpu_plugin_cc.so",
+    linkshared = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":zen_libs_linux",
+        "//tensorflow_plugin/src/amd_cpu:amd_cpu_opkernels",
+    ],
+)
+
 cc_library(
     name = "zen_libs_linux",
     srcs = [
