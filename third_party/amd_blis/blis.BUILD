@@ -16,7 +16,7 @@ genrule(
     cmd = "cd external/amd_blis " +
           "&& make clean " +
           "&& make distclean " +
-          "&& ./configure --prefix=$(RULEDIR) --disable-static --enable-threading=openmp --enable-cblas amdzen " +
+          "&& ./configure -a aocl_gemm --prefix=$(RULEDIR) --disable-static --enable-threading=openmp --enable-cblas amdzen " +
           "&& make -j install " +
           "&& cd ../.. " +
           "&& mkdir -p $(RULEDIR)/include/zen/ " +

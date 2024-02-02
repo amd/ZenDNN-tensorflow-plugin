@@ -102,14 +102,6 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     )
 
     tf_http_archive(
-        name = "amd_libm",
-        build_file = "//third_party/amd_libm:libm.BUILD",
-        sha256 = "906391b8e35d95ff37f7bda7bbef3864609b58213e52aacf687a91bebcd617c0",
-        strip_prefix = "aocl-libm-ose-aocl-3.1",
-        urls = tf_mirror_urls("https://github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip"),
-    )
-
-    tf_http_archive(
         name = "amd_blis",
         build_file = "//third_party/amd_blis:blis.BUILD",
         sha256 = "a05c6c7d359232580d1d599696053ad0beeedf50f3b88d5d22ee7d34375ab577",

@@ -5,7 +5,6 @@ _COPTS_LIST = select({
 }) + [
     "-DBIAS_ENABLED=1",
     "-DZENDNN_ENABLE=1",
-    "-DLIBM_ENABLE=1",
     "-DZENDNN_X64=1",
 ] + ["-Iexternal/amd_blis/include/zen/"]
 
@@ -43,7 +42,7 @@ cc_binary(
             "src/cpu/aarch64/**",
             "src/common/ittnotify/*.c",
         ],
-    ) + ["@amd_libm//:libm_config"],
+    ),
     copts = _COPTS_LIST,
     includes = _INCLUDES_LIST,
     linkopts = ["-lm -lpthread -lrt"],
