@@ -256,23 +256,38 @@ class ZenBatchMatMulOp : public OpKernel {
       using dt = memory::data_type;
       std::vector<primitive> net;
       std::vector<std::unordered_map<int, memory>> net_args;
-      // BF16 kernel only accepts 4D tensors.
-      // since it's hardcoded as 4D and only tested with 4D tensors.
-      Scalar *input_array =
-          const_cast<Scalar *>(lhs.tensor<Scalar, 4>().data());
-      Scalar *filter_array =
-          const_cast<Scalar *>(rhs.tensor<Scalar, 4>().data());
+      const int ndims = lhs.dims();
+      OP_REQUIRES(context, ndims == 3 || ndims == 4,
+                  errors::InvalidArgument(
+                      "BatchMatMul is supported for 3D and 4D only for BF16"));
+      // BF16 kernel only accepts 3D and 4D tensors.
+      // since it's hardcoded as 3D and 4D hence only tested with 3D and 4D
+      // tensors.
+      Scalar *input_array;
+      Scalar *filter_array;
+      Scalar *output_array;
+      uint64 M, N, K;
+      if (ndims == 4) {
+        input_array = const_cast<Scalar *>(lhs.tensor<Scalar, 4>().data());
+        filter_array = const_cast<Scalar *>(rhs.tensor<Scalar, 4>().data());
+        auto rhs_reshaped = rhs.template flat_inner_dims<Scalar, 3>();
+        auto lhs_reshaped = lhs.template flat_inner_dims<Scalar, 3>();
+        M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
+        K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
+        N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+      } else {
+        input_array = const_cast<Scalar *>(lhs.tensor<Scalar, 3>().data());
+        filter_array = const_cast<Scalar *>(rhs.tensor<Scalar, 3>().data());
+        M = adj_x_ ? lhs.dim_size(2) : lhs.dim_size(1);
+        K = adj_x_ ? lhs.dim_size(1) : lhs.dim_size(2);
+        N = adj_y_ ? rhs.dim_size(1) : rhs.dim_size(2);
+      }
       MatMulBCast bcast(lhs.shape().dim_sizes(), rhs.shape().dim_sizes());
       OP_REQUIRES(
           context, bcast.IsValid(),
           errors::InvalidArgument(
               "In[0] and In[1] must have compatible batch dimensions: ",
               lhs.shape().DebugString(), " vs. ", rhs.shape().DebugString()));
-      auto rhs_reshaped = rhs.template flat_inner_dims<Scalar, 3>();
-      auto lhs_reshaped = lhs.template flat_inner_dims<Scalar, 3>();
-      const int64 M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
-      const int64 K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
-      const int64 N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
 
       TensorShape out_shape = bcast.output_batch_shape();
       out_shape.AddDim(M);
@@ -310,26 +325,46 @@ class ZenBatchMatMulOp : public OpKernel {
                        context->allocate_output(0, out_shape, &output));
       }
 
-      Scalar *output_array =
-          const_cast<Scalar *>(output->tensor<Scalar, 4>().data());
-
-      memory::dims src_dims = {lhs.dim_size(0), lhs.dim_size(1), M, K};
-      memory::dims weight_dims = {rhs.dim_size(0), rhs.dim_size(1), K, N};
-      memory::dims dst_dims = {lhs.dim_size(0), lhs.dim_size(1), M, N};
+      if (ndims == 4) {
+        auto output_map = output->tensor<Scalar, 4>();
+        output_array = const_cast<Scalar *>(output_map.data());
+      } else {
+        auto output_map = output->tensor<Scalar, 3>();
+        output_array = const_cast<Scalar *>(output_map.data());
+      }
+      tag format_tag;
+      memory::dims src_dims;
+      memory::dims weight_dims;
+      memory::dims dst_dims;
+      tag weight_tag;
       memory::dims bias_dims = {1, 1, 1, N};
+      if (ndims == 4) {
+        format_tag = tag::abcd;
+        src_dims = {lhs.dim_size(0), lhs.dim_size(1), M, K};
+        weight_dims = {rhs.dim_size(0), rhs.dim_size(1), K, N};
+        dst_dims = {lhs.dim_size(0), lhs.dim_size(1), M, N};
+        weight_tag = adj_y_ ? tag::abdc : tag::abcd;
+      } else if (ndims == 3) {
+        format_tag = tag::abc;
+        src_dims = {lhs.dim_size(0), M, K};
+        weight_dims = {rhs.dim_size(0), K, N};
+        dst_dims = {lhs.dim_size(0), M, N};
+        weight_tag = adj_y_ ? tag::acb : tag::abc;
+      }
 
-      memory::desc src_md = memory::desc({src_dims}, dt::bf16, tag::abcd);
-      memory::desc dst_md = memory::desc({dst_dims}, dt::bf16, tag::abcd);
+      memory::desc src_md = memory::desc({src_dims}, dt::bf16, format_tag);
+      memory::desc dst_md = memory::desc({dst_dims}, dt::bf16, format_tag);
       memory::desc matmul_weights_md =
-          memory::desc({weight_dims}, dt::bf16, adj_y_ ? tag::abdc : tag::abcd);
+          memory::desc({weight_dims}, dt::bf16, weight_tag);
       memory::desc bias_md = memory::desc();
       zendnn::memory user_weights_memory, src_memory, dst_memory;
-      src_memory = memory({{src_dims}, dt::bf16, tag::abcd}, eng, input_array);
-      dst_memory = memory({{dst_dims}, dt::bf16, tag::abcd}, eng, output_array);
+      src_memory = memory({{src_dims}, dt::bf16, format_tag}, eng, input_array);
+      dst_memory =
+          memory({{dst_dims}, dt::bf16, format_tag}, eng, output_array);
 
       user_weights_memory =
-          memory({{weight_dims}, dt::bf16, adj_y_ ? tag::abdc : tag::abcd}, eng,
-                 filter_array);
+          memory({{weight_dims}, dt::bf16, weight_tag}, eng, filter_array);
+
       zendnn::primitive_attr matmul_attr;
 
       if (is_mul_add_fusion_enabled) {
