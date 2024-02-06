@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -390,7 +390,7 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
   // Method to update the 'use status' of buffer from tensor pool. Basically it
   // resets the 'use status' with the status value received as argument.
   // Currently this method is used in convolution fused sum optimization where
-  // the input buffer is re-used as output buffer.
+  // the input buffer is re-used as output buffer, along with binary ops.
   void ZenMemPoolUpdateTensorPtrStatus(OpKernelContext *context, void *input,
                                        int status, bool reset) {
     if (zen_enable_mempool_ == 1) {
@@ -405,9 +405,11 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
             void *output_array =
                 zen_memory_pool_arr_[i]->zen_tensor_pool_arr_[j].raw_buff;
             if (input == output_array) {
+              // The buffer should be retained for all child nodes of current
+              // node, along with all the siblings of current node.
               zen_memory_pool_arr_[i]
                   ->zen_tensor_pool_arr_[j]
-                  .zen_tensor_ptr_status = status;
+                  .zen_tensor_ptr_status += (status - 1);
               break;
             }
           }
