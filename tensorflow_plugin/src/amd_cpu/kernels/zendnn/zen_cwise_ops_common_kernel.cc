@@ -93,9 +93,9 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
   ZenTensorType out_type = ZenTensorType::kFloat;
 
   zendnnEnv zen_env_obj = readEnv();
-  int zen_enable_mempool = zen_env_obj.zenEnableMemPool &&
-                           !zendnn_params.is_eager &&
-                           ctx->expected_output_dtype(0) == DT_FLOAT;
+  int zen_enable_mempool =
+      (!zendnn_params.is_eager) ? zen_env_obj.zenEnableMemPool : 0;
+
   ZenMemoryPool<float> *zen_pool_buffer = NULL;
 
   // TODO(plugin) : TF-Plugin does not have C APIs for forwarding input to
@@ -119,7 +119,7 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
   // allocation i.e. with allocate_output(..).
   // ZenMempool Optimization is not supported by Depthwise Convolution due to
   // performance drop.
-  if (zen_enable_mempool) {
+  if (zen_enable_mempool % MEMPOOL_TYPE) {
     unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
     zen_pool_buffer = ZenMemoryPool<float>::GetZenMemPool(thread_id);
     if (zen_pool_buffer) {
@@ -127,13 +127,13 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
           ctx, &out, output_shape, zendnn_params.out_links, zendnn_params.reset,
           out_type);
       if (status) {
-        zen_enable_mempool = false;
+        zen_enable_mempool = 0;
       }
     } else {
-      zen_enable_mempool = false;
+      zen_enable_mempool = 0;
     }
   }
-  if (!zen_enable_mempool) {
+  if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, output_shape, &out));
   }
 

@@ -460,7 +460,7 @@ class ZenBinaryOp : public ZenBinaryOpShared {
     // ZenMempool Optimization is not supported by Depthwise Convolution due to
     // performance drop.
 
-    if (zen_enable_mempool) {
+    if (zen_enable_mempool % MEMPOOL_TYPE) {
       unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
       zen_pool_buffer = ZenMemoryPool<float>::GetZenMemPool(thread_id);
       if (zen_pool_buffer) {

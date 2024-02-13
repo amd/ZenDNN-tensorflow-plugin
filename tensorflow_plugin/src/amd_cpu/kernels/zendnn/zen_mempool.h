@@ -259,7 +259,8 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
         uint64_t out_size = GetTensorSize(out_shape);
         uint64_t tensor_size = zen_tensor_pool_arr_[i].zen_tensor_size;
         if (out_size > tensor_size ||
-            (zen_enable_mempool_ == 2 && out_size < tensor_size)) {
+            (zen_enable_mempool_ == 2 && out_size < tensor_size) ||
+            (zen_tensor_pool_arr_[i].zen_type != type)) {
           continue;
         }
         *output = (zen_tensor_pool_arr_[i].zen_tensor_ptr);
