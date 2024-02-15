@@ -232,18 +232,18 @@ def setup_python(environ_cp):
   write_to_bazelrc('build --python_path=\"%s"' % python_bin_path)
   environ_cp['PYTHON_BIN_PATH'] = python_bin_path
 
-  # If choosen python_lib_path is from a path specified in the PYTHONPATH
+  # If chosen python_lib_path is from a path specified in the PYTHONPATH
   # variable, need to tell bazel to include PYTHONPATH
   if environ_cp.get('PYTHONPATH'):
     python_paths = environ_cp.get('PYTHONPATH').split(':')
     if python_lib_path in python_paths:
       write_action_env_to_bazelrc('PYTHONPATH', environ_cp.get('PYTHONPATH'))
 
-  # check tensorflw version
-  # not check tensorflow-estimator version
+  # Check tensorflow version
+  # Do not check tensorflow-estimator version
   package_list = subprocess.Popen(
       os.path.sep.join(python_bin_path.split(os.path.sep)[:-1]) + os.path.sep +
-      "pip" + " list | grep \"^tensorflow \|^tensorflow-cpu \"",
+      "pip" + " list | grep \"^tensorflow \|^tensorflow-cpu \|^tf-nightly \"",
       shell=True,
       stdout=subprocess.PIPE).stdout.read().decode()
   tensorflow_list = package_list.splitlines()
@@ -251,7 +251,7 @@ def setup_python(environ_cp):
     print('Please install tensorflow version >= 2.12.0')
     sys.exit(1)
   for line in tensorflow_list:
-    if line.startswith(("tensorflow ", "tensorflow-cpu ")):
+    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tf-nightly ")):
       name, version = line.split()
       version = version.split("rc")[0]
       current_tensorflow_version = convert_version_to_int(version)
@@ -286,7 +286,7 @@ def get_python_lib_name(environ_cp):
 
 
 def get_python_link_path(environ_cp):
-  # TODO(quintin): we need to link libpythonx.y.so for _pywrap_tensorflow_internal.so
+  # TODO(plugin): we need to link libpythonx.y.so for _pywrap_tensorflow_internal.so
   # once google change CAPI symbols into libtensorflow.so, we don't need this
   python_bin_path = environ_cp['PYTHON_BIN_PATH']
   path_list = python_bin_path.split(os.sep)[:-2]
