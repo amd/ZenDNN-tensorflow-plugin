@@ -330,6 +330,7 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
 
       zen_tensor_pool_arr_[pool_offset].zen_tensor_ptr = new Tensor();
       DataType data_type = GetDataTypeFromMacro(type);
+      zen_tensor_pool_arr_[pool_offset].zen_type = type;
       context->allocate_temp(data_type, shape,
                              zen_tensor_pool_arr_[pool_offset].zen_tensor_ptr);
 
