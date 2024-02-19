@@ -30,7 +30,7 @@
 // This is for supporting future integration with streams.
 // TODO(zendnn): Test with maximum no of possible streams and tune
 //               ZEN_MEM_POOL_LIMIT accordingly.
-#define ZEN_MEM_POOL_LIMIT 64
+#define ZEN_MEM_POOL_LIMIT 256
 
 // ZEN_TENSOR_POOL_LIMIT defines the limit for active tensors inside pool for
 // given Memory pool.
@@ -48,6 +48,7 @@
 // #define ZEN_TENSOR_SIZE_FACTOR 1
 
 using zendnn::zendnn_getenv_int;
+extern unsigned int graph_exe_count;
 
 namespace amd_cpu_plugin {
 
@@ -386,6 +387,7 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
     if (zen_tensor_pool_reset_) {
       ResetPoolStatus();
       zen_tensor_pool_reset_ = false;
+      graph_exe_count++;
     }
   }
 
@@ -423,6 +425,7 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
     if (reset) {
       ResetPoolStatus();
       zen_tensor_pool_reset_ = false;
+      graph_exe_count++;
     }
   }
 };
