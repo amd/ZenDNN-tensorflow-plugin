@@ -2,6 +2,7 @@ load("//third_party:repo.bzl", "tf_http_archive", "tf_mirror_urls", "third_party
 load("//third_party/build_option:gcc_configure.bzl", "gcc_configure")
 load("//third_party/systemlibs:syslibs_configure.bzl", "syslibs_configure")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("//third_party/absl:workspace.bzl", absl = "repo")
 
 def clean_dep(dep):
     return str(Label(dep))
@@ -10,6 +11,7 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     """All external dependencies for TF builds"""
     gcc_configure(name = "local_config_gcc")
     syslibs_configure(name = "local_config_syslibs")
+    absl()
 
     http_archive(
         name = "bazel_toolchains",
@@ -37,14 +39,6 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
         sha256 = "df23a89e4cdfa7de2d81ee28190bd194413e47ff177c94076f845b32d7280344",  # SHARED_EIGEN_SHA
         strip_prefix = "eigen-5dc2fbabeee17fe023c38756ebde0c1d56472913",
         urls = tf_mirror_urls("https://gitlab.com/libeigen/eigen/-/archive/5dc2fbabeee17fe023c38756ebde0c1d56472913/eigen-5dc2fbabeee17fe023c38756ebde0c1d56472913.tar.gz"),
-    )
-
-    third_party_http_archive(
-        name = "com_google_absl",
-        build_file = clean_dep("//third_party:com_google_absl.BUILD"),
-        sha256 = "56cd3fbbbd94468a5fff58f5df2b6f9de7a0272870c61f6ca05b869934f4802a",
-        strip_prefix = "abseil-cpp-daf381e8535a1f1f1b8a75966a74e7cca63dee89",
-        urls = tf_mirror_urls("https://github.com/abseil/abseil-cpp/archive/daf381e8535a1f1f1b8a75966a74e7cca63dee89.tar.gz"),
     )
 
     tf_http_archive(
@@ -104,9 +98,9 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "amd_blis",
         build_file = "//third_party/amd_blis:blis.BUILD",
-        sha256 = "a05c6c7d359232580d1d599696053ad0beeedf50f3b88d5d22ee7d34375ab577",
-        strip_prefix = "blis-4.1",
-        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/4.1.tar.gz"),
+        sha256 = "0e1baf850ba0e6f99e79f64bbb0a59fcb838ddb5028e24527f52b407c3c62963",
+        strip_prefix = "blis-4.2",
+        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/4.2.tar.gz"),
     )
 
     tf_http_archive(
