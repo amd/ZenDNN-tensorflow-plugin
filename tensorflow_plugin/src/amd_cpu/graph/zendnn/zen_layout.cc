@@ -25,11 +25,13 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "absl/base/call_once.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_properties.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/attr_value_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
+#include "tensorflow_plugin/src/amd_cpu/util/util.h"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -37,15 +39,9 @@ namespace graph {
 namespace {
 
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
+  static absl::once_flag once;
   static std::vector<ZenFormatInfo> rinfo{
       {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
-      {"Add", "_ZenAdd", CopyAttrsAll, RewriteSupportedDataType},
-      {"AddV2", "_ZenAddV2", CopyAttrsAll, RewriteSupportedDataType},
-      {"Sub", "_ZenSub", CopyAttrsAll, RewriteSupportedDataType},
-      {"Mul", "_ZenMul", CopyAttrsAll, RewriteSupportedDataType},
-      {"Maximum", "_ZenMaximum", CopyAttrsAll, RewriteSupportedDataType},
-      {"SquaredDifference", "_ZenSquaredDifference", CopyAttrsAll,
-       RewriteSupportedDataType},
       {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
        RewriteSupportedDataType},
       {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
@@ -80,6 +76,22 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
       {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
        RewriteSupportedDataType}};
+  absl::call_once(once, [&] {
+    if (GetMempool() != 0) {
+      rinfo.push_back(
+          {"Add", "_ZenAdd", CopyAttrsAll, RewriteSupportedDataType});
+      rinfo.push_back(
+          {"AddV2", "_ZenAddV2", CopyAttrsAll, RewriteSupportedDataType});
+      rinfo.push_back(
+          {"Sub", "_ZenSub", CopyAttrsAll, RewriteSupportedDataType});
+      rinfo.push_back(
+          {"Mul", "_ZenMul", CopyAttrsAll, RewriteSupportedDataType});
+      rinfo.push_back(
+          {"Maximum", "_ZenMaximum", CopyAttrsAll, RewriteSupportedDataType});
+      rinfo.push_back({"SquaredDifference", "_ZenSquaredDifference",
+                       CopyAttrsAll, RewriteSupportedDataType});
+    }
+  });
   return &rinfo;
 }
 }  // namespace

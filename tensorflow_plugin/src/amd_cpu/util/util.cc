@@ -73,6 +73,23 @@ bool IsZenDnnBF16Enabled() {
   return tf_zendnn_plugin_bf16;
 }
 
+int64_t GetMempool() {
+  static absl::once_flag once;
+  static int64_t mempool = 1;
+  absl::call_once(once, [&] {
+    auto status =
+        ReadInt64FromEnvVar("ZENDNN_ENABLE_MEMPOOL", mempool, &mempool);
+
+    if (!status.ok()) {
+      zendnnInfo(
+          ZENDNN_FWKLOG,
+          "ZENDNN_ENABLE_MEMPOOL is not set. Using the default setting: ",
+          mempool);
+    }
+  });
+  return mempool;
+}
+
 std::string SliceDebugString(const TensorShape& shape, const int64 flat) {
   // Special case rank 0 and 1
   const int dims = shape.dims();

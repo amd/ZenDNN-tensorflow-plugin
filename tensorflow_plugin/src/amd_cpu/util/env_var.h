@@ -21,6 +21,8 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_ENV_VAR_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_ENV_VAR_H_
 
+#include <string>
+
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 
 namespace amd_cpu_plugin {
@@ -38,6 +40,11 @@ Status ReadBoolFromEnvVar(StringPiece env_var_name, bool default_val,
 Status ReadStringFromEnvVar(StringPiece env_var_name, StringPiece default_val,
                             std::string* value);
 
+// Returns an int64 into "value" from the environmental variable "env_var_name".
+// If it is unset, the default value is used.
+// If the string cannot be parsed into int64, an error status is returned.
+Status ReadInt64FromEnvVar(StringPiece env_var_name, int64_t default_val,
+                           int64* value);
 }  // namespace amd_cpu_plugin
 
 #endif  //  TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_ENV_VAR_H_

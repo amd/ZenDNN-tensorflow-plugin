@@ -60,4 +60,19 @@ Status ReadStringFromEnvVar(StringPiece env_var_name, StringPiece default_val,
   return OkStatus();
 }
 
+Status ReadInt64FromEnvVar(StringPiece env_var_name, int64_t default_val,
+                           int64* value) {
+  *value = default_val;
+  const char* tf_env_var_val = getenv(string(env_var_name).c_str());
+  if (tf_env_var_val == nullptr) {
+    return OkStatus();
+  }
+  if (strings::safe_strto64(tf_env_var_val, value)) {
+    return OkStatus();
+  }
+  return errors::InvalidArgument(strings::StrCat(
+      "Failed to parse the env-var ${", env_var_name, "} into int64: ",
+      tf_env_var_val, ". Use the default value: ", default_val));
+}
+
 }  // namespace amd_cpu_plugin

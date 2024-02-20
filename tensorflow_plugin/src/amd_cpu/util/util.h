@@ -29,6 +29,7 @@ namespace amd_cpu_plugin {
 
 bool IsZenDnnEnabled();
 bool IsZenDnnBF16Enabled();
+int64_t GetMempool();
 
 std::string SliceDebugString(const TensorShape& shape, const int64 flat);
 
