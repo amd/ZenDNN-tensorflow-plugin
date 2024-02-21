@@ -68,6 +68,7 @@ void RegisterZenFusedMatMul() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "product: T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "transpose_b: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "is_reshape: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float, bfloat16} = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
   TF_OpDefinitionBuilderAddAttr(op_builder, "fused_ops: list(string) = []");

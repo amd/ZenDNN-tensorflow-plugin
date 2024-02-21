@@ -829,10 +829,12 @@ inline bool VerifyConstants(RemapperContext* ctx,
 bool IsMatchedMatMulBiasAddAndGeluExact(
     RemapperContext& ctx, int node_index,
     std::map<string, int>* matched_nodes_map = nullptr,
-    std::set<int>* remove_node_indices = nullptr) {
+    std::set<int>* remove_node_indices = nullptr, bool* expand_dims = nullptr) {
   auto* node_view = ctx.graph_view.GetNode(node_index);
   using utils::MatchingDirection;
   using utils::NodeStatus;
+  int found_pattern_index = 0;  // Default = 0 means no pattern found.
+  std::vector<utils::OpTypePattern> gelu_exact_patterns;
   // clang-format off
   // Pattern 1:
   //    Const: 1/sqrt(2)        Const: 1    Const: 1/2
@@ -840,7 +842,7 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
   //  * --> BiasAdd --> Mul --> Erf --> AddV2 --> Mul --> Mul
   //        /       \____________________________________/
   //  MatMul
-  static utils::OpTypePattern* gelu_exact_pattern = new utils::OpTypePattern
+  gelu_exact_patterns.push_back(
     {"Mul", "output", NodeStatus::kReplace,
       {
         {"Mul", "erf_plus_one_times_one_half", NodeStatus::kRemove,
@@ -871,7 +873,7 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
           }
         }  // BiasAdd: "bias_add"
       }  // Mul: "output"
-    };
+    });
 
   // Pattern 2:
   //  Cast|Const: 1/sqrt(2)    Cast|Const: 1
@@ -881,7 +883,7 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
   // MatMul           ----------------------------> Mul
   //                                                /
   //                                  Cast|Const: 1/2
-  static utils::OpTypePattern* gelu_exact_pattern2 = new utils::OpTypePattern
+  gelu_exact_patterns.push_back(
     {"Mul", "output", NodeStatus::kReplace,
       {
         {"Add|AddV2", "erf_plus_one", NodeStatus::kRemove,
@@ -911,7 +913,44 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
           }
         }  // Mul: "erf_plus_one_times_one_half"
       }
-    };  // Mul: "output"
+    });  // Mul: "output"
+
+  // Pattern 3:
+  //    Const: expand_dims  1/sqrt(2)        Const: 1    Const: 1/2
+  //                 \           \               \         \
+  //  _FusedMatMul --> Reshape --> Mul --> Erf --> AddV2 --> Mul --> Mul
+  //                           \____________________________________/
+  gelu_exact_patterns.push_back(
+    {"Mul", "output", NodeStatus::kReplace,
+      {
+        {"Mul", "erf_plus_one_times_one_half", NodeStatus::kRemove,
+          {
+            {"Add|AddV2", "erf_plus_one", NodeStatus::kRemove,
+              {
+                {"Erf", "erf", NodeStatus::kRemove,
+                  {
+                    {"Mul", "bias_add_x_sqrt_one_half", NodeStatus::kRemove,
+                      {
+                        {"Reshape", "reshape", NodeStatus::kRemove},
+                        {"Cast|Const", "sqrt_one_half", NodeStatus::kRemain}
+                      }
+                    }  // Mul: "bias_add_x_sqrt_one_half"
+                  }
+                },  // Erf: "erf"
+                {"Cast|Const", "one", NodeStatus::kRemain}
+              }  // Add|AddV2: "erf_plus_one"
+            },
+            {"Cast|Const", "one_half", NodeStatus::kRemain}
+          }
+        },  // Mul: "erf_plus_one_times_one_half"
+        {"Reshape", "reshape", NodeStatus::kRemove,
+          {
+            {"_FusedMatMul", "matmul", NodeStatus::kRemove},
+            {"Cast|Const", "expand_dims", NodeStatus::kRemain}
+          }
+        }
+      }
+    });  // Mul: "output"
   // clang-format on
 
   utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
@@ -921,17 +960,23 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
   std::set<int> dummy_remove_node_indices;
   if (!matched_nodes_map) matched_nodes_map = &dummy_matched_nodes_map;
   if (!remove_node_indices) remove_node_indices = &dummy_remove_node_indices;
-  if (graph_matcher.GetMatchedNodes(*gelu_exact_pattern, ctx.nodes_to_preserve,
-                                    node_view, matched_nodes_map,
-                                    remove_node_indices)) {
-    return true;
+  bool found_gelu_exact = false;
+
+  for (size_t pattern = 0; pattern < gelu_exact_patterns.size(); pattern++) {
+    matched_nodes_map->clear();
+    remove_node_indices->clear();
+    if (graph_matcher.GetMatchedNodes(gelu_exact_patterns[pattern],
+                                      ctx.nodes_to_preserve, node_view,
+                                      matched_nodes_map, remove_node_indices)) {
+      found_gelu_exact = true;
+      found_pattern_index = pattern + 1;
+      break;
+    }
   }
-  // Pattern 1 not matched, check for pattern 2
-  matched_nodes_map->clear();
-  remove_node_indices->clear();
-  return graph_matcher.GetMatchedNodes(*gelu_exact_pattern2,
-                                       ctx.nodes_to_preserve, node_view,
-                                       matched_nodes_map, remove_node_indices);
+  if (found_pattern_index == 3) {
+    *expand_dims = true;
+  }
+  return found_gelu_exact;
 }
 
 // Gelu in python api generates a number of nodes in the graph. Depending on the
@@ -941,7 +986,7 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
 bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                               std::map<string, int>* matched_nodes_map,
                               std::set<int>* remove_node_indices,
-                              bool* is_gelu_approximate) {
+                              bool* is_gelu_approximate, bool* expand_dims) {
   using utils::MatchingDirection;
   using utils::NodeStatus;
 
@@ -954,7 +999,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
   matched_nodes_map->clear();
   remove_node_indices->clear();
   found_gelu_exact = IsMatchedMatMulBiasAddAndGeluExact(
-      *ctx, node_index, matched_nodes_map, remove_node_indices);
+      *ctx, node_index, matched_nodes_map, remove_node_indices, expand_dims);
   utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
       &(ctx->graph_view));
   // clang-format off
@@ -1137,6 +1182,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
     }
   };
   // clang-format on
+  // TODO(plugin) : Re-configure gelu pattern find to work under a loop.
   // Find GeluApproximate
   if (!found_gelu_exact) {
     // Gelu approximate uses Pow(x, 3). On GPU, it is a single Pow() node, but
@@ -1152,7 +1198,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
         gelu_approximate_pattern1, ctx->nodes_to_preserve, node_view,
         matched_nodes_map, remove_node_indices);
   }
-  if (!found_gelu_approximate_pattern1) {
+  if (!found_gelu_exact && !found_gelu_approximate_pattern1) {
     matched_nodes_map->clear();
     remove_node_indices->clear();
     found_gelu_approximate_pattern2 = graph_matcher.GetMatchedNodes(
@@ -1160,7 +1206,8 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
         ctx->graph_view.GetNode(node_index), matched_nodes_map,
         remove_node_indices);
   }
-  if (!found_gelu_approximate_pattern1 && !found_gelu_approximate_pattern2) {
+  if (!found_gelu_exact && !found_gelu_approximate_pattern1 &&
+      !found_gelu_approximate_pattern2) {
     matched_nodes_map->clear();
     remove_node_indices->clear();
     found_gelu_approximate_pattern_bf16 = graph_matcher.GetMatchedNodes(
@@ -1261,8 +1308,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
         },
         {"*", "addend", NodeStatus::kRemain}
       }
-    }
-  );
+    });
 
   fusion_patterns.push_back(
     {"Add|AddV2", "output", NodeStatus::kReplace,
@@ -1280,8 +1326,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
         },
         {"*", "addend", NodeStatus::kRemain}
       }
-    }
-  );
+    });
 
   fusion_patterns.push_back(
     {"Add|AddV2", "output", NodeStatus::kReplace,
@@ -1294,8 +1339,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
           }
         }
       }
-    }
-  );
+    });
   // clang-format on
 
   utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
@@ -1303,7 +1347,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
 
   bool found_op_type_match = false;
 
-  for (int pattern_iterator = 0; pattern_iterator < fusion_patterns.size();
+  for (size_t pattern_iterator = 0; pattern_iterator < fusion_patterns.size();
        pattern_iterator++) {
     matched_nodes_map->clear();
     remove_node_indices->clear();
@@ -1930,7 +1974,7 @@ Status AddFusedMatMulBiasAddAndGelu(
     RemapperContext* ctx, const std::map<string, int>& matched_nodes_map,
     const std::set<int>& remove_node_indices,
     std::vector<bool>* invalidated_nodes, std::vector<bool>* nodes_to_delete,
-    bool is_gelu_approximate) {
+    bool is_gelu_approximate, bool expand_dims) {
   auto* output_node =
       ctx->graph_view.GetNode(matched_nodes_map.at("output"))->node();
   auto* matmul_node =
@@ -1943,7 +1987,7 @@ Status AddFusedMatMulBiasAddAndGelu(
   fused_node.set_device(matmul_node->device());
   fused_node.add_input(matmul_node->input(0));
   fused_node.add_input(matmul_node->input(1));
-  if (is_gelu_approximate) {
+  if (is_gelu_approximate || expand_dims) {
     fused_node.add_input(matmul_node->input(2));
   } else {
     auto* bias_add_node =
@@ -1951,10 +1995,15 @@ Status AddFusedMatMulBiasAddAndGelu(
     fused_node.add_input(bias_add_node->input(1));
   }
   CopyMatMulAttributes(*matmul_node, &fused_node);
-  if (is_gelu_approximate)
+  if (is_gelu_approximate) {
     SetFusedOpAttributes(&fused_node, {"BiasAdd", "GeluApproximate"});
-  else
+  } else {
     SetFusedOpAttributes(&fused_node, {"BiasAdd", "GeluExact"});
+  }
+  if (expand_dims) {
+    auto* attr = fused_node.mutable_attr();
+    SetAttrValue(true, &(*attr)["is_reshape"]);
+  }
 
   utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
   Status status;
@@ -2150,14 +2199,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       std::map<string, int> matched_nodes_map;
       std::set<int> remove_node_indices;
       bool is_gelu_approximate = false;
+      bool expand_dims = false;
       if (FindMatMulBiasAddAndGelu(&ctx, i, &matched_nodes_map,
-                                   &remove_node_indices,
-                                   &is_gelu_approximate)) {
+                                   &remove_node_indices, &is_gelu_approximate,
+                                   &expand_dims)) {
         zendnnInfo(ZENDNN_FWKLOG, " Found MatMulBiasAddAndGelu pattern with",
                    (is_gelu_approximate ? "" : "out"), " Gelu Approximate.");
         TF_ABORT_IF_ERROR(AddFusedMatMulBiasAddAndGelu(
             &ctx, matched_nodes_map, remove_node_indices, &invalidated_nodes,
-            &nodes_to_delete, is_gelu_approximate));
+            &nodes_to_delete, is_gelu_approximate, expand_dims));
         continue;
       }
 

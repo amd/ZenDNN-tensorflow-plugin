@@ -133,7 +133,9 @@ class ZenMatMulOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("transpose_b", &transpose_b_));
 
     std::vector<FusedComputationPattern> patterns;
+    is_reshape_ = false;
     if (is_fused) {
+      OP_REQUIRES_OK(context, context->GetAttr("is_reshape", &is_reshape_));
       using FCT = FusedComputationType;
       patterns = {
           {FCT::kBiasAdd, {"BiasAdd"}},
@@ -177,8 +179,12 @@ class ZenMatMulOp : public OpKernel {
                                         ", In[1]: ", b.shape().DebugString()));
     int a_dim_remaining = 1 - dim_pair[0].first;
     int b_dim_remaining = 1 - dim_pair[0].second;
-    TensorShape out_shape(
-        {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)});
+    TensorShape out_shape;
+    if (is_reshape_) {
+      out_shape = {1, a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)};
+    } else {
+      out_shape = {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)};
+    }
 
     // Update the output type.
     bool is_float = std::is_same<T, float>::value;
@@ -312,6 +318,7 @@ class ZenMatMulOp : public OpKernel {
   }
 
  private:
+  bool is_reshape_;
   bool transpose_a_;
   bool transpose_b_;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
