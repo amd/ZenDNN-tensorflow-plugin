@@ -68,8 +68,17 @@ class ZenSoftmaxOp : public OpKernel {
       src_dims[d] = input.shape().dim_size(d);
     }
 
-    // Update the output type.
     bool is_input_float = std::is_same<T, float>::value;
+    // Check for the BF16 support on the machine.
+    if (!is_input_float) {
+      bool result = tensorflow::port::TestCPUFeature(
+          tensorflow::port::CPUFeature::AVX512F);
+      OP_REQUIRES(
+          context, result,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
+    }
+    // Update the output type.
     ZenTensorType out_type =
         (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 

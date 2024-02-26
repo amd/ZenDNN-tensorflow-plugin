@@ -275,6 +275,13 @@ class ZenBatchMatMulOp : public OpKernel {
             context, static_cast<void *>(const_cast<float *>(b_array[0])));
       }
     } else {
+      // Check for the BF16 support on the machine.
+      bool result = tensorflow::port::TestCPUFeature(
+          tensorflow::port::CPUFeature::AVX512F);
+      OP_REQUIRES(
+          context, result,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
       // BF16 BatchMatMul execution.
       ZenExecutor *ex = ex->getInstance();
       engine eng = ex->getEngine();

@@ -51,7 +51,18 @@ bool IsZenDnnBF16Enabled() {
   absl::call_once(once, [&] {
     auto status = ReadBoolFromEnvVar(
         "TF_ZENDNN_PLUGIN_BF16", tf_zendnn_plugin_bf16, &tf_zendnn_plugin_bf16);
-
+    if (tf_zendnn_plugin_bf16) {
+      // Check for the BF16 support on the machine.
+      bool result = tensorflow::port::TestCPUFeature(
+          tensorflow::port::CPUFeature::AVX512F);
+      if (!result) {
+        LOG(INFO)
+            << " BF16 AVX512 instruction set is not supported in the machine."
+            << " Auto_Mixed_Precision can't be enabled."
+            << " Hence, default FP32 precision type is used.";
+        tf_zendnn_plugin_bf16 = false;
+      }
+    }
     if (!status.ok()) {
       zendnnInfo(ZENDNN_FWKLOG,
                  "TF_ZENDNN_PLUGIN_BF16 is not set to either '0', 'false', "

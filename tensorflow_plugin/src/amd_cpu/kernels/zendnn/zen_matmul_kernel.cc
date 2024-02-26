@@ -22,6 +22,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "tensorflow/core/platform/cpu_info.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
@@ -186,8 +187,17 @@ class ZenMatMulOp : public OpKernel {
       out_shape = {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)};
     }
 
-    // Update the output type.
     bool is_float = std::is_same<T, float>::value;
+    // Check for the BF16 support on the machine.
+    if (!is_float) {
+      bool result = tensorflow::port::TestCPUFeature(
+          tensorflow::port::CPUFeature::AVX512F);
+      OP_REQUIRES(
+          context, result,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
+    }
+    // Update the output type.
     ZenTensorType out_type =
         (is_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
 

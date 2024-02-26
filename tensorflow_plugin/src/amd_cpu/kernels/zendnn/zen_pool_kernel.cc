@@ -170,11 +170,10 @@ class ZenPoolOp : public OpKernel {
     if (!is_input_float) {
       bool result = tensorflow::port::TestCPUFeature(
           tensorflow::port::CPUFeature::AVX512F);
-      if (!result) {
-        OP_REQUIRES_OK((OpKernelContext *)context,
-                       errors::Internal("BF16 AVX512 instruction set is not "
-                                        "supported in the machine."));
-      }
+      OP_REQUIRES(
+          context, result,
+          errors::Internal(
+              "BF16 AVX512 instruction set is not supported in the machine."));
     }
 
     if (blocked || !is_input_float) {
