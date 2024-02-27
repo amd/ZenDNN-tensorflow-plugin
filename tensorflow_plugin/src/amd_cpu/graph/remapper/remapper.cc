@@ -991,9 +991,9 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
   using utils::NodeStatus;
 
   bool found_gelu_exact = false;
-  bool found_gelu_approximate_pattern1 = false;
-  bool found_gelu_approximate_pattern2 = false;
-  bool found_gelu_approximate_pattern_bf16 = false;
+  bool found_gelu_approximate = false;
+  int found_pattern_index = 0;
+  std::vector<utils::OpTypePattern> gelu_approximate_patterns;
 
   // Find GeluExact
   matched_nodes_map->clear();
@@ -1003,6 +1003,10 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
   utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
       &(ctx->graph_view));
   // clang-format off
+  // SubGraph gpu Pattern
+  //            Const: 3  Empirical Const
+  //                \      \
+  //  FusedMatMul --> Pow --> Mul
   utils::OpTypePattern subgraph_gpu =
     {"Mul", "mul", NodeStatus::kRemove,
       {
@@ -1015,6 +1019,15 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
         {"Const", "empirical_const", NodeStatus::kRemain}
       }
     };
+
+  // SubGraph cpu Pattern
+  //            Empirical Const
+  //                   |
+  //             ------Mul------
+  //            /               \
+  //  FusedMatMul               Mul
+  //            \               /
+  //             -----Square----
   utils::OpTypePattern subgraph_cpu =
     {"Mul", "mul", NodeStatus::kRemove,
       {
@@ -1040,7 +1053,13 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
       root_on_gpu ? &subgraph_gpu : &subgraph_cpu;
 
   // clang-format off
-  utils::OpTypePattern gelu_approximate_pattern1 =
+  // Pattern 1:
+  //             Const: 1/sqrt(2)       Const: 1    Const: 1/2
+  //            SubGraph     \                \        \
+  //                \         \                \        \
+  //  FusedMatMul --> AddV2 --> Mul --> Tanh --> AddV2 --> Mul --> Mul
+  //            \________________________________________________/
+  gelu_approximate_patterns.push_back(
     {"Mul", "output", NodeStatus::kReplace,
       {
         {"Mul", "tanh_plus_one_times_one_half", NodeStatus::kRemove,
@@ -1056,23 +1075,32 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                             {"_FusedMatMul", "matmul", NodeStatus::kRemove},
                             *subgraph_pattern
                           }
-                        },
+                        }, // Add|AddV2: matmul_plus_mul
                         {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                       }
-                    }
+                    } // Mul: matmul_plus_mul_times_square_root_two_over_pi
                   }
-                },
+                }, // Tanh: tanh
                 {"Const", "one", NodeStatus::kRemain}
               }
-            },
+            }, // Add|AddV2: tanh_plus_one
             {"Const", "one_half", NodeStatus::kRemain}
           }
-        },
+        }, // Mul: tanh_plus_one_times_one_half
         {"_FusedMatMul", "matmul", NodeStatus::kRemove}
       }
-    };
+    }); // Mul: output
 
-  utils::OpTypePattern gelu_approximate_pattern2 =
+  // Pattern 2:
+  //    Const:                      Emperical     1/sqrt(2)             1
+  //                                   \                 \               \
+  //  FusedMatMul --> Square --> Mul --> Mul --> AddV2 --> Mul --> Tanh --> AddV2  --> Mul
+  //           \\\_______________/              /                                    /
+  //            \\_____________________________/                                    /
+  //             \______________________________________________________________ Mul
+  //                                                                             /
+  //                                                                         Const: 1/2
+  gelu_approximate_patterns.push_back(
   {"Mul", "output", NodeStatus::kReplace,
     {
       {"Mul", "tanh_plus_one_times_one_half", NodeStatus::kRemove,
@@ -1080,7 +1108,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
           {"Const", "one_half", NodeStatus::kRemain},
           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
         }
-      },
+      }, // Mul: tanh_plus_one_times_one_half
       {"Add|AddV2", "tanh_plus_one", NodeStatus::kRemove,
         {
           {"Tanh", "tanh", NodeStatus::kRemove,
@@ -1093,34 +1121,99 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                       {"Mul", "mul", NodeStatus::kRemove,
                         {
                           {"Const", "empirical_const", NodeStatus::kRemain},
-                          // {"_FusedMatMul", "matmul", NodeStatus::kRemove},
                           {"Mul", "empirical_const_times_matmul", NodeStatus::kRemove,
                             {
                               {"_FusedMatMul", "matmul", NodeStatus::kRemove},
-                              // {"Const", "empirical_const", NodeStatus::kRemain},
                               {"Square", "square", NodeStatus::kRemove,
                                 {
                                   {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                 }
-                              }
+                              } // Square: square
                             }
-                          }
+                          } // Mul: empirical_const_times_matmul
                         }
-                      }
+                      } //Mul: mul
                     }
-                  },
+                  },// Add|AddV2: matmul_plus_mul
                   {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                 }
-              }
+              } // Mul: matmul_plus_mul_times_square_root_two_over_pi
             }
-          },
+          }, // Tanh: tanh
           {"Const", "one", NodeStatus::kRemain}
         }
-      }
+      } // Add|AddV2: tanh_plus_one
     }
-  };
+  }); // Mul: output
 
-  utils::OpTypePattern gelu_approximate_pattern_bf16 =
+  // Pattern 3:
+  //    Const:   ExpandDims                   Emperical        1/sqrt(2)       Const: 1    Const: 1/2
+  //                \                              \                 \                \         \
+  //  FusedMatMul --> Reshape --> Square --> Mul --> Mul --> AddV2 --> Mul --> Tanh --> AddV2 --> Mul --> Mul
+  //                      \\\_______________/              /                                            /
+  //                       \\_____________________________/                                            /
+  //                        \_________________________________________________________________________/
+  gelu_approximate_patterns.push_back(
+  {"Mul", "output", NodeStatus::kReplace,
+    {
+      {"Mul", "tanh_plus_one_times_one_half", NodeStatus::kRemove,
+        {
+          {"Add|AddV2", "tanh_plus_one", NodeStatus::kRemove,
+            {
+              {"Tanh", "tanh", NodeStatus::kRemove,
+                {
+                  {"Mul", "matmul_plus_mul_times_square_root_two_over_pi", NodeStatus::kRemove,
+                    {
+                      {"Add|AddV2", "matmul_plus_mul", NodeStatus::kRemove,
+                        {
+                          {"Reshape", "reshape", NodeStatus::kRemove},
+                          {"Mul", "mul", NodeStatus::kRemove,
+                            {
+                              {"Mul", "empirical_const_times_matmul", NodeStatus::kRemove,
+                                {
+                                  {"Reshape", "reshape", NodeStatus::kRemove,
+                                    {
+                                      {"_FusedMatMul", "matmul", NodeStatus::kRemove},
+                                      {"Cast|Const", "expand_dims", NodeStatus::kRemain}
+                                    }
+                                  }, // Reshape: reshape
+                                  {"Square", "square", NodeStatus::kRemove,
+                                    {
+                                      {"Reshape", "reshape", NodeStatus::kRemove}
+                                    }
+                                  } // Square: square
+                                }
+                              }, // Mul: empirical_const_times_matmul
+                              {"Const", "empirical_const", NodeStatus::kRemain}
+                            }
+                          } // Mul: mul
+                        }
+                      }, // Add|AddV2: matmul_plus_mul
+                      {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
+                    }
+                  } // Mul: matmul_plus_mul_times_square_root_two_over_pi
+                }
+              }, // Tanh: tanh
+              {"Const", "one", NodeStatus::kRemain}
+            }
+          }, // Add|AddV2: tanh_plus_one
+          {"Const", "one_half", NodeStatus::kRemain}
+        }
+      }, // Mul: tanh_plus_one_times_one_half
+      {"Reshape", "reshape", NodeStatus::kRemove}
+    }
+  }); // Mul: output
+
+  // Pattern BF16:
+  //    Const:                    Emperical                1/sqrt(2)                      1
+  //                                   \                         \                         \
+  //  FusedMatMul --> Cast --> Square --> Mul --> Mul --> AddV2 --> Mul --> Cast --> Tanh --> AddV2  --> Mul
+  //            \      \\\______________________/       /                                             /
+  //             \      \\_____________________________/                                             /
+  //              \______________________________________________________________________________ Mul
+  //                                                                                              /
+  //                                                                                          Const: 1/2
+  gelu_approximate_patterns.push_back(
   {"Mul", "output", NodeStatus::kReplace,
     {
       {"Mul", "tanh_plus_one_times_one_half", NodeStatus::kRemove,
@@ -1128,7 +1221,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
           {"Const", "one_half", NodeStatus::kRemain},
           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
         }
-      },
+      }, // Mul: tanh_plus_one_times_one_half
       {"AddV2", "tanh_plus_one", NodeStatus::kRemove,
         {
           {"Tanh", "tanh", NodeStatus::kRemove,
@@ -1143,14 +1236,14 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                             {
                               {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                             }
-                          },
+                          }, // Cast: cast
                           {"Mul", "mul", NodeStatus::kRemove,
                             {
                               {"Cast", "cast", NodeStatus::kRemove,
                                 {
                                   {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                 }
-                              },
+                              }, // Cast: cast
                               {"Mul", "empirical_const_times_matmul", NodeStatus::kRemove,
                                 {
                                   {"Const", "empirical_const", NodeStatus::kRemain},
@@ -1160,61 +1253,47 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                                         {
                                           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                         }
-                                      }
+                                      } // Cast: cast
                                     }
-                                  }
+                                  } // Square: square
                                 }
-                              }
+                              } // Mul: empirical_const_times_matmul
                             }
-                          }
+                          } // Mul: mul
                         }
-                      },
+                      }, // AddV2: matmul_plus_mul
                       {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                     }
-                  }
+                  } // Mul: matmul_plus_mul_times_square_root_two_over_pi
                 }
-              }
+              } // Cast: cast1
             }
-          },
+          }, // Tanh: tanh
           {"Const", "one", NodeStatus::kRemain}
         }
-      }
+      } // AddV2: tanh_plus_one
     }
-  };
+  }); // Mul: output
+
   // clang-format on
-  // TODO(plugin) : Re-configure gelu pattern find to work under a loop.
   // Find GeluApproximate
   if (!found_gelu_exact) {
-    // Gelu approximate uses Pow(x, 3). On GPU, it is a single Pow() node, but
-    // on CPU, it is optimized by arithmetic optimizer as Mul(x, Square(x)) with
-    // an arifact of control dependency. So we try to match pattern at second
-    // pass of remapper which recieves _FusedMatMul (MatMul + BiasAdd) with
-    // control dependency removed.
+    for (size_t pattern = 0; pattern < gelu_approximate_patterns.size();
+         pattern++) {
+      matched_nodes_map->clear();
+      remove_node_indices->clear();
+      if (graph_matcher.GetMatchedNodes(
+              gelu_approximate_patterns[pattern], ctx->nodes_to_preserve,
+              node_view, matched_nodes_map, remove_node_indices)) {
+        found_gelu_approximate = true;
+        found_pattern_index = pattern + 1;
+        break;
+      }
+    }
+    if (found_pattern_index == 3) *expand_dims = true;
+  }
 
-    // Find GeluApproximate
-    matched_nodes_map->clear();
-    remove_node_indices->clear();
-    found_gelu_approximate_pattern1 = graph_matcher.GetMatchedNodes(
-        gelu_approximate_pattern1, ctx->nodes_to_preserve, node_view,
-        matched_nodes_map, remove_node_indices);
-  }
-  if (!found_gelu_exact && !found_gelu_approximate_pattern1) {
-    matched_nodes_map->clear();
-    remove_node_indices->clear();
-    found_gelu_approximate_pattern2 = graph_matcher.GetMatchedNodes(
-        gelu_approximate_pattern2, ctx->nodes_to_preserve,
-        ctx->graph_view.GetNode(node_index), matched_nodes_map,
-        remove_node_indices);
-  }
-  if (!found_gelu_exact && !found_gelu_approximate_pattern1 &&
-      !found_gelu_approximate_pattern2) {
-    matched_nodes_map->clear();
-    remove_node_indices->clear();
-    found_gelu_approximate_pattern_bf16 = graph_matcher.GetMatchedNodes(
-        gelu_approximate_pattern_bf16, ctx->nodes_to_preserve,
-        ctx->graph_view.GetNode(node_index), matched_nodes_map,
-        remove_node_indices);
-  }
+  *is_gelu_approximate = found_gelu_approximate ? true : false;
   // Pattern matcher does subgraph matching based on op types only. The matcher
   // also does a sanity check on nodes tagged as `kRemove`, i.e., they do not
   // have any consumer outside the matched nodes. In order to replace the
@@ -1241,9 +1320,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
     std::map<string, float> values_map = {
         {"sqrt_one_half", 0.707106}, {"one", 1.0}, {"one_half", 0.5}};
     if (!VerifyConstants(ctx, matched_nodes_map, &values_map)) return false;
-  } else if (found_gelu_approximate_pattern1 ||
-             found_gelu_approximate_pattern2 ||
-             found_gelu_approximate_pattern_bf16) {
+  } else if (*is_gelu_approximate) {
     NodeDef* matmul_node =
         ctx->graph_view.GetNode(matched_nodes_map->at("matmul"))->node();
 
@@ -1273,14 +1350,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
     return false;
   }
 
-  *is_gelu_approximate =
-      (found_gelu_approximate_pattern1 || found_gelu_approximate_pattern2 ||
-       found_gelu_approximate_pattern_bf16)
-          ? true
-          : false;
-  return (found_gelu_exact || found_gelu_approximate_pattern1 ||
-          found_gelu_approximate_pattern2 ||
-          found_gelu_approximate_pattern_bf16);
+  return (found_gelu_exact || *is_gelu_approximate);
 }
 
 bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
