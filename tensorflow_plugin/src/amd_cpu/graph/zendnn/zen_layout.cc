@@ -102,6 +102,23 @@ const ZenFormatInfo* CheckForNodeZenFormat(
   return nullptr;
 }
 
+// Returns a pair of [in_links, out_links] attribute values.
+std::pair<int, int> GetLinksInfo(const NodeDef* node_def,
+                                 const NodeMap& node_map) {
+  std::pair<int, int> links_info;
+  // Non-control inputs also include const type inputs like "kernel" and "bias".
+  // For pluggable device, NodeDef can only provide name of the inputs, which
+  // makes it difficult to differentiate, as in_links is not used, it does not
+  // affect execution of mempool.
+  links_info.first = NumNonControlInputs(*node_def);
+  // Non-control outputs are correctly configured, but the graph provided to
+  // plugin, does not contain "_Retval" node at this phase, hence we increment
+  // the out_links value for the leaf nodes.
+  links_info.second = NumNonControlOutputs((*node_def), node_map);
+  if (links_info.second == 0) links_info.second++;
+  return links_info;
+}
+
 // Rewrites input node to a new node specified by its matching rewrite info.
 //
 // Method first searches matching rewrite info for input node and then
@@ -126,19 +143,9 @@ Status RewriteNode(ZenFormatContext* ctx, const int node_index,
 
   ri->copy_attrs(node_view, &new_node_def);
 
-  // Non-control inputs also include const type inputs like "kernel" and "bias".
-  // For pluggable device, NodeDef can only provide name of the inputs, which
-  // makes it difficult to differentiate, as in_links is not used, it does not
-  // affect execution of mempool.
-  int num_non_control_inputs = NumNonControlInputs(*node_def);
-  // Non-control outputs are correctly configured, but the graph provided to
-  // plugin, does not contain "_Retval" node at this phase, hence we increment
-  // the out_links value for the leaf nodes.
-  int num_non_control_outputs = NumNonControlOutputs((*node_def), node_map);
-  if (num_non_control_outputs == 0) num_non_control_outputs++;
-
-  AddNodeAttr("in_links", num_non_control_inputs, &new_node_def);
-  AddNodeAttr("out_links", num_non_control_outputs, &new_node_def);
+  std::pair<int, int> links_info = GetLinksInfo(node_def, node_map);
+  AddNodeAttr("in_links", links_info.first, &new_node_def);
+  AddNodeAttr("out_links", links_info.second, &new_node_def);
 
   // Incoming data edges from 'orig_node' node to new 'new_node' node are
   // already copied in BuildNode. We need to handle control edges now.
@@ -177,12 +184,21 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
   for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
     const auto* node_view = ctx.graph_view.GetNode(node_index);
     const auto* node_def = node_view->node();
+    const std::string op_name = node_def->op();
     // Check if node can run on current optimizer device.
     if (!NodeIsOnDevice(device_name, node_def)) continue;
     // Don't rewrite fetch node because must keep its name unchanged.
     const ZenFormatInfo* ri = nullptr;
-    // We will first search if node is to be rewritten.
-    if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
+    // Check if its the second pass of model.
+    auto found = regex_search(op_name, std::regex("^_Zen"));
+    if (found) {  // In second pass, only update the Zen specfic attributes.
+      std::pair<int, int> links_info = GetLinksInfo(node_def, node_map);
+      const AttrValue* in_links = node_view->GetAttr("in_links");
+      const AttrValue* out_links = node_view->GetAttr("out_links");
+      SetAttrValue(links_info.first, const_cast<AttrValue*>(in_links));
+      SetAttrValue(links_info.second, const_cast<AttrValue*>(out_links));
+    } else if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
+      // We will first search if node is to be rewritten.
       const string& node_name = node_def->name();
       const string& op_name = node_def->op();
 

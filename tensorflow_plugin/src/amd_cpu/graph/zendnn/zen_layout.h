@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -23,6 +23,7 @@ limitations under the License.
 
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "protos/graph.pb.h"
@@ -61,6 +62,9 @@ typedef struct {
   // A rule under which to rewrite this node.
   std::function<bool(const utils::MutableNodeView&)> rewrite_rule;
 } ZenFormatInfo;
+
+std::pair<int, int> GetLinksInfo(const NodeDef* node_def,
+                                 const NodeMap& node_map);
 
 const ZenFormatInfo* CheckForNodeZenFormat(
     const utils::MutableNodeView& node_view);
