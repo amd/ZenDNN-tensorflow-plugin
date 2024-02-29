@@ -23,6 +23,7 @@ limitations under the License.
 
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/matmul_bcast.h"
@@ -36,7 +37,7 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 
 // The second parameter v2_bcast is set to true if we are using V2 otherwise we
 // set it to false.
-template <typename Scalar, bool v2_bcast, bool is_mul_add_fusion_enabled>
+template <typename Scalar, bool v2_bcast, bool fusion_enabled>
 class ZenBatchMatMulOp : public OpKernel {
  public:
   virtual ~ZenBatchMatMulOp() {}
@@ -46,6 +47,19 @@ class ZenBatchMatMulOp : public OpKernel {
 
     OP_REQUIRES_OK(context, context->GetAttr("adj_x", &adj_x_));
     OP_REQUIRES_OK(context, context->GetAttr("adj_y", &adj_y_));
+
+    std::vector<FusedComputationPattern> patterns;
+    if (fusion_enabled) {
+      using FCT = FusedComputationType;
+
+      patterns = {{FCT::kBinaryMul, {"BinaryMul"}},
+                  {FCT::kBinaryMulAdd, {"BinaryMul", "Add"}}};
+
+      OP_REQUIRES_OK(context,
+                     InitializeFusedComputation(context, "_ZenBatchMatMul",
+                                                patterns, &fused_computation_,
+                                                &fused_computation_args_));
+    }
   }
 
   void Compute(OpKernelContext *context) override {
@@ -222,21 +236,34 @@ class ZenBatchMatMulOp : public OpKernel {
 
       bool cblasRowMajor = 1;
       float mul_node = 1;
-      if (is_mul_add_fusion_enabled) {
+
+      if (fusion_enabled) {
+        // BatchMatMul + Mul
         const Tensor &mul_tensor = context->input(2);
-        const Tensor &add_tensor = context->input(3);
         mul_node = mul_tensor.flat<float>().data()[0];
-        auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
-        for (int64 i = 0; i < out->dim_size(0); i++) {
-          add_array.push_back(&add_reshaped(i, 0, 0));
+        if (fused_computation_ == FusedComputationType::kBinaryMulAdd) {
+          // BatchmatMul + Mul + Add
+          const Tensor &add_tensor = context->input(3);
+          auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
+          for (int64 i = 0; i < out->dim_size(0); i++) {
+            add_array.push_back(&add_reshaped(i, 0, 0));
+          }
         }
       }
+      // BinaryMul Fusion is mapped to Fusion 1
+      // MulAdd Fusion is mapped to Fusion 2
+      int fusion =
+          ((fused_computation_ == FusedComputationType::kBinaryMul)
+               ? 1
+               : ((fused_computation_ == FusedComputationType::kBinaryMulAdd)
+                      ? 2
+                      : 0));
+
       zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
                      &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
                      &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                     &ldc_array[0], 1, &group_size[0],
-                     is_mul_add_fusion_enabled, &add_array[0], mul_node,
-                     out->dim_size(0));
+                     &ldc_array[0], 1, &group_size[0], fusion, &add_array[0],
+                     mul_node, out->dim_size(0));
 
       // If ZenMemPool Optimization is enabled(default), update the state of
       // memory pool based on input_array address.
@@ -367,41 +394,59 @@ class ZenBatchMatMulOp : public OpKernel {
 
       zendnn::primitive_attr matmul_attr;
 
-      if (is_mul_add_fusion_enabled) {
+      if (fusion_enabled) {
+        // Mul PostOp for BatchMatMul
         const Tensor &mul_tensor = context->input(2);
-        const Tensor &add_tensor = context->input(3);
         Scalar *mul_arr =
             const_cast<Scalar *>(mul_tensor.flat<Scalar>().data());
-        Scalar *add_arr =
-            const_cast<Scalar *>(add_tensor.flat<Scalar>().data());
         memory::dims mul_dims = {1, 1, 1, 1};
-        memory::dims add_dims = {add_tensor.dim_size(0), add_tensor.dim_size(1),
-                                 add_tensor.dim_size(2),
-                                 add_tensor.dim_size(3)};
         zendnn::post_ops post_ops;
         post_ops.append_binary(algorithm::binary_mul,
                                memory::desc({mul_dims}, dt::bf16, tag::abcd));
-        post_ops.append_binary(algorithm::binary_add,
-                               memory::desc({add_dims}, dt::bf16, tag::abcd));
+
+        zendnn::memory postop_memory1, postop_memory2;
+        postop_memory1 =
+            memory({{mul_dims}, dt::bf16, tag::abcd}, eng, mul_arr);
+
+        if (fused_computation_ == FusedComputationType::kBinaryMulAdd) {
+          // Add PostOp for BatchMatMul
+          const Tensor &add_tensor = context->input(3);
+          Scalar *add_arr =
+              const_cast<Scalar *>(add_tensor.flat<Scalar>().data());
+          memory::dims add_dims = {
+              add_tensor.dim_size(0), add_tensor.dim_size(1),
+              add_tensor.dim_size(2), add_tensor.dim_size(3)};
+          post_ops.append_binary(algorithm::binary_add,
+                                 memory::desc({add_dims}, dt::bf16, tag::abcd));
+          postop_memory2 =
+              memory({{add_dims}, dt::bf16, tag::abcd}, eng, add_arr);
+        }
         matmul_attr.set_post_ops(post_ops);
+
         zendnn::matmul::desc matmul_pd1 =
             zendnn::matmul::desc(src_md, matmul_weights_md, dst_md);
         zendnn::matmul::primitive_desc matmul_pd =
             zendnn::matmul::primitive_desc(matmul_pd1, matmul_attr, eng);
         net.push_back(zendnn::matmul(matmul_pd));
-        zendnn::memory postop_memory1, postop_memory2;
-        postop_memory1 =
-            memory({{mul_dims}, dt::bf16, tag::abcd}, eng, mul_arr);
-        postop_memory2 =
-            memory({{add_dims}, dt::bf16, tag::abcd}, eng, add_arr);
-        net_args.push_back(
-            {{ZENDNN_ARG_SRC, src_memory},
-             {ZENDNN_ARG_WEIGHTS, user_weights_memory},
-             {ZENDNN_ARG_DST, dst_memory},
-             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
-              postop_memory1},
-             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(1) | ZENDNN_ARG_SRC_1,
-              postop_memory2}});
+        if (fused_computation_ == FusedComputationType::kBinaryMul) {
+          // BatchMatMul + Mul
+          net_args.push_back(
+              {{ZENDNN_ARG_SRC, src_memory},
+               {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+               {ZENDNN_ARG_DST, dst_memory},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
+                postop_memory1}});
+        } else {
+          // BatchMatMul + Mul + Add
+          net_args.push_back(
+              {{ZENDNN_ARG_SRC, src_memory},
+               {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+               {ZENDNN_ARG_DST, dst_memory},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
+                postop_memory1},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(1) | ZENDNN_ARG_SRC_1,
+                postop_memory2}});
+        }
       } else {
         zendnn::matmul::desc matmul_pd1 =
             zendnn::matmul::desc(src_md, matmul_weights_md, bias_md, dst_md);
@@ -440,6 +485,8 @@ class ZenBatchMatMulOp : public OpKernel {
   //
   // Tensor to hold output buffer memory.
   Tensor cached_data_ TF_GUARDED_BY(mu_);
+  FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
+  FusedComputationArgs fused_computation_args_;
 };
 #define REGISTER_BATCH_MATMUL_KERNELS(TYPE)                                   \
   REGISTER_KERNEL_BUILDER(                                                    \

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -55,7 +55,9 @@ enum class FusedComputationType {
   kFusedBatchNormWithRelu,
   kFusedBatchNormWithRelu6,
   kFusedBatchNormWithElu,
-  kFusedBatchNormWithLeakyRelu
+  kFusedBatchNormWithLeakyRelu,
+  kBinaryMul,
+  kBinaryMulAdd
 };
 
 // We have to pass around additional arguments for all possible fusion types.

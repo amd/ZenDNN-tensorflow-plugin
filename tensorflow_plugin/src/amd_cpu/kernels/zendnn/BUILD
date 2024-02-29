@@ -103,6 +103,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":fill_functor",
+        ":fused_eigen_output_kernels",
         ":zen_kernel_common",
         ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",

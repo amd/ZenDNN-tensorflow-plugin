@@ -208,6 +208,17 @@ struct KerasDenseLayerFwd {
   int activation = kMissingIndex;
 };
 
+// BatchMatMul + Mul fusion
+struct ContractionWithMul {
+  ContractionWithMul() = default;
+  ContractionWithMul(int contraction, int mul, int scalar)
+      : contraction(contraction), mul(mul), scalar(scalar) {}
+
+  int contraction = kMissingIndex;
+  int mul = kMissingIndex;
+  int scalar = kMissingIndex;
+};
+
 bool IsAddWithNoBroadcast(const RemapperContext& ctx, const NodeDef& node) {
   if (!IsAdd(node)) return false;
 
@@ -304,6 +315,25 @@ bool IsBiasSemanticAdd(const RemapperContext& ctx,
     return false;
 
   return is_supported_shape(contraction_shape, bias_shape);
+}
+
+// Returns 0: left input scalar, 1: right input scalar, -1: no scalar inputs
+int GetMulScalarInputIndex(const RemapperContext& ctx,
+                           const NodeDef& node_def) {
+  std::vector<OpInfo_TensorProperties> props;
+  TF_ABORT_IF_ERROR(
+      ctx.graph_properties.GetInputProperties(node_def.name(), &props));
+  if (props.size() != 2) return -1;
+
+  bool left_is_scalar = IsScalar(props[0].shape());
+  bool right_is_scalar = IsScalar(props[1].shape());
+  if (left_is_scalar) {
+    return 0;
+  } else if (right_is_scalar) {
+    return 1;
+  } else {
+    return -1;
+  }
 }
 
 // The function to set shapes is used in TF Proper's fused op creation
@@ -809,8 +839,7 @@ inline bool VerifyConstants(RemapperContext* ctx,
       TF_CHECK_OK(GetTensorFromConstant(node_def, &const_tensor));
       if (const_tensor.NumElements() == 1) {
         DataType dtype = const_tensor.dtype();
-        if (!(dtype == DT_FLOAT || dtype == DT_BFLOAT16 || dtype == DT_HALF))
-          return false;
+        if (!(dtype == DT_FLOAT || dtype == DT_BFLOAT16)) return false;
         auto const_value = (dtype == DT_FLOAT)
                                ? const_tensor.flat<float>()(0)
                                : const_tensor.flat<Eigen::bfloat16>()(0);
@@ -1486,6 +1515,55 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   return found_op_type_match;
 }
 
+// Fuse BatchMatMul and Mul into FusedBatchMatmul if the other input of
+// Mul is a scalar. For example, we can optimize
+/*
+              Mul
+             /  \
+    BatchMatMul scale*  ->       FusedBatchMatmul
+       /   \                     /      |       \
+   input1  input2             input1  input2   scale
+*/
+// *) scale must be a scalar
+
+bool FindContractionWithMul(const RemapperContext& ctx, int node_index,
+                            ContractionWithMul* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  if (HasControlFaninOrFanout(*node_view)) return false;
+
+  const auto* node_def = node_view->node();
+  if (!IsAnyMul(*node_def)) return false;
+  // Mul has two inputs, one input should be scalar
+  int scalar_input_index = GetMulScalarInputIndex(ctx, *node_def);
+  if (scalar_input_index == -1) return false;
+
+  auto* const_node_view =
+      node_view->GetRegularFanin(scalar_input_index).node_view();
+  auto* contraction_node_view =
+      node_view->GetRegularFanin(1 - scalar_input_index).node_view();
+
+  auto* contraction_node_def = contraction_node_view->node();
+  if (!IsAnyBatchMatMul(*contraction_node_def)) return false;
+  auto* const_node_def = const_node_view->node();
+  if (!IsAnyConst(*const_node_def)) return false;
+
+  //  TODO(plugin) : Provide support for different datatypes, Ex: DT_BFLOAT16
+  if (!(HasDataType(node_def, DT_FLOAT))) return false;
+
+  if (!HaveSameDataType(node_def, contraction_node_def) ||
+      HasControlFaninOrFanout(*contraction_node_view) ||
+      !HasAtMostOneFanoutAtPort0(*contraction_node_view) ||
+      IsInPreserveSet(ctx, contraction_node_def))
+    return false;
+
+  const ContractionWithMul pattern{contraction_node_view->node_index(),
+                                   node_index, const_node_view->node_index()};
+
+  *matched = pattern;
+
+  return true;
+}
+
 void CopyBatchMatMulAttributes(const NodeDef& batchmatmul,
                                NodeDef* fused_batch_matmul) {
   DCHECK(IsAnyBatchMatMul(batchmatmul)) << "Input node must be a BatchMatMul";
@@ -2040,6 +2118,38 @@ Status AddPadWithContractionNode(RemapperContext* ctx,
   return OkStatus();
 }
 
+// Contraction + Mul(scale).
+Status AddFusedContractionNode(RemapperContext* ctx,
+                               const ContractionWithMul& matched,
+                               std::vector<bool>* invalidated_nodes,
+                               std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& contraction = graph->node(matched.contraction);
+  const NodeDef& mul = graph->node(matched.mul);
+  const NodeDef& scalar = graph->node(matched.scalar);
+
+  NodeDef fused_op;
+  fused_op.set_name(mul.name());
+  fused_op.set_device(contraction.device());
+  fused_op.add_input(contraction.input(0));  // 0: input
+  fused_op.add_input(contraction.input(1));  // 1: filter
+  fused_op.add_input(scalar.name());         // 2: scale
+  fused_op.set_op(kFusedBatchMatMulV2);
+
+  CopyBatchMatMulAttributes(contraction, &fused_op);
+  SetFusedOpAttributes(&fused_op, {kBinaryMul}, 1);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_op), &status);
+  TF_ABORT_IF_ERROR(status);
+  TF_ABORT_IF_ERROR(mutation->Apply());
+
+  (*invalidated_nodes)[matched.mul] = true;
+  (*nodes_to_delete)[matched.contraction] = true;
+  return Status::OK();
+}
+
 Status AddFusedMatMulBiasAddAndGelu(
     RemapperContext* ctx, const std::map<string, int>& matched_nodes_map,
     const std::set<int>& remove_node_indices,
@@ -2104,13 +2214,13 @@ Status AddFusedBatchMatMul(RemapperContext* ctx,
   // Note: The op and kernel definition for the "_FusedBatchMatMulV2" op is not
   // present. We are sure that it will be rewritten with
   // "_ZenFusedBatchMatMulV2" from zen layout pass.
-  fused_node.set_op("_FusedBatchMatMulV2");
+  fused_node.set_op(kFusedBatchMatMulV2);
 
   fused_node.set_device(batch_matmul_node->device());
   for (const auto& name : input_node_names) fused_node.add_input(name);
 
   CopyBatchMatMulAttributes(*batch_matmul_node, &fused_node);
-  SetFusedOpAttributes(&fused_node, {"Mul", "Add"}, /*num_args=*/2);
+  SetFusedOpAttributes(&fused_node, {kBinaryMul, kAdd}, /*num_args=*/2);
 
   utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
   Status status;
@@ -2265,6 +2375,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         continue;
       }
 
+      // Remap BatchMatMul + Mul into the _FusedBatchMatMul.
+      ContractionWithMul contract_with_mul;
+      if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found BatchMatMul pattern with BinaryMul.");
+        AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
+                                &nodes_to_delete);
+        continue;
+      }
+
       // Remap MatMul + BiasAdd + gelu-subgraph.
       std::map<string, int> matched_nodes_map;
       std::set<int> remove_node_indices;
@@ -2288,7 +2407,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       input_node_names.clear();
       if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
                                &remove_node_indices, &input_node_names)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found _FusedBatchMatMul.");
+        zendnnInfo(ZENDNN_FWKLOG,
+                   " Found BatchMatMul pattern with BinaryMul and Add.");
         TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
             &ctx, matched_nodes_map, remove_node_indices, input_node_names,
             &invalidated_nodes, &nodes_to_delete));
