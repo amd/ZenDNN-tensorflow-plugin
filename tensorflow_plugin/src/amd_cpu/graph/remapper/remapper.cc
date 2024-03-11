@@ -835,16 +835,32 @@ inline bool VerifyConstants(RemapperContext* ctx,
     MutableNodeView* node_view = ctx->graph_view.GetNode(node_idx);
     NodeDef* node_def = node_view->node();
     Tensor const_tensor;
-    if (node_def != nullptr && node_def->op() == "Const") {
-      TF_CHECK_OK(GetTensorFromConstant(node_def, &const_tensor));
-      if (const_tensor.NumElements() == 1) {
-        DataType dtype = const_tensor.dtype();
-        if (!(dtype == DT_FLOAT || dtype == DT_BFLOAT16)) return false;
-        auto const_value = (dtype == DT_FLOAT)
-                               ? const_tensor.flat<float>()(0)
-                               : const_tensor.flat<Eigen::bfloat16>()(0);
-        // To compare float.
-        if (std::abs(const_value - it->second) > 1e-2f) return false;
+
+    // Check if node is Const or Cast.
+    if (node_def != nullptr &&
+        (node_def->op() == "Cast" || node_def->op() == "Const")) {
+      // If node is a Cast, look for Const in fan-ins.
+      if (node_def->op() == "Cast") {
+        const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+        const auto* regular_node_view = regular_fanin_0.node_view();
+        node_def = regular_node_view->node();
+      }
+      // Verify if the node is a constant.
+      if (node_def->op() == "Const") {
+        TF_CHECK_OK(GetTensorFromConstant(node_def, &const_tensor));
+        if (const_tensor.NumElements() == 1) {
+          DataType dtype = const_tensor.dtype();
+          if (!(dtype == DT_FLOAT || dtype == DT_BFLOAT16)) return false;
+          auto const_value = (dtype == DT_FLOAT)
+                                 ? const_tensor.flat<float>()(0)
+                                 : const_tensor.flat<Eigen::bfloat16>()(0);
+          // To compare float.
+          if (std::abs(const_value - it->second) > 1e-2f) {
+            return false;
+          }
+        } else {
+          return false;
+        }
       } else {
         return false;
       }
@@ -1213,20 +1229,20 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                                   } // Square: square
                                 }
                               }, // Mul: empirical_const_times_matmul
-                              {"Const", "empirical_const", NodeStatus::kRemain}
+                              {"Cast|Const", "empirical_const", NodeStatus::kRemain}
                             }
                           } // Mul: mul
                         }
                       }, // Add|AddV2: matmul_plus_mul
-                      {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
+                      {"Cast|Const", "square_root_two_over_pi", NodeStatus::kRemain}
                     }
                   } // Mul: matmul_plus_mul_times_square_root_two_over_pi
                 }
               }, // Tanh: tanh
-              {"Const", "one", NodeStatus::kRemain}
+              {"Cast|Const", "one", NodeStatus::kRemain}
             }
           }, // Add|AddV2: tanh_plus_one
-          {"Const", "one_half", NodeStatus::kRemain}
+          {"Cast|Const", "one_half", NodeStatus::kRemain}
         }
       }, // Mul: tanh_plus_one_times_one_half
       {"Reshape", "reshape", NodeStatus::kRemove}
