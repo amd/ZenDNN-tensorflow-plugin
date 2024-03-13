@@ -15,14 +15,16 @@
 #
 # ******************************************************************************
 
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
-import numpy as np
+import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
+a = tf.random.normal(shape=[24, 8], dtype=tf.float32, seed=5)
+b = tf.random.normal(shape=[8, 24], dtype=tf.float32, seed=5)
 
-model = Sequential()
-model.add(Dense(16, input_shape=(8, 8)))
+with tf.device("/CPU:0"):
+  c = tf.matmul(a=a, b=b)
 
-model.summary()
-x = np.random.rand(1, 8, 8)
-model_out = model.predict(x)
-print('Model output shape:', model_out.shape)
+sess = tf.compat.v1.Session(
+    config=tf.compat.v1.ConfigProto(
+        allow_soft_placement=False,
+        log_device_placement=True))
+print(sess.run(c))
