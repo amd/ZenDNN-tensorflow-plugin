@@ -209,11 +209,11 @@ class ZenBatchMatMulOp : public OpKernel {
       std::vector<const float *> a_array;
       std::vector<const float *> b_array;
       std::vector<float *> c_array;
-      std::vector<const float *> add_array;
+      std::vector<int> add_shape;
+      std::vector<const float *> add_array(out->dim_size(0), nullptr);
       a_array.reserve(batch_size);
       b_array.reserve(batch_size);
       c_array.reserve(batch_size);
-      add_array.reserve(out->dim_size(0));
 
       if (!bcast.IsBroadcastingRequired()) {
         for (int64 i = 0; i < batch_size; i++) {
@@ -235,7 +235,7 @@ class ZenBatchMatMulOp : public OpKernel {
       }
 
       bool cblasRowMajor = 1;
-      float mul_node = 1;
+      float mul_node = 1.0f;
 
       if (fusion_enabled) {
         // BatchMatMul + Mul
@@ -245,25 +245,19 @@ class ZenBatchMatMulOp : public OpKernel {
           // BatchmatMul + Mul + Add
           const Tensor &add_tensor = context->input(3);
           auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
+          add_shape = {add_reshaped.dimension(0), add_reshaped.dimension(1),
+                       add_reshaped.dimension(2)};
           for (int64 i = 0; i < out->dim_size(0); i++) {
-            add_array.push_back(&add_reshaped(i, 0, 0));
+            add_array[i] = &add_reshaped(i, 0, 0);
           }
         }
       }
-      // BinaryMul Fusion is mapped to Fusion 1
-      // MulAdd Fusion is mapped to Fusion 2
-      int fusion =
-          ((fused_computation_ == FusedComputationType::kBinaryMul)
-               ? 1
-               : ((fused_computation_ == FusedComputationType::kBinaryMulAdd)
-                      ? 2
-                      : 0));
 
       zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
                      &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
                      &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                     &ldc_array[0], 1, &group_size[0], fusion, &add_array[0],
-                     mul_node, out->dim_size(0));
+                     &ldc_array[0], 1, &group_size[0], &add_array[0],
+                     &add_shape[0], mul_node, out->dim_size(0));
 
       // If ZenMemPool Optimization is enabled(default), update the state of
       // memory pool based on input_array address.
