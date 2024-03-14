@@ -175,12 +175,18 @@ class ZenBatchMatMulOp : public OpKernel {
         }
       } else if (zen_enable_mempool) {
         // Caching the output buffer and reusing it with persistent tensor.
-        int res = cached_data_.NumElements();
+        int res = cached_buffer_.NumElements();
+        Status state = OkStatus();
         if (res <= 0 || res != out_shape.num_elements()) {
-          context->allocate_temp(DataType::DT_FLOAT, out_shape, &cached_data_);
+          state = context->allocate_temp(DataType::DT_FLOAT, out_shape,
+                                         &cached_buffer_);
         }
-        out = &cached_data_;
-        context->set_output(0, *out);
+        if (state != OkStatus()) {
+          zen_enable_mempool = 0;
+        } else {
+          out = &cached_buffer_;
+          context->set_output(0, *out);
+        }
       }
       if (!zen_enable_mempool) {
         OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &out));
@@ -338,13 +344,18 @@ class ZenBatchMatMulOp : public OpKernel {
           zen_enable_mempool = false;
         }
       } else if (zen_enable_mempool) {
-        int res = cached_data_.NumElements();
+        int res = cached_buffer_.NumElements();
+        Status state = OkStatus();
         if (res <= 0 || res != out_shape.num_elements()) {
-          context->allocate_temp(DataType::DT_BFLOAT16, out_shape,
-                                 &cached_data_);
+          state = context->allocate_temp(DataType::DT_BFLOAT16, out_shape,
+                                         &cached_buffer_);
         }
-        output = &cached_data_;
-        context->set_output(0, *output);
+        if (state != OkStatus()) {
+          zen_enable_mempool = 0;
+        } else {
+          output = &cached_buffer_;
+          context->set_output(0, *output);
+        }
       }
       if (!zen_enable_mempool) {
         // Output tensor is of the following dimensions:
@@ -485,7 +496,7 @@ class ZenBatchMatMulOp : public OpKernel {
   // cases where a valid mutex expression cannot be specified.
   //
   // Tensor to hold output buffer memory.
-  Tensor cached_data_ TF_GUARDED_BY(mu_);
+  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;
 };

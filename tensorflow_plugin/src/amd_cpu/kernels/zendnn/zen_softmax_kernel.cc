@@ -116,12 +116,17 @@ class ZenSoftmaxOp : public OpKernel {
       DataType out_type =
           (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
       // Caching the output buffer and reusing it with persistent tensor.
-      int res = cached_data_.NumElements();
+      int res = cached_buffer_.NumElements();
+      Status state = OkStatus();
       if (res <= 0 || res != out_shape.num_elements()) {
-        context->allocate_temp(out_type, out_shape, &cached_data_);
+        state = context->allocate_temp(out_type, out_shape, &cached_buffer_);
       }
-      output = &cached_data_;
-      context->set_output(0, *output);
+      if (state != OkStatus()) {
+        zen_enable_mempool = 0;
+      } else {
+        output = &cached_buffer_;
+        context->set_output(0, *output);
+      }
     }
     if (!zen_enable_mempool) {
       OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
@@ -208,7 +213,7 @@ class ZenSoftmaxOp : public OpKernel {
   // cases where a valid mutex expression cannot be specified.
   //
   // Tensor to hold output buffer memory.
-  Tensor cached_data_ TF_GUARDED_BY(mu_);
+  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
 };
 
 #define REGISTER_SOFTMAX_KERNELS(TYPE)                                  \
