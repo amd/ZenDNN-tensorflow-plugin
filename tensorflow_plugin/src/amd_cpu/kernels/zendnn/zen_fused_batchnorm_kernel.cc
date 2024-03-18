@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -150,18 +150,6 @@ class ZenFusedBatchNormOp : public OpKernel {
     int inp_cols =
         tf_shape_src.dim_size(GetTensorDimIndex(tensor_format_, 'W'));
 
-    zendnnEnv zen_env_obj = readEnv();
-    bool blocked = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 &&
-                   !zendnn_params_.is_eager;
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
-
-    if (inp_depth % 8 != 0 && blocked && !blocked_nhwc) {
-      OP_REQUIRES_OK(
-          context,
-          errors::Internal("ZENDNN_BLOCKED_FORMAT not supported for this "
-                           "model, Please use another data format."));
-    }
-
     // Set src memory descriptor.
     memory::dims src_dims =
         memory::dims({inp_batch, inp_depth, inp_rows, inp_cols});
@@ -237,6 +225,7 @@ class ZenFusedBatchNormOp : public OpKernel {
     // Allocate output (dst) tensor.
     TensorShape tf_shape_dst = tf_shape_src;
 
+    zendnnEnv zen_env_obj = readEnv();
     int zen_enable_mempool =
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
     ZenMemoryPool<T> *zen_pool_buffer;

@@ -91,16 +91,9 @@ class ZenConv2DOp : public OpKernel {
     // Output tensor
     Tensor* output = nullptr;
     zendnnEnv zen_env_obj = readEnv();
-    bool blocked = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 &&
-                   !zendnn_params_.is_eager;
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
-
-    if (dimensions.out_depth % 8 != 0 && blocked && !blocked_nhwc) {
-      OP_REQUIRES_OK(context,
-                     errors::Internal(
-                         "ZENDNN_BLOCKED_FORMAT not supported for this model, "
-                         "Please use another data format."));
-    }
+    // Both DIRECT settings will follow NHWC_BLOCKED path.
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
     int zen_enable_mempool =
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
@@ -138,7 +131,7 @@ class ZenConv2DOp : public OpKernel {
 
     T* bias_arr = nullptr;
 
-    if (!(is_depthwise || blocked || blocked_nhwc)) {
+    if (!(is_depthwise || blocked_nhwc)) {
       OP_REQUIRES(context, is_input_float,
                   errors::Unimplemented(
                       "ZenDNN GEMM path only supported for FP32 data type"));
@@ -160,7 +153,7 @@ class ZenConv2DOp : public OpKernel {
           output_array, dimensions.out_rows, dimensions.out_cols,
           zendnn_params_.is_eager, zendnn_params_.reorder_before,
           zendnn_params_.reorder_after, &(cached_filter_data_), context);
-    } else if (blocked || blocked_nhwc) {
+    } else if (blocked_nhwc) {
       ZenConvolution2DBiasOrRelu<T>(
           eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
           dimensions.input_rows, dimensions.input_cols, filter_array,

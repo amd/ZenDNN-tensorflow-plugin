@@ -103,16 +103,6 @@ class ZenFusedConv2DOp : public OpKernel {
     // Output tensor
     Tensor* output = nullptr;
     zendnnEnv zen_env_obj = readEnv();
-    bool blocked = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 &&
-                   !zendnn_params_.is_eager;
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
-
-    if (dimensions.out_depth % 8 != 0 && blocked && !blocked_nhwc) {
-      OP_REQUIRES_OK(context,
-                     errors::Internal(
-                         "ZENDNN_BLOCKED_FORMAT not supported for this model, "
-                         "Please use another data format."));
-    }
 
     int zen_enable_mempool =
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;

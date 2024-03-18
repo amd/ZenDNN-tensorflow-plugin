@@ -163,22 +163,15 @@ class ZenPoolOp : public OpKernel {
       padding_w_right = total_pad_w - padding_w_left;
     }
 
-    bool blocked = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 &&
-                   !zendnn_params_.is_eager;
-
-    // Check for the BF16 support on the machine.
     if (!is_input_float) {
+      // Check for the BF16 support on the machine.
       bool result = tensorflow::port::TestCPUFeature(
           tensorflow::port::CPUFeature::AVX512F);
       OP_REQUIRES(
           context, result,
           errors::Internal(
               "BF16 AVX512 instruction set is not supported in the machine."));
-    }
 
-    if (blocked || !is_input_float) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "_ZenPool (TF kernel): New API for BLOCKED POOLING _ZenPool");
       using tag = memory::format_tag;
       using dt = memory::data_type;
       ZenExecutor *ex = ex->getInstance();
@@ -186,7 +179,6 @@ class ZenPoolOp : public OpKernel {
       stream s = ex->getStream();
       std::vector<primitive> net;
       std::vector<std::unordered_map<int, memory>> net_args;
-      auto dtype = std::is_same<T, float>::value ? dt::f32 : dt::bf16;
 
       memory::dim out_height, out_width;
       out_height = (params.tensor_in_rows - params.window_rows + padding_h_top +
@@ -207,41 +199,15 @@ class ZenPoolOp : public OpKernel {
       memory::dims pool_padding_l = {padding_h_top, padding_w_left};
       memory::dims pool_padding_r = {padding_h_bottom, padding_w_right};
 
-      memory pool_src_memory;
-      memory pool_dst_memory, pool_dst_memory_new;
+      memory pool_src_memory = memory({{pool_src_tz}, dt::bf16, tag::nhwc}, eng,
+                                      const_cast<T *>(input_array));
+      memory pool_dst_memory = memory({{pool_dst_tz}, dt::bf16, tag::nhwc}, eng,
+                                      reinterpret_cast<T *>(output_array));
 
-      if (zendnn_params_.reorder_before || !is_input_float) {
-        pool_src_memory = memory({{pool_src_tz}, dtype, tag::nhwc}, eng,
-                                 const_cast<T *>(input_array));
-      } else {
-        pool_src_memory = memory({{pool_src_tz}, dtype, tag::aBcd8b}, eng,
-                                 const_cast<T *>(input_array));
-      }
-
-      if (!is_input_float) {
-        pool_dst_memory = memory({{pool_dst_tz}, dtype, tag::nhwc}, eng,
-                                 reinterpret_cast<T *>(output_array));
-        pool_dst_memory_new = memory({{pool_dst_tz}, dtype, tag::nhwc}, eng,
-                                     reinterpret_cast<T *>(output_array));
-      } else if (zendnn_params_.reorder_after) {
-        pool_dst_memory = memory({{pool_dst_tz}, dtype, tag::aBcd8b}, eng);
-        pool_dst_memory_new = memory({{pool_dst_tz}, dtype, tag::nhwc}, eng,
-                                     reinterpret_cast<T *>(output_array));
-      } else {
-        pool_dst_memory = memory({{pool_dst_tz}, dtype, tag::aBcd8b}, eng,
-                                 reinterpret_cast<T *>(output_array));
-        pool_dst_memory_new = memory({{pool_dst_tz}, dtype, tag::aBcd8b}, eng,
-                                     reinterpret_cast<T *>(output_array));
-      }
-
-      memory::desc pool_src_md, pool_dst_md;
-      if (is_input_float) {
-        pool_src_md = memory::desc({pool_src_tz}, dtype, tag::aBcd8b);
-        pool_dst_md = memory::desc({pool_dst_tz}, dtype, tag::aBcd8b);
-      } else {
-        pool_src_md = memory::desc({pool_src_tz}, dtype, tag::nhwc);
-        pool_dst_md = memory::desc({pool_dst_tz}, dtype, tag::nhwc);
-      }
+      memory::desc pool_src_md =
+          memory::desc({pool_src_tz}, dt::bf16, tag::nhwc);
+      memory::desc pool_dst_md =
+          memory::desc({pool_dst_tz}, dt::bf16, tag::nhwc);
 
       algorithm pooling_algo =
           is_maxpool ? algorithm::pooling_max : algorithm::pooling_avg;
@@ -256,11 +222,6 @@ class ZenPoolOp : public OpKernel {
       memory pool1_src_memory = pool_src_memory;
       if (pool_pd.src_desc() != pool_src_memory.get_desc()) {
         pool1_src_memory = memory(pool_pd.src_desc(), eng);
-        if (zendnn_params_.reorder_before) {
-          net.push_back(reorder(pool_src_memory, pool1_src_memory));
-          net_args.push_back({{ZENDNN_ARG_SRC, pool_src_memory},
-                              {ZENDNN_ARG_DST, pool1_src_memory}});
-        }
       }
 
       net.push_back(pooling_forward(pool_pd));
@@ -272,14 +233,8 @@ class ZenPoolOp : public OpKernel {
       for (size_t i = 0; i < net.size(); ++i) {
         net.at(i).execute(s, net_args.at(i));
       }
-      if (zendnn_params_.reorder_after) {
-        reorder(pool_dst_memory, pool_dst_memory_new)
-            .execute(s, pool_dst_memory, pool_dst_memory_new);
-      }
     } else {
-      // TODO(ZenDNN): Create ZenDNN API for ZenDNN Library pooling.
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "_ZenPool (TF kernel): New API for NHWC POOLING _ZenPool");
+      // TODO(zendnn): Create ZenDNN API for ZenDNN Library pooling.
       if (is_maxpool) {
         max_pooling(
             const_cast<float *>(reinterpret_cast<const float *>(input_array)),

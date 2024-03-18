@@ -407,9 +407,9 @@ void ZenBlockedConv2DBiasEltSum(
 
   // ZenDNN state.
   zendnnEnv zen_env_obj = readEnv();
-  bool blocked =
-      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+  // Both DIRECT settings will follow NHWC_BLOCKED path.
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // Check for the BF16 support on the machine.
   if (!is_input_float) {
@@ -419,7 +419,6 @@ void ZenBlockedConv2DBiasEltSum(
         static_cast<OpKernelContext *>(context), result,
         errors::Internal(
             "BF16 AVX512 instruction set is not supported in the machine."));
-    blocked = 0;
     blocked_nhwc = 1;
   }
   auto dtype = is_input_float ? dt::f32 : dt::bf16;
@@ -456,53 +455,10 @@ void ZenBlockedConv2DBiasEltSum(
       convolution_forward::primitive_desc(op_desc, prim_attr, eng);
 
   // Define the source and destination memory.
-  zendnn::memory src_mem, dst_mem;
-  if (blocked) {
-    if (reorder_before) {
-      // Reorder before is enabled which means that the source inputs are in
-      // NHWC format, hence both the source inputs needs to be reordered to
-      // blocked data format.
-
-      // One input via input_array is reordered for blocked format
-      zendnn::memory usr_src_mem =
-          memory({{src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-      src_mem = memory(prim_desc.src_desc(), eng);
-      net.push_back(reorder(usr_src_mem, src_mem));
-      net_args.push_back(
-          {{ZENDNN_ARG_SRC, usr_src_mem}, {ZENDNN_ARG_DST, src_mem}});
-      // Second input via output_array is reordered for blocked format
-      zendnn::memory usr_dst_mem =
-          memory({{dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-      dst_mem = memory(prim_desc.dst_desc(), eng);
-      net.push_back(reorder(usr_dst_mem, dst_mem));
-      net_args.push_back(
-          {{ZENDNN_ARG_SRC, usr_dst_mem}, {ZENDNN_ARG_DST, dst_mem}});
-    } else {
-      // Reorder before is disabled which means that the source inputs are in
-      // blocked format, hence no reorder is required.
-
-      // src_mem definition with blocked data format.
-      src_mem = memory({{src_tz}, dt::f32, tag::aBcd8b}, eng, input_array);
-      // dst_mem definition.
-      if (reorder_after) {
-        // For reorder after enabled, we do a reorder to transfer the data
-        // to a temporary buffer but no data format is changed. This is
-        // because we need output_array buffer for reordering after the
-        // primitive execution.
-        zendnn::memory usr_dst_mem =
-            memory({{dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-        dst_mem = memory(prim_desc.dst_desc(), eng);
-        net.push_back(reorder(usr_dst_mem, dst_mem));
-        net_args.push_back(
-            {{ZENDNN_ARG_SRC, usr_dst_mem}, {ZENDNN_ARG_DST, dst_mem}});
-      } else {
-        dst_mem = memory({{dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-      }
-    }
-  } else {
-    src_mem = memory({{src_tz}, dtype, tag::nhwc}, eng, input_array);
-    dst_mem = memory({{dst_tz}, dtype, tag::nhwc}, eng, output_array);
-  }
+  zendnn::memory src_mem =
+      memory({{src_tz}, dtype, tag::nhwc}, eng, input_array);
+  zendnn::memory dst_mem =
+      memory({{dst_tz}, dtype, tag::nhwc}, eng, output_array);
   // Define filters memory.
   zendnn::memory wts_mem;
   if (res <= 0) {
@@ -556,35 +512,6 @@ void ZenBlockedConv2DBiasEltSum(
                static_cast<Tensor *>(cached_filter_data_)->flat<T>().data()),
            weights_data, cached_filter_data_size);
   }
-
-  if (reorder_after && blocked) {
-    // output_array should have the data in nhwc data format as reorder
-    // after is enabled.
-
-    // Reorder after is enabled, so output memory has to be converted to
-    // nhwc format from blocked format.
-    zendnn::memory usr_dst_mem =
-        memory({{dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-    reorder(dst_mem, usr_dst_mem).execute(s, dst_mem, usr_dst_mem);
-  } else {
-    // output_array should have the data in blocked data format as reorder
-    // after is disabled.
-
-    if (reorder_before && blocked) {
-      // Reorder after is disabled, but since reorder before was enabled the
-      // primitive execution was having temp buffer for primitive output. So to
-      // bring the primitive output to output_array from tmp buffer we do a
-      // reorder here. (i.e. this reorder is just done for moving output data
-      // from one buffer to the other)
-      zendnn::memory usr_dst_mem =
-          memory({{dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-      reorder(dst_mem, usr_dst_mem).execute(s, dst_mem, usr_dst_mem);
-    } else {
-      // Do nothing as no reorder is required before and after primitive
-      // execution (i.e. both inputs and output of this primitive execution are
-      // in blocked format)
-    }
-  }
 }
 template void ZenBlockedConv2DBiasEltSum<float>(
     zendnn::engine, zendnn::stream, zendnn::primitive_attr, void *, int, int,
@@ -631,9 +558,9 @@ void ZenConvolution2DDepthwise(
   void *filter_data = NULL;
 
   zendnnEnv zen_env_obj = readEnv();
-  bool blocked =
-      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+  // Both DIRECT settings will follow NHWC_BLOCKED path.
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // filter Tag:: d = height,e = width, c = ic, a = group, b = oc.
   auto filter_format = tag::decab;
@@ -646,7 +573,6 @@ void ZenConvolution2DDepthwise(
         static_cast<OpKernelContext *>(context), result,
         errors::Internal(
             "BF16 AVX512 instruction set is not supported in the machine."));
-    blocked = 0;
     blocked_nhwc = 1;
   }
 
@@ -654,7 +580,7 @@ void ZenConvolution2DDepthwise(
   auto dtype = std::is_same<T, float>::value ? dt::f32 : dt::bf16;
 
   zendnn::memory user_src_memory;
-  zendnn::memory conv1_dst_memory, conv1_dst_memory_new;
+  zendnn::memory conv1_dst_memory;
   zendnn::memory conv1_bias_memory;
   zendnn::memory user_weights_memory = zendnn::memory(
       {{conv1_weights_tz}, dtype, filter_format}, eng, filter_array);
@@ -664,33 +590,6 @@ void ZenConvolution2DDepthwise(
   memory::desc conv1_weights_md =
       memory::desc({conv1_weights_tz}, dtype, tag::any);
   memory::desc conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
-
-  if (blocked) {
-    if (reorder_before) {
-      user_src_memory =
-          memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-    } else {
-      user_src_memory =
-          memory({{conv1_src_tz}, dt::f32, tag::aBcd8b}, eng, input_array);
-    }
-
-    if (reorder_after) {
-      conv1_dst_memory = memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng);
-      conv1_dst_memory_new =
-          memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-    } else {
-      conv1_dst_memory =
-          memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-    }
-
-    conv1_bias_memory =
-        memory({{conv1_bias_tz}, dt::f32, tag::x}, eng, bias_array);
-
-    conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
-    conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::any);
-    conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
-    conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::aBcd8b);
-  }
 
   convolution_forward::desc conv1_desc = convolution_forward::desc(
       prop_kind::forward_inference, algorithm::convolution_direct, conv1_src_md,
@@ -706,24 +605,11 @@ void ZenConvolution2DDepthwise(
   convolution_forward::primitive_desc conv1_prim_desc =
       convolution_forward::primitive_desc(conv1_desc, conv_attr, eng);
 
-  if (!blocked) {
-    user_src_memory = memory(conv1_prim_desc.src_desc(), eng, input_array);
-    conv1_dst_memory =
-        memory({{conv1_dst_tz}, dtype, tag::acdb}, eng, output_array);
-    conv1_bias_memory = memory(conv1_prim_desc.bias_desc(), eng, bias_array);
-  }
-
+  user_src_memory = memory(conv1_prim_desc.src_desc(), eng, input_array);
+  conv1_dst_memory =
+      memory({{conv1_dst_tz}, dtype, tag::acdb}, eng, output_array);
+  conv1_bias_memory = memory(conv1_prim_desc.bias_desc(), eng, bias_array);
   zendnn::memory conv1_src_memory = user_src_memory;
-  if (blocked) {
-    if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
-      conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
-      if (reorder_before) {
-        net.push_back(reorder(user_src_memory, conv1_src_memory));
-        net_args.push_back({{ZENDNN_ARG_SRC, user_src_memory},
-                            {ZENDNN_ARG_DST, conv1_src_memory}});
-      }
-    }
-  }
 
   zendnn::memory conv1_weights_memory = user_weights_memory;
   if (res <= 0) {
@@ -741,15 +627,16 @@ void ZenConvolution2DDepthwise(
   }
 
   net.push_back(convolution_forward(conv1_prim_desc));
-  if (!bias_array)
+  if (!bias_array) {
     net_args.push_back({{ZENDNN_ARG_SRC, conv1_src_memory},
                         {ZENDNN_ARG_WEIGHTS, conv1_weights_memory},
                         {ZENDNN_ARG_DST, conv1_dst_memory}});
-  else
+  } else {
     net_args.push_back({{ZENDNN_ARG_SRC, conv1_src_memory},
                         {ZENDNN_ARG_WEIGHTS, conv1_weights_memory},
                         {ZENDNN_ARG_BIAS, conv1_bias_memory},
                         {ZENDNN_ARG_DST, conv1_dst_memory}});
+  }
 
   assert(net.size() == net_args.size() && "something is missing");
   for (size_t i = 0; i < net.size(); ++i) {
@@ -768,11 +655,6 @@ void ZenConvolution2DDepthwise(
     memcpy(static_cast<T *>(
                static_cast<Tensor *>(cached_filter_data_)->flat<T>().data()),
            weights_data, cached_filter_data_size);
-  }
-
-  if (reorder_after && blocked) {
-    reorder(conv1_dst_memory, conv1_dst_memory_new)
-        .execute(s, conv1_dst_memory, conv1_dst_memory_new);
   }
 }
 template void ZenConvolution2DDepthwise<float>(
@@ -818,9 +700,9 @@ void ZenConvolution2DBiasOrRelu(
   void *filter_data = NULL;
 
   zendnnEnv zen_env_obj = readEnv();
-  bool blocked =
-      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+  // Both DIRECT settings will follow NHWC_BLOCKED path.
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // Check for the BF16 support on the machine.
   if (!is_input_float) {
@@ -830,7 +712,6 @@ void ZenConvolution2DBiasOrRelu(
         static_cast<OpKernelContext *>(context), result,
         errors::Internal(
             "BF16 AVX512 instruction set is not supported in the machine."));
-    blocked = 0;
     blocked_nhwc = 1;
   }
   auto dtype = std::is_same<T, float>::value ? dt::f32 : dt::bf16;
@@ -840,35 +721,15 @@ void ZenConvolution2DBiasOrRelu(
   zendnn::memory conv1_user_bias_memory =
       memory({{conv1_bias_tz}, dtype, tag::x}, eng, bias_array);
 
-  if (blocked || blocked_nhwc) {
+  if (blocked_nhwc) {
     zendnnInfo(ZENDNN_FWKLOG,
                "ZenConvolution2DBiasOrRelu (TF kernel): New API for DIRECT "
                "CONV ZenConvolution2DBiasOrRelu");
 
-    zendnn::memory user_src_memory;
-    zendnn::memory conv1_dst_memory, conv1_dst_memory_new;
-    if (blocked) {
-      if (reorder_before) {
-        user_src_memory =
-            memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-      } else {
-        user_src_memory =
-            memory({{conv1_src_tz}, dt::f32, tag::aBcd8b}, eng, input_array);
-      }
-      if (reorder_after) {
-        conv1_dst_memory = memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng);
-        conv1_dst_memory_new =
-            memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-      } else {
-        conv1_dst_memory =
-            memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-      }
-    } else {
-      user_src_memory =
-          memory({{conv1_src_tz}, dtype, tag::nhwc}, eng, input_array);
-      conv1_dst_memory =
-          memory({{conv1_dst_tz}, dtype, tag::nhwc}, eng, output_array);
-    }
+    zendnn::memory conv1_src_memory =
+        memory({{conv1_src_tz}, dtype, tag::nhwc}, eng, input_array);
+    zendnn::memory conv1_dst_memory =
+        memory({{conv1_dst_tz}, dtype, tag::nhwc}, eng, output_array);
 
     memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::any);
     memory::desc conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::any);
@@ -877,38 +738,25 @@ void ZenConvolution2DBiasOrRelu(
     memory::desc conv1_dst_md =
         memory::desc({conv1_dst_tz}, dtype, tag::aBcd8b);
 
-    if (blocked_nhwc) {
-      conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::nhwc);
-      conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::x);
-      conv1_weights_md = memory::desc({conv1_weights_tz}, dtype, tag::any);
-      conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
-    }
+    conv1_src_md = memory::desc({conv1_src_tz}, dtype, tag::nhwc);
+    conv1_bias_md = memory::desc({conv1_bias_tz}, dtype, tag::x);
+    conv1_weights_md = memory::desc({conv1_weights_tz}, dtype, tag::any);
+    conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
 
     // TODO(zendnn): Current there is no default consructor to create conv desc
     convolution_forward::desc conv1_desc = convolution_forward::desc(
         prop_kind::forward_inference, algorithm::convolution_direct,
         conv1_src_md, conv1_weights_md, conv1_bias_md, conv1_dst_md,
         conv1_strides, conv1_padding1, conv1_padding2);
-    if (!bias_array)
+    if (!bias_array) {
       conv1_desc = convolution_forward::desc(
           prop_kind::forward_inference, algorithm::convolution_direct,
           conv1_src_md, conv1_weights_md, conv1_dst_md, conv1_strides,
           conv1_padding1, conv1_padding2);
+    }
 
     convolution_forward::primitive_desc conv1_prim_desc =
         convolution_forward::primitive_desc(conv1_desc, conv_attr, eng);
-
-    zendnn::memory conv1_src_memory = user_src_memory;
-    if (blocked) {
-      if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
-        conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
-        if (reorder_before) {
-          net.push_back(reorder(user_src_memory, conv1_src_memory));
-          net_args.push_back({{ZENDNN_ARG_SRC, user_src_memory},
-                              {ZENDNN_ARG_DST, conv1_src_memory}});
-        }
-      }
-    }
 
     zendnn::memory conv1_weights_memory = user_weights_memory;
     if (res <= 0) {
@@ -926,15 +774,16 @@ void ZenConvolution2DBiasOrRelu(
     }
 
     net.push_back(convolution_forward(conv1_prim_desc));
-    if (!bias_array)
+    if (!bias_array) {
       net_args.push_back({{ZENDNN_ARG_SRC, conv1_src_memory},
                           {ZENDNN_ARG_WEIGHTS, conv1_weights_memory},
                           {ZENDNN_ARG_DST, conv1_dst_memory}});
-    else
+    } else {
       net_args.push_back({{ZENDNN_ARG_SRC, conv1_src_memory},
                           {ZENDNN_ARG_WEIGHTS, conv1_weights_memory},
                           {ZENDNN_ARG_BIAS, conv1_user_bias_memory},
                           {ZENDNN_ARG_DST, conv1_dst_memory}});
+    }
 
     assert(net.size() == net_args.size() && "something is missing");
     for (size_t i = 0; i < net.size(); ++i) {
@@ -957,10 +806,6 @@ void ZenConvolution2DBiasOrRelu(
              weights_data, cached_filter_data_size);
     }
 
-    if (reorder_after && blocked) {
-      reorder(conv1_dst_memory, conv1_dst_memory_new)
-          .execute(s, conv1_dst_memory, conv1_dst_memory_new);
-    }
   } else {
     zendnnInfo(ZENDNN_FWKLOG,
                "ZenConvolution2DBiasOrRelu (TF kernel): New API for GEMM CONV "
@@ -1035,9 +880,9 @@ void ZenConvolution2DBatchNormOrRelu(
   std::vector<std::unordered_map<int, memory>> net_args;
 
   zendnnEnv zen_env_obj = readEnv();
-  bool blocked =
-      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+  // Both DIRECT settings will follow NHWC_BLOCKED path.
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   const Tensor &cached_filter_data_tensor =
       *(static_cast<Tensor *>(cached_filter_data_));
@@ -1045,94 +890,24 @@ void ZenConvolution2DBatchNormOrRelu(
   int res = cached_filter_data_tensor.NumElements();
   void *filter_data = NULL;
 
-  // TODO(zendnn): Remove below code if not required
-  // For switching b/w blocked and NHWC paths.
-  /*int blocked_flag = 0;
-  int blocked_filter = 3;
-  int blocked_input = 56;
-  if (getenv("ZENDNN_ALGO")) {
-     blocked_flag = atoi(getenv("ZENDNN_ALGO"));
-  }
-  if (getenv("ZENDNN_FILTER")) {
-     blocked_filter = atoi(getenv("ZENDNN_FILTER"));
-  }
-  if (getenv("ZENDNN_INPUT")) {
-     blocked_input = atoi(getenv("ZENDNN_INPUT"));
-  }
-
-  bool blocked = false;
-  if ((height >=blocked_input) && (kernel_h==blocked_filter) &&
-          (kernel_w == blocked_filter) && (blocked_flag == 1)) {
-       blocked = true;
-  }
-  float *bias = NULL;
-  float *offset = (float *) batch_norm_offset;
-  float *scale = (float *) batch_norm_scale;
-  float *mean = (float *) batch_norm_mean;
-  bool reorder_before = true;
-  bool reorder_after= true;
-  if (blocked) {
-      bias = (float *)malloc(sizeof(float)*output_channels);
-      for (int r=0; r <output_channels; r++) {
-          bias[r] = offset[r]-(scale[r]*mean[r]);
-      }
-      bias_array = bias;
-  }*/
-
   zendnn::memory user_weights_memory =
       memory({{conv1_weights_tz}, dt::f32, tag::hwcn}, eng, filter_array);
   zendnn::memory conv1_user_bias_memory =
       memory({{conv1_bias_tz}, dt::f32, tag::x}, eng, bias_array);
 
-  if (blocked || blocked_nhwc) {
-    if (elementwise_input)
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for "
-                 "DIRECT CONV zenConvolution2DBatchNormSum");
-    else
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for "
-                 "DIRECT CONV ZenConvolution2DBatchNormOrRelu");
+  if (blocked_nhwc) {
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for DIRECT CONV",
+        (elementwise_input ? "zenConvolution2DBatchNormSum"
+                           : "ZenConvolution2DBatchNormOrRelu"));
 
-    zendnn::memory user_src_memory;
-    zendnn::memory elementwise_memory, elementwise_memory_new;
-    zendnn::memory conv1_dst_memory, conv1_dst_memory_new;
-    if (blocked) {
-      if (reorder_before) {
-        user_src_memory =
-            memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-        if (elementwise_input) {
-          elementwise_memory = memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng,
-                                      elementwise_input);
-          elementwise_memory_new =
-              memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng);
-        }
-      } else {
-        user_src_memory =
-            memory({{conv1_src_tz}, dt::f32, tag::aBcd8b}, eng, input_array);
-        if (elementwise_input) {
-          elementwise_memory = memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b},
-                                      eng, elementwise_input);
-          elementwise_memory_new = elementwise_memory;
-        }
-      }
-
-      if (reorder_after) {
-        conv1_dst_memory = memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng);
-        conv1_dst_memory_new =
-            memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-      } else {
-        conv1_dst_memory =
-            memory({{conv1_dst_tz}, dt::f32, tag::aBcd8b}, eng, output_array);
-      }
-    } else {
-      user_src_memory =
-          memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
-      elementwise_memory =
-          memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, elementwise_input);
-      conv1_dst_memory =
-          memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
-    }
+    zendnn::memory conv1_src_memory =
+        memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
+    zendnn::memory elementwise_memory =
+        memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, elementwise_input);
+    zendnn::memory conv1_dst_memory =
+        memory({{conv1_dst_tz}, dt::f32, tag::nhwc}, eng, output_array);
 
     memory::desc conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::any);
     memory::desc conv1_bias_md =
@@ -1141,37 +916,25 @@ void ZenConvolution2DBatchNormOrRelu(
         memory::desc({conv1_weights_tz}, dt::f32, tag::any);
     memory::desc conv1_dst_md =
         memory::desc({conv1_dst_tz}, dt::f32, tag::aBcd8b);
-    if (blocked_nhwc) {
-      conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::nhwc);
-      conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::x);
-      conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
-      conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::nhwc);
-    }
+    conv1_src_md = memory::desc({conv1_src_tz}, dt::f32, tag::nhwc);
+    conv1_bias_md = memory::desc({conv1_bias_tz}, dt::f32, tag::x);
+    conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
+    conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::nhwc);
 
     // TODO(zendnn): Current there is no default consructor to create conv desc.
     convolution_forward::desc conv1_desc = convolution_forward::desc(
         prop_kind::forward_inference, algorithm::convolution_direct,
         conv1_src_md, conv1_weights_md, conv1_bias_md, conv1_dst_md,
         conv1_strides, conv1_padding1, conv1_padding2);
-    if (!bias_array)
+    if (!bias_array) {
       conv1_desc = convolution_forward::desc(
           prop_kind::forward_inference, algorithm::convolution_direct,
           conv1_src_md, conv1_weights_md, conv1_dst_md, conv1_strides,
           conv1_padding1, conv1_padding2);
+    }
     convolution_forward::primitive_desc conv1_prim_desc =
         convolution_forward::primitive_desc(conv1_desc, conv_attr, eng);
 
-    zendnn::memory conv1_src_memory = user_src_memory;
-    if (blocked) {
-      if (conv1_prim_desc.src_desc() != user_src_memory.get_desc()) {
-        conv1_src_memory = memory(conv1_prim_desc.src_desc(), eng);
-        if (reorder_before) {
-          net.push_back(reorder(user_src_memory, conv1_src_memory));
-          net_args.push_back({{ZENDNN_ARG_SRC, user_src_memory},
-                              {ZENDNN_ARG_DST, conv1_src_memory}});
-        }
-      }
-    }
     zendnn::memory conv1_weights_memory = user_weights_memory;
     if (res <= 0) {
       if (conv1_prim_desc.weights_desc() != user_weights_memory.get_desc()) {
@@ -1224,70 +987,34 @@ void ZenConvolution2DBatchNormOrRelu(
 
     float *elementwise_input_new = NULL;
     if (elementwise_input) {
-      if (reorder_before && blocked) {
-        reorder(elementwise_memory, elementwise_memory_new)
-            .execute(s, elementwise_memory, elementwise_memory_new);
-      }
-      if (blocked) {
-        elementwise_input_new =
-            static_cast<float *>(elementwise_memory_new.get_data_handle());
-      } else {
-        elementwise_input_new =
-            static_cast<float *>(elementwise_memory.get_data_handle());
-      }
+      elementwise_input_new =
+          static_cast<float *>(elementwise_memory.get_data_handle());
     }
-    if (reorder_after && blocked) {
-      zenPostOps(
-          zen_env_obj, static_cast<float *>(conv1_dst_memory.get_data_handle()),
-          const_cast<const float *>(elementwise_input_new), out_height,
-          out_width, output_channels, 0, 0, NULL, relu_fused, false,
-          static_cast<const float *>(batch_norm_scale), no_of_threads, 1.0f,
-          static_cast<const float *>(batch_norm_offset),
-          static_cast<const float *>(batch_norm_mean), batch_size, alpha);
 
-      reorder(conv1_dst_memory, conv1_dst_memory_new)
-          .execute(s, conv1_dst_memory, conv1_dst_memory_new);
-
-    } else {
-      if (!blocked) {
-        float *bias =
-            static_cast<float *>(malloc(sizeof(float) * output_channels));
+    float *bias = static_cast<float *>(malloc(sizeof(float) * output_channels));
 #pragma omp parallel for num_threads(no_of_threads)
-        for (int r = 0; r < output_channels; r++) {
-          bias[r] = (static_cast<float *>(batch_norm_offset))[r] -
-                    ((static_cast<float *>(batch_norm_scale))[r] *
-                     (static_cast<float *>(batch_norm_mean))[r]);
-        }
-        uint64_t bias_offset = 0;
-        for (int i = 0; i < batch_size; ++i) {
-          bias_offset = (out_height * out_width) * output_channels * i;
-          zenPostOps(
-              zen_env_obj, static_cast<float *>(output_array),
-              const_cast<const float *>(elementwise_input_new), out_height,
-              out_width, output_channels, output_channels, bias_offset, bias,
-              relu_fused, false, static_cast<const float *>(batch_norm_scale),
-              no_of_threads, 1.0f /* alpha */, NULL /* offset */,
-              NULL /* mean */, 1 /* batch_size */, alpha /* leakyrelu_alpha */);
-        }
-      } else {
-        zenPostOps(zen_env_obj, static_cast<float *>(output_array),
-                   const_cast<const float *>(elementwise_input_new), out_height,
-                   out_width, output_channels, 0, 0, NULL, relu_fused, false,
-                   static_cast<const float *>(batch_norm_scale), no_of_threads,
-                   1.0f, static_cast<const float *>(batch_norm_offset),
-                   static_cast<const float *>(batch_norm_mean), batch_size,
-                   alpha);
-      }
+    for (int r = 0; r < output_channels; r++) {
+      bias[r] = (static_cast<float *>(batch_norm_offset))[r] -
+                ((static_cast<float *>(batch_norm_scale))[r] *
+                 (static_cast<float *>(batch_norm_mean))[r]);
+    }
+    uint64_t bias_offset = 0;
+    for (int i = 0; i < batch_size; ++i) {
+      bias_offset = (out_height * out_width) * output_channels * i;
+      zenPostOps(zen_env_obj, static_cast<float *>(output_array),
+                 const_cast<const float *>(elementwise_input_new), out_height,
+                 out_width, output_channels, output_channels, bias_offset, bias,
+                 relu_fused, false,
+                 static_cast<const float *>(batch_norm_scale), no_of_threads,
+                 1.0f /* alpha */, NULL /* offset */, NULL /* mean */,
+                 1 /* batch_size */, alpha /* leakyrelu_alpha */);
     }
   } else {
-    if (elementwise_input)
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for "
-                 "GEMM CONV zenConvolution2DBatchNormSum");
-    else
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for "
-                 "GEMM CONV ZenConvolution2DBatchNormOrRelu");
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for DIRECT CONV",
+        (elementwise_input ? "zenConvolution2DBatchNormSum"
+                           : "ZenConvolution2DBatchNormOrRelu"));
     zendnn::memory user_src_memory =
         memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
     zendnn::memory conv1_dst_memory =

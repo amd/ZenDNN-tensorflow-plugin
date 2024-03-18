@@ -110,16 +110,17 @@ struct LaunchZenFusedConv2DOp {
     T *output_array = const_cast<T *>(output->template flat<T>().data());
 
     zendnnEnv zen_env_obj = readEnv();
-    bool blocked =
-        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+    // Both DIRECT settings will follow NHWC_BLOCKED path.
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+
     ZenExecutor *ex = ex->getInstance();
     engine eng = ex->getEngine();
     stream s = ex->getStream();
 
     bool is_input_float = std::is_same<T, float>::value;
 
-    if (!(is_depthwise || blocked || blocked_nhwc)) {
+    if (!(is_depthwise || blocked_nhwc)) {
       OP_REQUIRES(context, is_input_float,
                   errors::Unimplemented(
                       "ZenDNN GEMM path only supported for FP32 data type"));
@@ -143,7 +144,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr, output_array,
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
-        } else if (blocked || blocked_nhwc) {
+        } else if (blocked_nhwc) {
           // Direct convolution.
           ZenConvolution2DBiasOrRelu<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -192,7 +193,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr, output_array,
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
-        } else if (blocked || blocked_nhwc) {
+        } else if (blocked_nhwc) {
           // Direct convolution.
           ZenConvolution2DBiasOrRelu<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -241,7 +242,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr, output_array,
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
-        } else if (blocked || blocked_nhwc) {
+        } else if (blocked_nhwc) {
           // Direct convolution
           ZenConvolution2DBiasOrRelu<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -293,7 +294,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr, output_array,
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
-        } else if (blocked || blocked_nhwc) {
+        } else if (blocked_nhwc) {
           // Direct convolution.
           ZenConvolution2DBiasOrRelu<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -325,7 +326,7 @@ struct LaunchZenFusedConv2DOp {
         break;
       case FusedComputationType::kBiasAddWithAdd: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
-        if (blocked || blocked_nhwc) {
+        if (blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
           // [Configure post-ops]
@@ -361,7 +362,7 @@ struct LaunchZenFusedConv2DOp {
       }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
-        if (blocked || blocked_nhwc) {
+        if (blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
           // [Configure post-ops]
@@ -405,7 +406,7 @@ struct LaunchZenFusedConv2DOp {
             const_cast<T *>(fused_batch_norm_args.estimated_mean_data);
         T *batch_norm_offset_data =
             const_cast<T *>(fused_batch_norm_args.offset_data);
-        if (blocked || blocked_nhwc) {
+        if (blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -443,7 +444,7 @@ struct LaunchZenFusedConv2DOp {
             const_cast<T *>(fused_batch_norm_args.estimated_mean_data);
         T *batch_norm_offset_data =
             const_cast<T *>(fused_batch_norm_args.offset_data);
-        if (blocked || blocked_nhwc) {
+        if (blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -488,7 +489,7 @@ struct LaunchZenFusedConv2DOp {
         T *batch_norm_offset_data =
             const_cast<T *>(fused_batch_norm_args.offset_data);
         const float ops_alpha = fused_batch_norm_args.leakyrelu_alpha;
-        if (blocked || blocked_nhwc) {
+        if (blocked_nhwc) {
           primitive_attr conv_attr;
           ZenConvolution2DBatchNormOrRelu(
               eng, s, conv_attr, input_array, dimensions.batch,
@@ -566,11 +567,11 @@ struct LaunchZenFusedConv2DSumOp {
     primitive_attr conv_attr;
 
     zendnnEnv zen_env_obj = readEnv();
-    bool blocked =
-        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1 && !is_eager;
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2;
+    // Both DIRECT settings will follow NHWC_BLOCKED path.
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
+                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
-    if (blocked || blocked_nhwc) {
+    if (blocked_nhwc) {
       ZenExecutor *ex = ex->getInstance();
       engine eng = ex->getEngine();
       stream s = ex->getStream();

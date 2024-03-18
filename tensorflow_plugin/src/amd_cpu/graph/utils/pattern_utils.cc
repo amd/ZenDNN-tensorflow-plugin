@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -108,14 +108,14 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
   // fanins, we can continue to the matching.
   if (node_view->NumControllingFanins() > 0 &&
       (fanin_checking || pattern.node_status != NodeStatus::kRemain)) {
-    zendnnInfo(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
-               "] failed due to controlling fanins");
+    zendnnVerbose(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
+                  "] failed due to controlling fanins");
     return false;
   }
 
   if (node_view->NumControlledFanouts() > 0) {
-    zendnnInfo(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
-               "] failed due to controlled fanouts");
+    zendnnVerbose(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
+                  "] failed due to controlled fanouts");
     return false;
   }
 
