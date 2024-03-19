@@ -1561,10 +1561,11 @@ bool FindContractionWithMul(const RemapperContext& ctx, int node_index,
   auto* contraction_node_def = contraction_node_view->node();
   if (!IsAnyBatchMatMul(*contraction_node_def)) return false;
   auto* const_node_def = const_node_view->node();
-  if (!IsAnyConst(*const_node_def)) return false;
+  if (!(IsAnyConst(*const_node_def) || IsCast(*const_node_def))) return false;
 
-  //  TODO(plugin) : Provide support for different datatypes, Ex: DT_BFLOAT16
-  if (!(HasDataType(node_def, DT_FLOAT))) return false;
+  // The fusion is only supported for float and bfloat16 on CPU.
+  if (!HasDataType(node_def, DT_FLOAT) && !HasDataType(node_def, DT_BFLOAT16))
+    return false;
 
   if (!HaveSameDataType(node_def, contraction_node_def) ||
       HasControlFaninOrFanout(*contraction_node_view) ||
