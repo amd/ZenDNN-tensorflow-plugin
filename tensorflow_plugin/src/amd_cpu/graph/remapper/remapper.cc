@@ -90,6 +90,14 @@ Status GetTensorFromConstant(const NodeDef* node_def, Tensor* dst) {
 
 namespace {
 
+// FusedBatchNorm with activation.
+struct FusedBatchNormEx {
+  FusedBatchNormEx() = default;
+
+  int fused_batch_norm = kMissingIndex;
+  int activation = kMissingIndex;
+};
+
 // Contraction node followed by a BiasAdd.
 struct ContractionWithBiasAdd {
   ContractionWithBiasAdd() = default;
@@ -635,6 +643,59 @@ bool FindContractionWithBiasAndActivation(
   *matched = pattern;
 
   return true;
+}
+
+bool FindFusedBatchNormEx(const RemapperContext& ctx, int node_index,
+                          FusedBatchNormEx* matched) {
+  // Root of the pattern must be a Relu.
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  const auto* node_def = node_view->node();
+  if (!IsRelu(*node_def)) return false;
+
+  // Returns true iff the node is a compatible FusedBatchNorm node.
+  const auto valid_batch_norm =
+      [&](const utils::MutableNodeView& fused_batch_norm) -> bool {
+    const auto* fused_batch_norm_node_def = fused_batch_norm.node();
+    if (!IsFusedBatchNorm(*fused_batch_norm_node_def)) return false;
+
+    DataType t_dtype = GetDataTypeFromAttr(*fused_batch_norm_node_def, "T");
+
+    // CPU supports float.
+    if (t_dtype != DT_FLOAT) return false;
+
+    string data_format;
+    if (!GetNodeAttr(*fused_batch_norm_node_def, kDataFormat, &data_format)
+             .ok())
+      return false;
+    if (data_format != "NHWC" && data_format != "NCHW") return false;
+
+    // FusedBatchNormV2 and V3 have an extra type parameter.
+    if ((fused_batch_norm_node_def->op() != "FusedBatchNorm") &&
+        !HasDataType(fused_batch_norm_node_def, DT_FLOAT, "U"))
+      return false;
+
+    // Check that only one node consumes the 0-th output of a FusedBatchNorm.
+    if (HasControlFaninOrFanout(fused_batch_norm) ||
+        !HasAtMostOneFanoutAtPort0(fused_batch_norm) ||
+        IsInPreserveSet(ctx, fused_batch_norm_node_def))
+      return false;
+
+    return true;
+  };
+
+  if (node_view->NumRegularFanins() < 1) return false;
+  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+  const auto* relu_fanin_0_node_view = regular_fanin_0.node_view();
+  const auto* relu_fanin_0_node_def = relu_fanin_0_node_view->node();
+
+  // Input to a Relu can be a FusedBatchNorm.
+  if (valid_batch_norm(*relu_fanin_0_node_view)) {
+    matched->activation = node_index;
+    matched->fused_batch_norm = regular_fanin_0.node_index();
+    return true;
+  }
+
+  return false;
 }
 
 bool FindConv2DWithBatchNorm(const RemapperContext& ctx, int node_index,
@@ -1666,6 +1727,20 @@ void CopyMatMulAttributes(const NodeDef& matmul, NodeDef* fused_matmul,
   // }
 }
 
+void CopyFusedBatchNormAttributes(const NodeDef& fused_batch_norm,
+                                  NodeDef* fused_batch_norm_ex) {
+  DCHECK(IsFusedBatchNorm(fused_batch_norm))
+      << "Input node must be a FusedBatchNorm";
+
+  CopyAllAttrs(fused_batch_norm, fused_batch_norm_ex);
+
+  // FusedBatchNorm doesn't have an extra type parameter.
+  if ((fused_batch_norm.op() == "FusedBatchNorm") ||
+      (fused_batch_norm.op() == "FusedBatchNormGrad")) {
+    AddNodeAttr("U", DT_FLOAT, fused_batch_norm_ex);
+  }
+}
+
 void CopyReshapeAttributes(const NodeDef& reshape, NodeDef* node) {
   DCHECK(IsReshape(reshape)) << "Input node must be a Reshape";
 
@@ -1716,7 +1791,7 @@ Status AddKerasDenseLayerFwd(RemapperContext* ctx,
 
     TF_ABORT_IF_ERROR(status);
     TF_ABORT_IF_ERROR(mutation->Apply());
-    return Status::OK();
+    return OkStatus();
   } else {
     fused_node.set_op(kFusedMatMul);
     fused_node.set_name(reshape.name());
@@ -1745,7 +1820,7 @@ Status AddKerasDenseLayerFwd(RemapperContext* ctx,
 
     TF_ABORT_IF_ERROR(status);
     TF_ABORT_IF_ERROR(mutation->Apply());
-    return Status::OK();
+    return OkStatus();
   }
 }
 
@@ -2040,6 +2115,59 @@ Status AddFusedConv2DNode(RemapperContext* ctx,
   return OkStatus();
 }
 
+Status AddFusedBatchNormExNode(RemapperContext* ctx,
+                               const FusedBatchNormEx& matched,
+                               std::vector<bool>* invalidated_nodes,
+                               std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
+  const NodeDef& activation = graph->node(matched.activation);
+
+  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", activation.op(),
+             " with FusedBatchNorm: activation=", activation.name(),
+             " for fused_batch_norm=", fused_batch_norm.name());
+
+  // Replace FusedBatchNorm with _FusedBatchNormEx + <Activation>.
+  NodeDef fused_op;
+  fused_op.set_op(kFusedBatchNormEx);
+  fused_op.set_name(fused_batch_norm.name());
+  fused_op.set_device(fused_batch_norm.device());
+
+  fused_op.add_input(fused_batch_norm.input(0));  // 0: input
+  fused_op.add_input(fused_batch_norm.input(1));  // 1: scale
+  fused_op.add_input(fused_batch_norm.input(2));  // 2: offset
+  fused_op.add_input(fused_batch_norm.input(3));  // 3: estimated_mean
+  fused_op.add_input(fused_batch_norm.input(4));  // 4: estimated_var
+
+  CopyFusedBatchNormAttributes(fused_batch_norm, &fused_op);
+
+  auto* attrs = fused_op.mutable_attr();
+  SetAttrValue(activation.op(), &(*attrs)["activation_mode"]);
+
+  AddNodeAttr("num_side_inputs", 0, &fused_op);
+
+  // Turn activation node into Identity node.
+  NodeDef identity_op;
+  identity_op.set_op("Identity");
+  identity_op.set_name(activation.name());
+  identity_op.set_device(fused_batch_norm.device());
+  identity_op.add_input(fused_batch_norm.name());
+  (*identity_op.mutable_attr())["T"] = attrs->at("T");
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_op), &status);
+  TF_ABORT_IF_ERROR(status);
+  mutation->AddNode(std::move(identity_op), &status);
+  TF_ABORT_IF_ERROR(status);
+  TF_ABORT_IF_ERROR(mutation->Apply());
+
+  (*invalidated_nodes)[matched.fused_batch_norm] = true;
+  (*invalidated_nodes)[matched.activation] = true;
+
+  return OkStatus();
+}
+
 Status AddPadWithContractionNode(RemapperContext* ctx,
                                  const PadWithContraction& matched,
                                  std::vector<bool>* invalidated_nodes,
@@ -2164,7 +2292,7 @@ Status AddFusedContractionNode(RemapperContext* ctx,
 
   (*invalidated_nodes)[matched.mul] = true;
   (*nodes_to_delete)[matched.contraction] = true;
-  return Status::OK();
+  return OkStatus();
 }
 
 Status AddFusedMatMulBiasAddAndGelu(
@@ -2390,6 +2518,14 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
             AddFusedConv2DNode(&ctx, contract_with_batch_norm_and_activation,
                                &invalidated_nodes, &nodes_to_delete));
         continue;
+      }
+
+      // Remap FusedBatchNorm+<Activation> into _FusedBatchNormEx.
+      FusedBatchNormEx fused_batch_norm_ex;
+      if (FindFusedBatchNormEx(ctx, i, &fused_batch_norm_ex)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found FindFusedBatchNormEx pattern.");
+        TF_ABORT_IF_ERROR(AddFusedBatchNormExNode(
+            &ctx, fused_batch_norm_ex, &invalidated_nodes, &nodes_to_delete));
       }
 
       // Remap BatchMatMul + Mul into the _FusedBatchMatMul.

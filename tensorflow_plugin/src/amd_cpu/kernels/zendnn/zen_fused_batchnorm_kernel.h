@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -76,11 +76,11 @@ Status ParseActivationMode(OpKernelConstruction *context,
 
   if (activation_mode_str == "Identity") {
     *activation_mode = FusedBNActivationMode::kIdentity;
-    return Status::OK();
+    return OkStatus();
   }
   if (activation_mode_str == "Relu") {
     *activation_mode = FusedBNActivationMode::kRelu;
-    return Status::OK();
+    return OkStatus();
   }
   return errors::InvalidArgument("Unsupported activation mode: ",
                                  activation_mode_str);

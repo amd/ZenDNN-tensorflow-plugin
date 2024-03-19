@@ -73,6 +73,7 @@ constexpr char kTanh[] = "Tanh";
 
 // Fused op names.
 constexpr char kFusedBatchMatMulV2[] = "_FusedBatchMatMulV2";
+constexpr char kFusedBatchNormEx[] = "_FusedBatchNormEx";
 constexpr char kFusedConv2D[] = "_FusedConv2D";
 constexpr char kFusedDepthwiseConv2dNative[] = "_FusedDepthwiseConv2dNative";
 constexpr char kFusedMatMul[] = "_FusedMatMul";

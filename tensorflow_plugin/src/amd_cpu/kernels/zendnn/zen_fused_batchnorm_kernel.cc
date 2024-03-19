@@ -421,33 +421,31 @@ class ZenFusedBatchNormOp : public OpKernel {
   }
 };
 
-#define REGISTER_ZEN_FUSED_BATCHNORM_CPU(T)                                 \
-  REGISTER_KERNEL_BUILDER(                                                  \
-      Name("_ZenFusedBatchNorm").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      ZenFusedBatchNormOp<CPUDevice, T, T, false, false>);
-
-TF_CALL_float(REGISTER_ZEN_FUSED_BATCHNORM_CPU);
-#undef REGISTER_ZEN_FUSED_BATCHNORM_CPU
-
-#define REGISTER_ZEN_FUSED_BATCHNORM_V2_CPU(T, U)      \
-  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV2") \
-                              .Device(DEVICE_CPU)      \
-                              .TypeConstraint<T>("T")  \
-                              .TypeConstraint<U>("U"), \
-                          ZenFusedBatchNormOp<CPUDevice, T, U, false, false>);
-
-REGISTER_ZEN_FUSED_BATCHNORM_V2_CPU(float, float);
-#undef REGISTER_ZEN_FUSED_BATCHNORM_V2_CPU
-
 // TODO(zendnn) : FusedBatchNormV3 has an additional output that is used to hold
 // intermediate results. This parameter functionality is not implemented on CPU.
-#define REGISTER_ZEN_FUSED_BATCHNORM_V3_CPU(T, U)      \
-  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV3") \
-                              .Device(DEVICE_CPU)      \
-                              .TypeConstraint<T>("T")  \
-                              .TypeConstraint<U>("U"), \
-                          ZenFusedBatchNormOp<CPUDevice, T, U, true, false>);
+#define REGISTER_ZEN_FUSED_BATCHNORM_CPU(T, U)                                 \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenFusedBatchNorm").Device(DEVICE_CPU).TypeConstraint<T>("T"),    \
+      ZenFusedBatchNormOp<CPUDevice, T, T, false, false>);                     \
+                                                                               \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV2")                         \
+                              .Device(DEVICE_CPU)                              \
+                              .TypeConstraint<T>("T")                          \
+                              .TypeConstraint<U>("U"),                         \
+                          ZenFusedBatchNormOp<CPUDevice, T, U, false, false>); \
+                                                                               \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV3")                         \
+                              .Device(DEVICE_CPU)                              \
+                              .TypeConstraint<T>("T")                          \
+                              .TypeConstraint<U>("U"),                         \
+                          ZenFusedBatchNormOp<CPUDevice, T, U, true, false>);  \
+                                                                               \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormEx")                         \
+                              .Device(DEVICE_CPU)                              \
+                              .TypeConstraint<T>("T")                          \
+                              .TypeConstraint<U>("U"),                         \
+                          ZenFusedBatchNormOp<CPUDevice, T, U, true, true>);
 
-REGISTER_ZEN_FUSED_BATCHNORM_V3_CPU(float, float);
-#undef REGISTER_ZEN_FUSED_BATCHNORM_V3_CPU
+REGISTER_ZEN_FUSED_BATCHNORM_CPU(float, float);
+#undef REGISTER_ZEN_FUSED_BATCHNORM_CPU(T, U)
 }  // namespace amd_cpu_plugin

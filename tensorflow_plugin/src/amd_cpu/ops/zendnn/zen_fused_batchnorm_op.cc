@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ void RegisterZenFusedBatchNormV3() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float } = DT_FLOAT");
   TF_OpDefinitionBuilderAddAttr(op_builder, "U: {float}");
   TF_OpDefinitionBuilderAddAttr(op_builder,
-                                GetConvnetDataFormat2D3DAttrString().c_str());
+                                GetConvnetDataFormatAttrString().c_str());
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
@@ -160,10 +160,61 @@ void RegisterZenFusedBatchNormV3() {
   TF_DeleteStatus(status);
 }
 
+// Routine for registering _ZenFusedBatchNormEx op.
+void RegisterZenFusedBatchNormEx() {
+  TF_Status* status = TF_NewStatus();
+
+  TF_OpDefinitionBuilder* op_builder =
+      TF_NewOpDefinitionBuilder("_ZenFusedBatchNormEx");
+  TF_OpDefinitionBuilderAddInput(op_builder, "x: T");
+  TF_OpDefinitionBuilderAddInput(op_builder, "scale: U");
+  TF_OpDefinitionBuilderAddInput(op_builder, "offset: U");
+  TF_OpDefinitionBuilderAddInput(op_builder, "mean: U");
+  TF_OpDefinitionBuilderAddInput(op_builder, "variance: U");
+  TF_OpDefinitionBuilderAddInput(op_builder, "side_input: num_side_inputs * T");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "y: T");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "batch_mean: U");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "batch_variance: U");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "reserve_space_1: U");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "reserve_space_2: U");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "reserve_space_3: U");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: {float } = DT_FLOAT");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "U: {float}");
+  TF_OpDefinitionBuilderAddAttr(op_builder,
+                                GetConvnetDataFormatAttrString().c_str());
+  TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
+  TF_OpDefinitionBuilderAddAttr(op_builder,
+                                "exponential_avg_factor: float = 1.0");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "num_side_inputs: int >= 0 = 0");
+  TF_OpDefinitionBuilderAddAttr(op_builder,
+                                "activation_mode: string = \"Identity\"");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "is_training: bool = false");
+  TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
+                                                  &unknown_shape_fn);
+
+  TF_RegisterOpDefinition(op_builder, status);
+  if (TF_OK != TF_GetCode(status)) {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-REG: _ZenFusedBatchNormEx Op Registration Failed!");
+  } else {
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZEN-OP-REG: _ZenFusedBatchNormEx Op Registration Is Successful!");
+  }
+  TF_DeleteStatus(status);
+}
+
 }  // namespace amd_cpu_plugin
 
 void RegisterZenFusedBatchNormOps() {
   amd_cpu_plugin::RegisterZenFusedBatchNorm();
   amd_cpu_plugin::RegisterZenFusedBatchNormV2();
   amd_cpu_plugin::RegisterZenFusedBatchNormV3();
+  amd_cpu_plugin::RegisterZenFusedBatchNormEx();
 }

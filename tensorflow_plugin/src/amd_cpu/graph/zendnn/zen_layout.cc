@@ -66,6 +66,8 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
        RewriteSupportedDataType},
       {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll,
        RewriteSupportedDataType},
+      {"_FusedBatchNormEx", "_ZenFusedBatchNormEx", CopyAttrsAll,
+       RewriteSupportedDataType},
       {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
       {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
       {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
