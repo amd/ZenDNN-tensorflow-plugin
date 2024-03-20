@@ -226,6 +226,11 @@ class ZenMemoryPool : public ZenMemoryPoolBase {
                            ZenTensorType type, int out_index = 0) {
     if (reset && zen_tensor_pool_size_) {
       zen_tensor_pool_reset_ = true;
+    } else if (reset) {
+      // When reset is true and zen_tensor_pool_size_ is 0, it means there is
+      // only one Zen node in the graph. For only one Zen node, mempool will not
+      // be effective. So, disabling mempool for this case.
+      return 1;
     }
 
     /*
