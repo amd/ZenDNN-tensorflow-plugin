@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -77,12 +77,14 @@ string MakeUniqueFilename(string name, const string& suffix = ".pbtxt") {
     mutex_lock lock(instance.counts_mutex);
     count = instance.counts[name]++;
   }
-
   string filename = name;
   if (count > 0) {
-    absl::StrAppend(&filename, "_", count);
+    // absl::StrAppend(&filename, "_", count);
+    filename = filename + "_" + std::to_string(count);
   }
-  absl::StrAppend(&filename, suffix);
+  // TODO(plugin) : Why absl::StrAppend() function fails with const string?
+  // absl::StrAppend(&filename, suffix);
+  filename = filename + suffix;
   return filename;
 }
 
@@ -95,6 +97,18 @@ Status WriteTextProtoToUniqueFile(
 
   output->write(s.c_str(), s.length());
   if (!output->good()) return errors::Internal("Unable to dump graph to file.");
+
+  output->close();
+  if (!output->good()) return errors::Internal("Unable to close dump file.");
+
+  return OkStatus();
+}
+
+Status WriteBinaryProtoToUniqueFile(
+    const amd_cpu_plugin::protobuf::Message& proto, std::ofstream* output) {
+  if (!proto.SerializeToOstream(output)) {
+    return errors::Internal("Unable to dump graph to file.");
+  }
 
   output->close();
   if (!output->good()) return errors::Internal("Unable to close dump file.");
@@ -153,21 +167,28 @@ NodeMapInternal<const GraphDef, const NodeDef>::GetNodeDefFromGraph(
 }  // namespace internal
 
 string DumpGraphDefToFile(const string& name, GraphDef const& graph_def,
-                          const string& dirname) {
+                          const string& dirname, bool is_output_binary) {
   string filepath;
   std::ofstream output;
-  Status status =
-      CreateWritableFile(dirname, name, ".pbtxt", &filepath, &output);
+
+  string ext = is_output_binary ? ".pb" : ".pbtxt";
+  Status status = CreateWritableFile(dirname, name, ext, &filepath, &output);
 
   if (!status.ok()) {
     return StrCat("(failed to create writable file: ", status.ToString(), ")");
   }
 
-  status = WriteTextProtoToUniqueFile(graph_def, &output);
+  if (is_output_binary) {
+    status = WriteBinaryProtoToUniqueFile(graph_def, &output);
+  } else {
+    status = WriteTextProtoToUniqueFile(graph_def, &output);
+  }
+
   if (!status.ok()) {
     return StrCat("(failed to dump Graph to '", filepath,
                   "': ", status.ToString(), ")");
   }
+  zendnnVerbose(ZENDNN_FWKLOG, "Dumped Graph to ", filepath);
   return filepath;
 }
 

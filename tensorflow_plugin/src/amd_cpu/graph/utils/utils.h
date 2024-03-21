@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -57,7 +57,7 @@ namespace graph {
 // this process with the same name, suffixes with "_n.pbtxt", where
 // 'n' is a sequence number.
 string DumpGraphDefToFile(const string& name, GraphDef const& graph_def,
-                          const string& dirname);
+                          const string& dirname, bool is_output_binary = false);
 
 // Utilities for manipulating node name and input strings.
 
