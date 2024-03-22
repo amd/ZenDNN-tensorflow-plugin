@@ -1181,21 +1181,21 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                             {"_FusedMatMul", "matmul", NodeStatus::kRemove},
                             *subgraph_pattern
                           }
-                        }, // Add|AddV2: matmul_plus_mul
+                        },  // Add|AddV2: matmul_plus_mul
                         {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                       }
-                    } // Mul: matmul_plus_mul_times_square_root_two_over_pi
+                    }  // Mul: matmul_plus_mul_times_square_root_two_over_pi
                   }
-                }, // Tanh: tanh
+                },  // Tanh: tanh
                 {"Const", "one", NodeStatus::kRemain}
               }
-            }, // Add|AddV2: tanh_plus_one
+            },  // Add|AddV2: tanh_plus_one
             {"Const", "one_half", NodeStatus::kRemain}
           }
-        }, // Mul: tanh_plus_one_times_one_half
+        },  // Mul: tanh_plus_one_times_one_half
         {"_FusedMatMul", "matmul", NodeStatus::kRemove}
       }
-    }); // Mul: output
+    });  // Mul: output
 
   // Pattern 2:
   //    Const:                      Emperical     1/sqrt(2)             1
@@ -1214,7 +1214,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
           {"Const", "one_half", NodeStatus::kRemain},
           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
         }
-      }, // Mul: tanh_plus_one_times_one_half
+      },  // Mul: tanh_plus_one_times_one_half
       {"Add|AddV2", "tanh_plus_one", NodeStatus::kRemove,
         {
           {"Tanh", "tanh", NodeStatus::kRemove,
@@ -1234,23 +1234,23 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                                 {
                                   {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                 }
-                              } // Square: square
+                              }  // Square: square
                             }
-                          } // Mul: empirical_const_times_matmul
+                          }  // Mul: empirical_const_times_matmul
                         }
-                      } //Mul: mul
+                      }  // Mul: mul
                     }
-                  },// Add|AddV2: matmul_plus_mul
+                  },  // Add|AddV2: matmul_plus_mul
                   {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                 }
-              } // Mul: matmul_plus_mul_times_square_root_two_over_pi
+              }  // Mul: matmul_plus_mul_times_square_root_two_over_pi
             }
-          }, // Tanh: tanh
+          },  // Tanh: tanh
           {"Const", "one", NodeStatus::kRemain}
         }
-      } // Add|AddV2: tanh_plus_one
+      }  // Add|AddV2: tanh_plus_one
     }
-  }); // Mul: output
+  });  // Mul: output
 
   // Pattern 3:
   //    Const:   ExpandDims                   Emperical        1/sqrt(2)       Const: 1    Const: 1/2
@@ -1282,33 +1282,33 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                                       {"_FusedMatMul", "matmul", NodeStatus::kRemove},
                                       {"Cast|Const", "expand_dims", NodeStatus::kRemain}
                                     }
-                                  }, // Reshape: reshape
+                                  },  // Reshape: reshape
                                   {"Square", "square", NodeStatus::kRemove,
                                     {
                                       {"Reshape", "reshape", NodeStatus::kRemove}
                                     }
-                                  } // Square: square
+                                  }  // Square: square
                                 }
-                              }, // Mul: empirical_const_times_matmul
+                              },  // Mul: empirical_const_times_matmul
                               {"Cast|Const", "empirical_const", NodeStatus::kRemain}
                             }
-                          } // Mul: mul
+                          }  // Mul: mul
                         }
-                      }, // Add|AddV2: matmul_plus_mul
+                      },  // Add|AddV2: matmul_plus_mul
                       {"Cast|Const", "square_root_two_over_pi", NodeStatus::kRemain}
                     }
-                  } // Mul: matmul_plus_mul_times_square_root_two_over_pi
+                  }  // Mul: matmul_plus_mul_times_square_root_two_over_pi
                 }
-              }, // Tanh: tanh
+              },  // Tanh: tanh
               {"Cast|Const", "one", NodeStatus::kRemain}
             }
-          }, // Add|AddV2: tanh_plus_one
+          },  // Add|AddV2: tanh_plus_one
           {"Cast|Const", "one_half", NodeStatus::kRemain}
         }
-      }, // Mul: tanh_plus_one_times_one_half
+      },  // Mul: tanh_plus_one_times_one_half
       {"Reshape", "reshape", NodeStatus::kRemove}
     }
-  }); // Mul: output
+  });  // Mul: output
 
   // Pattern BF16:
   //    Const:                    Emperical                1/sqrt(2)                      1
@@ -1327,7 +1327,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
           {"Const", "one_half", NodeStatus::kRemain},
           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
         }
-      }, // Mul: tanh_plus_one_times_one_half
+      },  // Mul: tanh_plus_one_times_one_half
       {"AddV2", "tanh_plus_one", NodeStatus::kRemove,
         {
           {"Tanh", "tanh", NodeStatus::kRemove,
@@ -1342,14 +1342,14 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                             {
                               {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                             }
-                          }, // Cast: cast
+                          },  // Cast: cast
                           {"Mul", "mul", NodeStatus::kRemove,
                             {
                               {"Cast", "cast", NodeStatus::kRemove,
                                 {
                                   {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                 }
-                              }, // Cast: cast
+                              },  // Cast: cast
                               {"Mul", "empirical_const_times_matmul", NodeStatus::kRemove,
                                 {
                                   {"Const", "empirical_const", NodeStatus::kRemain},
@@ -1359,27 +1359,27 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
                                         {
                                           {"_FusedMatMul", "matmul", NodeStatus::kRemove}
                                         }
-                                      } // Cast: cast
+                                      }  // Cast: cast
                                     }
-                                  } // Square: square
+                                  }  // Square: square
                                 }
-                              } // Mul: empirical_const_times_matmul
+                              }  // Mul: empirical_const_times_matmul
                             }
-                          } // Mul: mul
+                          }  // Mul: mul
                         }
-                      }, // AddV2: matmul_plus_mul
+                      },  // AddV2: matmul_plus_mul
                       {"Const", "square_root_two_over_pi", NodeStatus::kRemain}
                     }
-                  } // Mul: matmul_plus_mul_times_square_root_two_over_pi
+                  }  // Mul: matmul_plus_mul_times_square_root_two_over_pi
                 }
-              } // Cast: cast1
+              }  // Cast: cast1
             }
-          }, // Tanh: tanh
+          },  // Tanh: tanh
           {"Const", "one", NodeStatus::kRemain}
         }
-      } // AddV2: tanh_plus_one
+      }  // AddV2: tanh_plus_one
     }
-  }); // Mul: output
+  });  // Mul: output
 
   // clang-format on
   // Find GeluApproximate
