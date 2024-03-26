@@ -249,8 +249,22 @@ class ZenFusedBatchNormOp : public OpKernel {
       } else {
         zen_enable_mempool = 0;
       }
+    } else if (zen_enable_mempool) {
+      // Caching the output buffer and reusing it with persistent tensor.
+      int res = cached_buffer_.NumElements();
+      Status state = OkStatus();
+      if (res <= 0 || res != tf_shape_dst.num_elements()) {
+        state = context->allocate_temp(DataType::DT_FLOAT, tf_shape_dst,
+                                       &cached_buffer_);
+      }
+      if (state != OkStatus()) {
+        zen_enable_mempool = 0;
+      } else {
+        dst_tensor = &cached_buffer_;
+        context->set_output(0, *dst_tensor);
+      }
     }
-    if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
+    if (!zen_enable_mempool) {
       OP_REQUIRES_OK(context, context->allocate_output(kDstIndex, tf_shape_dst,
                                                        &dst_tensor));
     }
@@ -323,6 +337,13 @@ class ZenFusedBatchNormOp : public OpKernel {
   U *variance_values_;
   size_t depth_;  // Batch normalization is performed for per channel.
   FusedBNActivationMode activation_mode_;
+  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
+  // held when accessing the annotated variable. GUARDED_VAR indicates that
+  // a shared variable is guarded by some unspecified mutex, for use in rare
+  // cases where a valid mutex expression cannot be specified.
+  //
+  // Tensor to hold output buffer memory.
+  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   ZendnnParameters zendnn_params_;
 
   void SetMeanVariance(const Tensor &mean, const Tensor &variance) {

@@ -83,6 +83,8 @@ class ZenConv2DOp : public OpKernel {
     bool is_input_float = std::is_same<T, float>::value;
     ZenTensorType out_type =
         (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
+    DataType dtype =
+        (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
 
     TensorShape out_shape = ShapeFromFormat(
         (params_.data_format), dimensions.batch, dimensions.out_rows,
@@ -120,8 +122,21 @@ class ZenConv2DOp : public OpKernel {
       } else {
         zen_enable_mempool = 0;
       }
+    } else if (zen_enable_mempool) {
+      // Caching the output buffer and reusing it with persistent tensor.
+      int res = cached_buffer_.NumElements();
+      Status state = OkStatus();
+      if (res <= 0 || res != out_shape.num_elements()) {
+        state = context->allocate_temp(dtype, out_shape, &cached_buffer_);
+      }
+      if (state != OkStatus()) {
+        zen_enable_mempool = 0;
+      } else {
+        output = &cached_buffer_;
+        context->set_output(0, *output);
+      }
     }
-    if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
+    if (!zen_enable_mempool) {
       OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
     }
 
@@ -192,7 +207,13 @@ class ZenConv2DOp : public OpKernel {
  protected:
   Conv2DParameters params_;
   Tensor cached_filter_data_ TF_GUARDED_BY(mu_);
-
+  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
+  // held when accessing the annotated variable. GUARDED_VAR indicates that
+  // a shared variable is guarded by some unspecified mutex, for use in rare
+  // cases where a valid mutex expression cannot be specified.
+  //
+  // Tensor to hold output buffer memory.
+  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   /* ZenDNN specific */
   ZendnnParameters zendnn_params_;
 };
