@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ DOCLINES = __doc__.split('\n')
 # result for pip.
 # Also update tensorflow/amd_cpu_plugin.bzl and
 # tensorflow/core/public/version.h
-_VERSION = '0.2.0'
+_VERSION = '4.2.0'
 # this path can't be modified.
 _PLUGIN_LIB_PATH = 'tensorflow-plugins'
 _MY_PLUGIN_PATH = 'my_plugin_dir'
@@ -47,8 +47,8 @@ if sys.byteorder == 'little':
   # See https://github.com/tensorflow/tensorflow/issues/17882.
   REQUIRED_PACKAGES.append('grpcio >= 1.8.6')
 
-# The wheel package name, change it as your requirements
-project_name = 'tensorflow_zendnn_plugin'
+# The wheel package name, change it as your requirements.
+project_name = 'zentf'
 
 # python3 requires wheel 0.26
 if sys.version_info.major == 3:
@@ -224,10 +224,10 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',

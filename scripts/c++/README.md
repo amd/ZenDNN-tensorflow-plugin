@@ -11,7 +11,7 @@ $ cd <cpp_package_name>/
 ```
 ### 2. Set env and library path
 ```
-$ source zendnn_tf_cc_api_env_setup.sh
+$ source zentf_cc_api_env_setup.sh
 ```
 Set up is done!
 

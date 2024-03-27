@@ -29,7 +29,7 @@
 #   -Creates necessary soft links.
 #----------------------------------------------------------------------------
 
-# Enable TensorFlow-ZenDNN Plugin.
+# Enable TensorFlow-ZenDNN Plug-in.
 export TF_ENABLE_ZENDNN_OPTS=1
 echo "TF_ENABLE_ZENDNN_OPTS=$TF_ENABLE_ZENDNN_OPTS"
 export TF_ENABLE_ONEDNN_OPTS=0
@@ -55,8 +55,8 @@ echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 export ZENDNN_CONV_ALGO=4
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 # Switch to set Matmul algo type.
-# By default, its set to '4' for FP32 which is BRGEMM kernel path.
-export ZENDNN_MATMUL_ALGO=FP32:4
+# By default, its set to BRGEMM kernel path.
+export ZENDNN_MATMUL_ALGO=FP32:4,BF16:3
 echo "ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
 # Enable/Disable primitive reuse.
 export TF_ZEN_PRIMITIVE_REUSE_DISABLE=FALSE
