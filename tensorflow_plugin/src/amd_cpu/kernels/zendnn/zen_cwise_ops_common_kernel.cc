@@ -64,8 +64,7 @@ void ZenBinaryOpShared::SetComputeError(OpKernelContext *ctx) {
 
 ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
     OpKernelContext *ctx, const string &op, bool has_attr,
-    bool incompatible_shape_error, ZendnnParameters zendnn_params,
-    Tensor &cached_buffer_)
+    bool incompatible_shape_error, ZendnnParameters zendnn_params)
     : in0(ctx->input(0)),
       in1(ctx->input(1)),
       bcast(BCast::FromShape(in0.shape()), BCast::FromShape(in1.shape())),
@@ -133,21 +132,8 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
     } else {
       zen_enable_mempool = 0;
     }
-  } else if (zen_enable_mempool) {
-    int res = cached_buffer_.NumElements();
-    Status state = OkStatus();
-    if (res <= 0 || res != output_shape.num_elements()) {
-      state =
-          ctx->allocate_temp(DataType::DT_FLOAT, output_shape, &cached_buffer_);
-    }
-    if (state != OkStatus()) {
-      zen_enable_mempool = 0;
-    } else {
-      out = &cached_buffer_;
-      ctx->set_output(0, *out);
-    }
   }
-  if (!zen_enable_mempool) {
+  if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, output_shape, &out));
   }
   ndims = static_cast<int>(bcast.x_reshape().size());

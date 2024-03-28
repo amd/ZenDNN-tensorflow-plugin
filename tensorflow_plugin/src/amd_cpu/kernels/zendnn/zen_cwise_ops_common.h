@@ -316,8 +316,7 @@ class ZenBinaryOpShared : public OpKernel {
     // If ctx->status().ok() is true, then out is guaranteed to be allocated.
     explicit ZenBinaryOpState(OpKernelContext* ctx, const std::string& op,
                               bool has_attr, bool incompatible_shape_error,
-                              ZendnnParameters zendnn_params,
-                              Tensor& cached_buffer_);
+                              ZendnnParameters zendnn_params);
 
     const Tensor& in0;
     const Tensor& in1;
@@ -352,7 +351,6 @@ class ZenBinaryOp : public ZenBinaryOpShared {
  private:
   /* ZenDNN specific */
   ZendnnParameters zendnn_params_;
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
 
  public:
   typedef typename Functor::in_type Tin;    // Input scalar data type.
@@ -369,8 +367,7 @@ class ZenBinaryOp : public ZenBinaryOpShared {
                "ZEN-OP-DEF: _ZenBinary (TF kernel): In Compute!");
 
     // 'state': Shared helper not dependent on T to reduce code size
-    ZenBinaryOpState state(ctx, op_name, false, false, zendnn_params_,
-                           cached_buffer_);
+    ZenBinaryOpState state(ctx, op_name, false, false, zendnn_params_);
 
     auto& bcast = state.bcast;
     const CPUDevice& eigen_device = ctx->eigen_cpu_device();
