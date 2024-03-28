@@ -43,6 +43,8 @@ void RegisterZenMatMul() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_a: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_b: bool = false");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 

@@ -41,6 +41,8 @@ void RegisterZenBatchMatMul() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_x: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_y: bool = false");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -73,6 +75,8 @@ void RegisterZenBatchMatMulV2() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_x: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "grad_y: bool = false");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
