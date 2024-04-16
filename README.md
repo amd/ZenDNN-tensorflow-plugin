@@ -39,6 +39,11 @@ $ pip install zentf-4.2.0-cp310-cp310-linux_x86_64.whl
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
+Note: Repository is defaults to master branch, to build the version 4.2 checkout the branch r4.2.
+```
+$ git checkout r4.2
+```
+
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
 >Note: Configure & Build Tensorflow-ZenDNN Plug-in manually by following the steps [3-6].
 
