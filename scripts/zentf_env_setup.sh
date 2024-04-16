@@ -27,13 +27,15 @@
 export TF_ENABLE_ZENDNN_OPTS=1
 echo "TF_ENABLE_ZENDNN_OPTS=$TF_ENABLE_ZENDNN_OPTS"
 export TF_ENABLE_ONEDNN_OPTS=0
-echo "TF_ENABLE_ZENDNN_OPTS=$TF_ENABLE_ONEDNN_OPTS"
+echo "TF_ENABLE_ONEDNN_OPTS=$TF_ENABLE_ONEDNN_OPTS"
 
 # Setting ZenDNN Environment variables.
 echo "Setting ZenDNN Environment variables."
 echo "The following settings gave us the best results. However, these details should be verified by the user empirically."
 # Switch to set zen mempool optimization.
-# By default, zen mempool is enabled with option '2' (node based mempool).
+# Default value is 1, but for this release we recommend :
+#   2 - For NLP and LLM models.
+#   3 - For CNN models.
 export ZENDNN_ENABLE_MEMPOOL=2
 echo "ZENDNN_ENABLE_MEMPOOL=$ZENDNN_ENABLE_MEMPOOL"
 # Variable to set the max no. of tensors that can be used inside zen memory pool.
@@ -44,9 +46,8 @@ echo "ZENDNN_TENSOR_POOL_LIMIT=$ZENDNN_TENSOR_POOL_LIMIT"
 export ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=0
 echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 # Switch to set Convolution algo type.
-# By default, algo type is set to '4' which is Direct convolution with
-# only filters in blocked memory format.
-export ZENDNN_CONV_ALGO=4
+# Default value is 0 i.e AUTO, but for this release we recommend 3.
+export ZENDNN_CONV_ALGO=3
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 # Switch to set Matmul algo type.
 # By default, its set to BRGEMM kernel path.
