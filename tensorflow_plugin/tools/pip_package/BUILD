@@ -28,7 +28,7 @@ load(
 
 COMMON_PIP_DEPS = [
     "MANIFEST.in",
-    "README",
+    "DESCRIPTION.md",
     "setup.py",
     "//tensorflow_plugin:libamdcpu_plugin.so",
 ]

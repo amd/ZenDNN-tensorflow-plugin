@@ -1,9 +1,22 @@
 # TensorFlow-ZenDNN Plug-in For AMD CPUs
-TensorFlow provides a [PluggableDevice mechanism (from v2.5)](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html) that enables modular, plug-and-play integration of device-specific code. AMD adopted PluggableDevice when implementing the TensorFlow-ZenDNN plug-in for it's EPYC<sup>TM</sup> CPUs ([See the blog announcement](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)). TensorFlow-ZenDNN plug-in adds custom kernel implementations and operations specific to AMD EPYC<sup>TM</sup> CPUs to TensorFlow through its kernel and op registration C APIs.
 
-TensorFlow-ZenDNN plug-in is a supplemental package to be installed alongside standard TensorFlow packages. From a TensorFlow developer’s perspective, the TensorFlow-ZenDNN plug-in approach simplifies the process of leveraging ZenDNN optimizations.
+**EARLY ACCESS:** The ZenDNN TensorFlow* Plugin (zenTF) extends TensorFlow* with an innovative upgrade that's set to revolutionize performance on AMD hardware.
 
-The following is a high-level block diagram for the TensorFlow-ZenDNN plug-in package which utilizes [ZenDNN](https://github.com/amd/ZenDNN) as the core inference library:
+As of version 4.2, AMD is unveiling a game-changing upgrade to ZenDNN, introducing a cutting-edge plug-in mechanism and an enhanced architecture under the hood. This isn't just about extensions; ZenDNN's aggressive AMD-specific optimizations operate at every level. It delves into comprehensive graph optimizations, including pattern identification, graph reordering, and seeking opportunities for graph fusions. At the operator level, ZenDNN boasts enhancements with microkernels, mempool optimizations, and efficient multi-threading on the large number of AMD EPYC cores. Microkernel optimizations further exploit all possible low-level math libraries, including [AOCL BLIS](https://www.amd.com/en/developer/aocl/blis.html).
+
+The result? Enhanced performance with respect to baseline TensorFlow*. The ZenDNN TensorFlow* Plugin is compatible with TensorFlow versions 2.16 and later.
+
+## Support
+
+Please note that zenTF is currently in “Early Access” mode. We welcome feedback, suggestions, and bug reports. Should you have any of these, please contact us on zendnn.maintainers@amd.com
+
+## License
+
+AMD copyrighted code in ZenDNN is subject to the [Apache-2.0, MIT, or BSD-3-Clause](https://github.com/amd/ZenDNN-tensorflow-plugin/blob/main/LICENSE) licenses; consult the source code file headers for the applicable license. Third party copyrighted code in ZenDNN is subject to the licenses set forth in the source code file headers of such code.
+
+## Overview
+
+The following is a high-level block diagram for the zenTF package which utilizes [ZenDNN](https://github.com/amd/ZenDNN) as the core inference library:
 
 ![TensorFlow-ZenDNN Plug-in](./images/zentf_overview.png)
 
@@ -19,19 +32,35 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 | [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=3.1 |
 | Git | >=1.8 |
 | Python | >=3.9 and <=3.12 |
-| [TensorFlow](https://www.tensorflow.org/) | ==2.16 |
+| [TensorFlow](https://www.tensorflow.org/) | >=2.16 |
 
 # Installation Guide
 
 >Note: Make sure you have active conda environment and TensorFlow v2.16 installed.
 
-## Install via wheel file.
-### 1. Download the wheel file from [here](http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/).
+## Install zenTF wheel.
 
-### 2. Install wheel file using pip:
+### 1. Install wheel file using pip:
 ```
-$ pip install zentf-4.2.0-cp310-cp310-linux_x86_64.whl
+$ pip install zentf=4.2.0
 ```
+### 2. Install zenTF using release package.
+
+* Download the package and the user-guide from [AMD developer portal](https://www.amd.com/en/developer/zendnn.html).
+
+* Run the following commands to unzip the package and install the binary.
+  > NOTE : We are taking an example for release package with Python version 3.10.
+
+  ```
+  $ unzip ZENTF_v4.2.0_Python_v3.10.zip
+  $ cd ZENTF_v4.2.0_Python_v3.10/
+  $ pip install zentf-4.2.0-cp310-cp310-manylinux2014_x86_64.whl
+  ```
+
+* To use the recommended environment settings, execute :
+  ```
+  $ source scripts/zentf_env_setup.sh
+  ```
 
 ## Build and install from source.
 ### 1. Clone the repository
@@ -130,12 +159,7 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 * [TensorFlow's Pluggable Device blog](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html)
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
 * [Download TensorFlow-ZenDNN Plug-in binary](http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/)
-* [TensorFlow-ZenDNN Plug-in User Guide](doc/TensorFlow-ZenDNN-Plugin-user-guide-v0.2.pdf)
 
-# Performace tuning and Benchmarking
-* Zentf v4.2.0 is supported with ZenDNN v4.2. Please see the section 2.7 of [ZenDNN User Guide](https://www.amd.com/content/dam/amd/en/documents/developer/zendnn-user-guide-4-1.pdf) for performance tuning guidelines.
-
-# Support
-* Please email zendnnsupport@amd.com for questions, issues, and feedback.
-* Please submit your questions, feature requests, and bug reports on the [GitHub issues](https://github.com/amd/ZenDNN-tensorflow-plugin/issues) page.
+# Performance tuning and Benchmarking
+* zenTF v4.2.0 is supported with ZenDNN v4.2. Please see the section 2.6 of ZenDNN user guide for performance tuning guidelines.
 
