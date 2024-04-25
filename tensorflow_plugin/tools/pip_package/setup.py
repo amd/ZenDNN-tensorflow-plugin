@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 #*******************************************************************************
-'''
-setup.py file to build wheel for tensorflow_plugin
-'''
+
 import fnmatch
 import os
 import re
@@ -26,8 +24,6 @@ from setuptools import Command
 from setuptools import setup
 from setuptools.command.install import install as InstallCommandBase
 from setuptools.dist import Distribution
-
-DOCLINES = __doc__.split('\n')
 
 # This version string is semver compatible, but incompatible with pip.
 # For pip, we will remove all '-' characters from this string, and use the
@@ -185,13 +181,18 @@ headers = (
     list(find_files('*.h', 'tensorflow-plugins/c_api/c')) +
     list(find_files('*.h', 'tensorflow-plugins/c_api/src')))
 
+curr_dir = os.path.dirname(__file__)
+long_description = ""
+with open(os.path.join(curr_dir, "DESCRIPTION.md"), encoding="utf-8") as f:
+  long_description = f.read()
+
 setup(
     name=project_name,
     version=_VERSION.replace('-', ''),
-    description=DOCLINES[0],
-    long_description='\n'.join(DOCLINES[2:]),
-    url='http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/',
-    download_url='https://github.com/amd/ZenDNN-tensorflow-plugin',
+    description="zenTF : A TensorFlow extension for AMD EPYC CPUs.",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://developer.amd.com/zendnn',
     author='AMD',
     author_email='zendnn.maintainers@amd.com',
     # Contained modules and scripts.
@@ -236,5 +237,5 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     license='Apache 2.0',
-    keywords='tensorflow tensor machine learning plugin',
+    keywords='tensorflow tensor machine learning plugin ZenDNN AMD',
 )
