@@ -35,9 +35,16 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 | [TensorFlow](https://www.tensorflow.org/) | >=2.16 |
 
 # Installation Guide
-
->Note: Make sure you have active conda environment and TensorFlow v2.16 installed.
-
+## Prerequisite
+* Create conda environment and activate it.
+  ```
+  $ conda create -n tf-v2.16-zendnn-v4.2-rel-env python=3.10 -y
+  $ conda activate tf-v2.16-zendnn-v4.2-rel-env
+  ```
+* Install TensorFlow v2.16
+  ```
+  $ pip install tensorflow-cpu~=2.16
+  ```
 ## Install zenTF wheel.
 
 ### 1. Install wheel file using pip:
@@ -101,6 +108,7 @@ Configuration finished
 
 ### 4. Build the TensorFlow-ZenDNN Plug-in:
 ```
+ZenDNN-tensorflow-plugin$ bazel clean --expunge
 ZenDNN-tensorflow-plugin$ bazel build  -c opt //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --spawn_strategy=standalone
 ```
 
