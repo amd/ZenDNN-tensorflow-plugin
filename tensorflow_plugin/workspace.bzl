@@ -106,7 +106,7 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "zen_dnn",
         build_file = "//third_party/zen_dnn:zen.BUILD",
-        sha256 = "ec501534bf7a6d948689ab5e8559d9c63867ca6101186255127e744e13dcd7d1",
+        sha256 = "b5a879372c277de37b67fb0e20e8b3f7318bc456148d68df5de8ff1169e29de6",
         strip_prefix = "ZenDNN-4.2",
         urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/v4.2.tar.gz"),
     )
