@@ -93,9 +93,7 @@ class ZenConv2DOp : public OpKernel {
     // Output tensor
     Tensor* output = nullptr;
     zendnnEnv zen_env_obj = readEnv();
-    // Both DIRECT settings will follow NHWC_BLOCKED path.
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
     int zen_enable_mempool =
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;

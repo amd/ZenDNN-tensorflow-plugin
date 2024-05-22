@@ -407,9 +407,7 @@ void ZenBlockedConv2DBiasEltSum(
 
   // ZenDNN state.
   zendnnEnv zen_env_obj = readEnv();
-  // Both DIRECT settings will follow NHWC_BLOCKED path.
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // Check for the BF16 support on the machine.
   if (!is_input_float) {
@@ -558,9 +556,7 @@ void ZenConvolution2DDepthwise(
   void *filter_data = NULL;
 
   zendnnEnv zen_env_obj = readEnv();
-  // Both DIRECT settings will follow NHWC_BLOCKED path.
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // filter Tag:: d = height,e = width, c = ic, a = group, b = oc.
   auto filter_format = tag::decab;
@@ -700,9 +696,7 @@ void ZenConvolution2DBiasOrRelu(
   void *filter_data = NULL;
 
   zendnnEnv zen_env_obj = readEnv();
-  // Both DIRECT settings will follow NHWC_BLOCKED path.
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // Check for the BF16 support on the machine.
   if (!is_input_float) {
@@ -880,9 +874,7 @@ void ZenConvolution2DBatchNormOrRelu(
   std::vector<std::unordered_map<int, memory>> net_args;
 
   zendnnEnv zen_env_obj = readEnv();
-  // Both DIRECT settings will follow NHWC_BLOCKED path.
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                      zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   const Tensor &cached_filter_data_tensor =
       *(static_cast<Tensor *>(cached_filter_data_));

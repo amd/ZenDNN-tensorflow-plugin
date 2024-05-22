@@ -110,9 +110,7 @@ struct LaunchZenFusedConv2DOp {
     T *output_array = const_cast<T *>(output->template flat<T>().data());
 
     zendnnEnv zen_env_obj = readEnv();
-    // Both DIRECT settings will follow NHWC_BLOCKED path.
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
     ZenExecutor *ex = ex->getInstance();
     engine eng = ex->getEngine();
@@ -567,9 +565,7 @@ struct LaunchZenFusedConv2DSumOp {
     primitive_attr conv_attr;
 
     zendnnEnv zen_env_obj = readEnv();
-    // Both DIRECT settings will follow NHWC_BLOCKED path.
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT2 ||
-                        zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
+    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
     if (blocked_nhwc) {
       ZenExecutor *ex = ex->getInstance();

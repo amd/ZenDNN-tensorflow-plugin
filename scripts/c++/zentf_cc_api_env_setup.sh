@@ -51,9 +51,14 @@ echo "ZENDNN_TENSOR_POOL_LIMIT=$ZENDNN_TENSOR_POOL_LIMIT"
 # zen memory pool optimization. By default, its disabled.
 export ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=0
 echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
-# Switch to set Convolution algo type.
-# Default value is 0 i.e AUTO, but for this release we recommend 4.
-export ZENDNN_CONV_ALGO=4
+# Convolution algo path.
+#   0. AUTO
+#   1. GEMM
+#   2. WINOGRAD
+#   3. NHWC BLOCKED
+# If env variable is not set, GEMM will be selected as default path.
+# We recommend NHWC BLOCKED format for the best possible performance.
+export ZENDNN_CONV_ALGO=3
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 # Switch to set Matmul algo type.
 # By default, its set to BRGEMM kernel path.
