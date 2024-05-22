@@ -49,7 +49,7 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 
 ### 1. Install wheel file using pip:
 ```
-$ pip install zentf=4.2.0
+$ pip install zentf==4.2.0
 ```
 ### 2. Install zenTF using release package.
 
