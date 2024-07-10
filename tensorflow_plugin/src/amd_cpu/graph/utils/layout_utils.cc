@@ -58,15 +58,28 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
   GetNodeAttr(node_def, "fused_ops", &fused_ops);
 
   return (fused_ops == std::vector<string>{"BiasAdd"} ||
-          fused_ops == std::vector<string>{"FusedBatchNorm"} ||
-          fused_ops == std::vector<string>{"Relu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Relu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Relu6"} ||
           fused_ops == std::vector<string>{"BiasAdd", "LeakyRelu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Add"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"} ||
+          fused_ops == std::vector<string>{"FusedBatchNorm"} ||
           fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"} ||
           fused_ops == std::vector<string>{"FusedBatchNorm", "LeakyRelu"});
+}
+
+bool RewriteFusedMatMul(const utils::MutableNodeView& node_view) {
+  if (!RewriteSupportedDataType(node_view)) return false;
+  const NodeDef& node_def = *(node_view.node());
+  std::vector<string> fused_ops;
+  GetNodeAttr(node_def, "fused_ops", &fused_ops);
+
+  return (fused_ops == std::vector<string>{"BiasAdd"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "Add"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "Relu"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "GeluExact"} ||
+          fused_ops == std::vector<string>{"BiasAdd", "GeluApproximate"});
 }
 
 //////////////////////////////////////////////////////////////////////////

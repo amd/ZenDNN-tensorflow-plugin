@@ -141,9 +141,7 @@ class ZenMatMulOp : public OpKernel {
       patterns = {
           {FCT::kBiasAdd, {"BiasAdd"}},
           {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
-          {FCT::kBiasAddWithElu, {"BiasAdd", "Elu"}},
           {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
-          {FCT::kBiasAddWithRelu6, {"BiasAdd", "Relu6"}},
           {FCT::kBiasAddWithGeluExact, {"BiasAdd", "GeluExact"}},
           {FCT::kBiasAddWithAddAndRelu, {"BiasAdd", "Add", "Relu"}},
           {FCT::kBiasAddWithGeluApproximate, {"BiasAdd", "GeluApproximate"}}};

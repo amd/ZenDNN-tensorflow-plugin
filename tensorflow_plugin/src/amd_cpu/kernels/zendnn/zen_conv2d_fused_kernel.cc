@@ -51,14 +51,11 @@ class ZenFusedConv2DOp : public OpKernel {
         {FCT::kBiasAdd, {"BiasAdd"}},
         {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
         {FCT::kBiasAddWithRelu6, {"BiasAdd", "Relu6"}},
-        {FCT::kBiasAddWithElu, {"BiasAdd", "Elu"}},
         {FCT::kBiasAddWithLeakyRelu, {"BiasAdd", "LeakyRelu"}},
         {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
         {FCT::kBiasAddWithAddAndRelu, {"BiasAdd", "Add", "Relu"}},
         {FCT::kFusedBatchNorm, {"FusedBatchNorm"}},
         {FCT::kFusedBatchNormWithRelu, {"FusedBatchNorm", "Relu"}},
-        {FCT::kFusedBatchNormWithRelu6, {"FusedBatchNorm", "Relu6"}},
-        {FCT::kFusedBatchNormWithElu, {"FusedBatchNorm", "Elu"}},
         {FCT::kFusedBatchNormWithLeakyRelu, {"FusedBatchNorm", "LeakyRelu"}},
     };
 

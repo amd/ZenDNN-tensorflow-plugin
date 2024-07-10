@@ -41,6 +41,9 @@ bool RewriteSupportedDataType(const utils::MutableNodeView& node_view);
 // FusedConv2D is rewritten only for a limited number of fused post-ops.
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view);
 
+// FusedMatMul is rewritten only for a limited number of fused post-ops.
+bool RewriteFusedMatMul(const utils::MutableNodeView& node_view);
+
 //////////////////////////////////////////////////////////////////////////
 // Op-specific functions to copy attributes from old node to new node
 //////////////////////////////////////////////////////////////////////////
