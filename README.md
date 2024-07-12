@@ -2,7 +2,7 @@
 
 **EARLY ACCESS:** The ZenDNN TensorFlow* Plugin (zenTF) extends TensorFlow* with an innovative upgrade that's set to revolutionize performance on AMD hardware.
 
-As of version 4.2, AMD is unveiling a game-changing upgrade to ZenDNN, introducing a cutting-edge plug-in mechanism and an enhanced architecture under the hood. This isn't just about extensions; ZenDNN's aggressive AMD-specific optimizations operate at every level. It delves into comprehensive graph optimizations, including pattern identification, graph reordering, and seeking opportunities for graph fusions. At the operator level, ZenDNN boasts enhancements with microkernels, mempool optimizations, and efficient multi-threading on the large number of AMD EPYC cores. Microkernel optimizations further exploit all possible low-level math libraries, including [AOCL BLIS](https://www.amd.com/en/developer/aocl/blis.html).
+As of version 5.0, AMD is unveiling a game-changing upgrade to ZenDNN, introducing a cutting-edge plug-in mechanism and an enhanced architecture under the hood. This isn't just about extensions; ZenDNN's aggressive AMD-specific optimizations operate at every level. It delves into comprehensive graph optimizations, including pattern identification, graph reordering, and seeking opportunities for graph fusions. At the operator level, ZenDNN boasts enhancements with microkernels, mempool optimizations, and efficient multi-threading on the large number of AMD EPYC cores. Microkernel optimizations further exploit all possible low-level math libraries, including [AOCL BLIS](https://www.amd.com/en/developer/aocl/blis.html).
 
 The result? Enhanced performance with respect to baseline TensorFlow*. The ZenDNN TensorFlow* Plugin is compatible with TensorFlow versions 2.16 and later.
 
@@ -29,7 +29,7 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 
 | Tools/Frameworks | Version |
 | :--------------: | :-----: |
-| [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=3.1 |
+| [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=5.3.0 and <=6.5.0 |
 | Git | >=1.8 |
 | Python | >=3.9 and <=3.12 |
 | [TensorFlow](https://www.tensorflow.org/) | >=2.16 |
@@ -38,8 +38,8 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.16-zendnn-v4.2-rel-env python=3.10 -y
-  $ conda activate tf-v2.16-zendnn-v4.2-rel-env
+  $ conda create -n tf-v2.17-zendnn-v5.0-rel-env python=3.10 -y
+  $ conda activate tf-v2.17-zendnn-v5.0-rel-env
   ```
 * Install TensorFlow v2.16
   ```
@@ -59,9 +59,9 @@ $ pip install zentf==4.2.0
   > NOTE : We are taking an example for release package with Python version 3.10.
 
   ```
-  $ unzip ZENTF_v4.2.0_Python_v3.10.zip
-  $ cd ZENTF_v4.2.0_Python_v3.10/
-  $ pip install zentf-4.2.0-cp310-cp310-manylinux2014_x86_64.whl
+  $ unzip ZENTF_v5.0.0_Python_v3.10.zip
+  $ cd ZENTF_v5.0.0_Python_v3.10/
+  $ pip install zentf-5.0.0-cp310-cp310-manylinux2014_x86_64.whl
   ```
 
 * To use the recommended environment settings, execute :
@@ -120,7 +120,7 @@ ZenDNN-tensorflow-plugin$ bazel-bin/tensorflow_plugin/tools/pip_package/build_pi
 
 ### 6. Install wheel file using pip:
 ```
-ZenDNN-tensorflow-plugin$ pip install zentf-4.2.0-cp310-cp310-linux_x86_64.whl
+ZenDNN-tensorflow-plugin$ pip install zentf-5.0.0-cp310-cp310-linux_x86_64.whl
 ```
 
 **The build and installation from source is done!**
@@ -170,4 +170,3 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 
 # Performance tuning and Benchmarking
 * zenTF v4.2.0 is supported with ZenDNN v4.2. Please see the section 2.6 of ZenDNN user guide for performance tuning guidelines.
-
