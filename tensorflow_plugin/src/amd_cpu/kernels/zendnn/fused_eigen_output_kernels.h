@@ -56,10 +56,11 @@ enum class FusedComputationType {
   kFusedBatchNormWithRelu,
   kFusedBatchNormWithRelu6,
   kFusedBatchNormWithElu,
+  kBiasAddWithTanh,
   kFusedBatchNormWithLeakyRelu,
   kBinaryMul,
   kBinaryMulAdd,
-  kRelu
+  kRelu,
 };
 
 // We have to pass around additional arguments for all possible fusion types.
@@ -159,6 +160,7 @@ struct BiasAddArgs {
                   fusion == FusedComputationType::kBiasAddWithGeluApproximate ||
                   fusion == FusedComputationType::kBiasAddWithGeluExact ||
                   fusion == FusedComputationType::kBiasAddWithAdd ||
+                  fusion == FusedComputationType::kBiasAddWithTanh ||
                   fusion == FusedComputationType::kBiasAddWithAddAndRelu;
     return result;
   }

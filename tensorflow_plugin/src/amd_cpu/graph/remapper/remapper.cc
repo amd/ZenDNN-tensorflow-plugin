@@ -40,7 +40,8 @@ bool HasDataType(const NodeDef* node, const DataType& expected,
 
 bool IsSupportedActivation(const NodeDef& node) {
   bool is_default_supported = IsRelu(node) || IsRelu6(node) || IsElu(node) ||
-                              IsLeakyRelu(node) || IsSigmoid(node);
+                              IsLeakyRelu(node) || IsSigmoid(node) ||
+                              IsTanh(node);
   return is_default_supported;
 }
 

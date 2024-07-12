@@ -65,6 +65,7 @@ Status InitializeFusedComputation(
   if (*fused_computation == FusedComputationType::kBiasAdd ||
       *fused_computation == FusedComputationType::kBiasAddWithRelu ||
       *fused_computation == FusedComputationType::kBiasAddWithRelu6 ||
+      *fused_computation == FusedComputationType::kBiasAddWithTanh ||
       *fused_computation == FusedComputationType::kBiasAddWithElu ||
       *fused_computation == FusedComputationType::kBiasAddWithLeakyRelu) {
     if (num_args != 1) {
