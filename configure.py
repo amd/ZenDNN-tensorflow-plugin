@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+# Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
 # reserved. Notified per clause 4(b) of the license.
 #*******************************************************************************
 #
@@ -243,28 +243,29 @@ def setup_python(environ_cp):
   # Do not check tensorflow-estimator version
   package_list = subprocess.Popen(
       os.path.sep.join(python_bin_path.split(os.path.sep)[:-1]) + os.path.sep +
-      "pip" + " list | grep \"^tensorflow \|^tensorflow-cpu \|^tf-nightly \"",
+      "pip" + r' list | grep "^tensorflow \|^tensorflow-cpu \|^tf_nightly "',
       shell=True,
       stdout=subprocess.PIPE).stdout.read().decode()
   tensorflow_list = package_list.splitlines()
   if not tensorflow_list:
-    print('Please install tensorflow version >= 2.12.0')
+    print('Please install tensorflow version >= 2.16.0')
     sys.exit(1)
   for line in tensorflow_list:
-    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tf-nightly ")):
+    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tf_nightly ")):
       name, version = line.split()
+      version = version.split(".dev")[0]
       version = version.split("rc")[0]
       current_tensorflow_version = convert_version_to_int(version)
       tf_major_version = version.split(".")[0]
       tf_minor_version = version.split(".")[1]
       write_to_bazelrc('build --define=tf_main_version=' + tf_major_version +
                        '.' + tf_minor_version)
-      min_tf_version = convert_version_to_int("2.12.0")
+      min_tf_version = convert_version_to_int("2.16.0")
       if current_tensorflow_version < min_tf_version:
-        print('Make sure you installed tensorflow version >= 2.12.0')
+        print('Make sure you installed tensorflow version >= 2.16.0')
         sys.exit(1)
     else:
-      print('Make sure you installed tensorflow version >= 2.12.0')
+      print('Make sure you installed tensorflow version >= 2.16.0')
       sys.exit(1)
 
   # Write tools/python_bin_path.sh
@@ -1130,7 +1131,9 @@ def main():
   # environment variables.
   environ_cp = dict(os.environ)
 
-  current_bazel_version = check_bazel_version('5.1.1', '5.3.0')
+  # Using 6.5.0 as the max version of bazel as TF v2.17 is supported for
+  # this specific version.
+  current_bazel_version = check_bazel_version('5.3.0', '6.5.0')
   _TF_CURRENT_BAZEL_VERSION = convert_version_to_int(current_bazel_version)
 
   reset_tf_configure_bazelrc()
