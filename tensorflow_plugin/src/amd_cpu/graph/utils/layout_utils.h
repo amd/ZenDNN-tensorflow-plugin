@@ -32,7 +32,7 @@ namespace amd_cpu_plugin {
 namespace graph {
 
 //////////////////////////////////////////////////////////////////////////
-// Rewrite functions
+// Rewrite functions.
 //////////////////////////////////////////////////////////////////////////
 
 // Returns true if the rewite is supported for the data type.
@@ -44,14 +44,26 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view);
 // FusedMatMul is rewritten only for a limited number of fused post-ops.
 bool RewriteFusedMatMul(const utils::MutableNodeView& node_view);
 
+// Returns true if the rewite is supported for the quantize data type.
+bool RewriteQuantize(const utils::MutableNodeView& node_view);
+
 //////////////////////////////////////////////////////////////////////////
-// Op-specific functions to copy attributes from old node to new node
+// Op-specific functions to copy attributes from old node to new node.
 //////////////////////////////////////////////////////////////////////////
 
 // Generic function to copy all attributes from original node to target.
-// graph_view is needed to get information from input node of orig_node
+// graph_view is needed to get information from input node of orig_node.
 void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,
                   NodeDef* new_node);
+
+void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
+                   NodeDef* new_node);
+
+void UpdateZenOpAttrs(const utils::MutableNodeView* orig_node_view,
+                      NodeDef* new_node);
+
+void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
+                              NodeDef* new_node);
 
 void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
                         NodeDef* new_node);
@@ -60,7 +72,7 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
                              NodeDef* new_node);
 
 //////////////////////////////////////////////////////////////////////////
-// Helper function to handle layout process
+// Helper function to handle layout process.
 //////////////////////////////////////////////////////////////////////////
 
 // Copy all zen specific attributes.

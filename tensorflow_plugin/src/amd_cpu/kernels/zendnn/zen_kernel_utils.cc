@@ -41,35 +41,8 @@ using zendnn::reorder;
 
 namespace amd_cpu_plugin {
 
-// This routine converts FP32 into qint8/quint8 based on scale factors.
-void ZenQuantized(zendnn::engine eng, zendnn::stream s, void *input_array,
-                  int batch_size, int height, int width, int channels,
-                  float scale_factor, bool out_type, void *output_array) {
-  using tag = memory::format_tag;
-  using dt = memory::data_type;
-
-  zendnn::primitive_attr attr;
-  std::vector<float> scales_;
-  scales_.resize(1);
-  scales_[0] = scale_factor;
-  attr.set_output_scales(0, scales_);
-
-  memory::dims src_tz = {batch_size, channels, height, width};
-  memory::dims dst_tz = {batch_size, channels, height, width};
-  memory::desc src_md = memory::desc({src_tz}, dt::f32, tag::acdb);
-  memory::desc dst_md =
-      memory::desc({dst_tz}, (channels == 32) ? dt::u8 : dt::s8, tag::acdb);
-
-  zendnn::memory src_mem = memory(src_md, eng, input_array);
-  zendnn::memory dst_mem = memory(dst_md, eng, output_array);
-
-  auto reorder_pd = reorder::primitive_desc(eng, src_md, eng, dst_md, attr);
-  auto val_reorder = reorder(reorder_pd);
-  val_reorder.execute(s, src_mem, dst_mem);
-}
-
 // TODO(zendnn): Code cleanup to be done for July Release 2021.
-void ZenQuantizedConvolution2DBiasOrRelu(
+void ZenQuantizedConv2DBiasOrRelu(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
     void *context, void *input_array, int batch_size, int channels, int height,
     int width, void *filter_array, int output_channels, int kernel_h,
@@ -87,7 +60,7 @@ void ZenQuantizedConvolution2DBiasOrRelu(
   const Tensor &cached_filter_data_tensor =
       *(static_cast<Tensor *>(cached_filter_data_));
 
-  // TODO(zendnn): Add an alternative fix
+  // TODO(zendnn): Add an alternative fix.
   // This fixes the accuracy issue in the first Convolution layer.
   // By setting res = -1, we are not using persistent caching for this layer
   // and the memory will be reallocated.
@@ -118,6 +91,7 @@ void ZenQuantizedConvolution2DBiasOrRelu(
       pad_b = 1, pad_r = 1;
     }
   }
+
   memory::dims bias_dims = {output_channels};
   memory::dims conv1_dst_tz = {batch_size, output_channels, out_height,
                                out_width};
@@ -139,8 +113,8 @@ void ZenQuantizedConvolution2DBiasOrRelu(
       zendnn::algorithm::convolution_direct, conv1_src_md, conv1_weights_md,
       conv1_bias_md, conv1_dst_md, conv1_strides, conv1_padding1,
       conv1_padding2);
-  // Convolution masks specify if a scalar value is used ( Per Channel mask ) or
-  // Vector values are used for scaling ( Per Tensor masks ).
+  // Convolution masks specify if a scalar value is used (Per Channel mask) or
+  // Vector values are used for scaling (Per Tensor masks).
   // Mask value of 0 denotes scalar mask while 1 denotes vector masks.
   if (scale.size() == 1) {
     conv_attr.set_output_scales(0, scale);
@@ -205,7 +179,7 @@ void ZenQuantizedConvolution2DBiasOrRelu(
 #endif
   // Mask value of 0 indicates vector of bias values is scaled by same scale.
   // Mask value of 1 indicates vector of bias values are scaled by different
-  // scale.
+  // scales.
   primitive_attr bias_attr;
   if (bias_scale.size() == 1) {
     bias_attr.set_output_scales(0, bias_scale);
@@ -303,17 +277,20 @@ void ZenQuantizedConvolution2DBiasOrRelu(
 
   filter_tf_shape.AddDim(user_weights_memory.get_desc().get_size());
 
-  if (res == 0) {
-    static_cast<OpKernelContext *>(context)->allocate_temp(
-        DT_QINT8, filter_tf_shape, static_cast<Tensor *>(cached_filter_data_));
-    size_t cached_filter_data_size = user_weights_memory.get_desc().get_size();
-    qint8 *weights_data =
-        static_cast<qint8 *>(conv1_weights_memory.get_data_handle());
-    memcpy(
-        static_cast<qint8 *>(
-            static_cast<Tensor *>(cached_filter_data_)->flat<qint8>().data()),
-        weights_data, cached_filter_data_size);
-  }
+  // TODO(plugin): Add INT8 MEMPOOL support.
+  // if (res == 0) {
+  //   static_cast<OpKernelContext *>(context)->allocate_temp(
+  //       DT_QINT8, filter_tf_shape, static_cast<Tensor
+  //       *>(cached_filter_data_));
+  //   size_t cached_filter_data_size =
+  //   user_weights_memory.get_desc().get_size(); qint8 *weights_data =
+  //       static_cast<qint8 *>(conv1_weights_memory.get_data_handle());
+  //   memcpy(
+  //       static_cast<qint8 *>(
+  //           static_cast<Tensor
+  //           *>(cached_filter_data_)->flat<qint8>().data()),
+  //       weights_data, cached_filter_data_size);
+  // }
 }
 
 void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
@@ -737,7 +714,8 @@ void ZenConvolution2DBiasOrRelu(
     conv1_weights_md = memory::desc({conv1_weights_tz}, dtype, tag::any);
     conv1_dst_md = memory::desc({conv1_dst_tz}, dtype, tag::nhwc);
 
-    // TODO(zendnn): Current there is no default consructor to create conv desc
+    // TODO(zendnn): Current there is no default consructor to create conv
+    // desc.
     convolution_forward::desc conv1_desc = convolution_forward::desc(
         prop_kind::forward_inference, algorithm::convolution_direct,
         conv1_src_md, conv1_weights_md, conv1_bias_md, conv1_dst_md,
@@ -913,7 +891,8 @@ void ZenConvolution2DBatchNormOrRelu(
     conv1_weights_md = memory::desc({conv1_weights_tz}, dt::f32, tag::any);
     conv1_dst_md = memory::desc({conv1_dst_tz}, dt::f32, tag::nhwc);
 
-    // TODO(zendnn): Current there is no default consructor to create conv desc.
+    // TODO(zendnn): Currently there is no default consructor to create conv
+    // desc.
     convolution_forward::desc conv1_desc = convolution_forward::desc(
         prop_kind::forward_inference, algorithm::convolution_direct,
         conv1_src_md, conv1_weights_md, conv1_bias_md, conv1_dst_md,

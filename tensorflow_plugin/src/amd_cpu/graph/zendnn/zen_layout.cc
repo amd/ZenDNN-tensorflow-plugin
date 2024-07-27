@@ -76,7 +76,22 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       // enable the below rewrite.
       // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
       {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
-       RewriteSupportedDataType}};
+       RewriteSupportedDataType},
+      {"QuantizedConv2DWithBiasAndReluAndRequantize",
+       "_ZenQuantizedConv2DWithBiasAndReluAndRequantize", CopyAttrsQCBR,
+       RewriteQuantize},
+      {"QuantizedConv2DWithBiasAndRequantize",
+       "_ZenQuantizedConv2DWithBiasAndRequantize", CopyAttrsQuantizedConv2D,
+       RewriteQuantize},
+      {"QuantizedConv2DWithBiasSumAndReluAndRequantize",
+       "_ZenQuantizedConv2DWithBiasSumAndReluAndRequantize", CopyAttrsQCBR,
+       RewriteQuantize},
+      {"QuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
+       "_ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
+       CopyAttrsQCBR, RewriteQuantize},
+      {"QuantizedMaxPool", "_ZenQuantizedMaxPool", CopyAttrsAll,
+       RewriteQuantize},
+  };
   absl::call_once(once, [&] {
     if (GetMempool() != 0) {
       rinfo.push_back(

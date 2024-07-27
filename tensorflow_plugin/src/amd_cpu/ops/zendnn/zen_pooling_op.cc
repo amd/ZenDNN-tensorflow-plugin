@@ -26,6 +26,80 @@
 
 namespace amd_cpu_plugin {
 
+// Routine for registering _ZenQuantizedMaxPool op.
+void RegisterZenQuantizedMaxPool() {
+  TF_Status* status = TF_NewStatus();
+
+  TF_OpDefinitionBuilder* op_builder =
+      TF_NewOpDefinitionBuilder("_ZenQuantizedMaxPool");
+  TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
+  TF_OpDefinitionBuilderAddInput(op_builder, "min_input: float");
+  TF_OpDefinitionBuilderAddInput(op_builder, "max_input: float");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "min_output: float");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "max_output: float");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: quantizedtype");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "ksize: list(int) >= 4");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int) >= 4");
+  TF_OpDefinitionBuilderAddAttr(op_builder, GetPaddingAttrString().c_str());
+  TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
+                                                  &unknown_shape_fn);
+
+  TF_RegisterOpDefinition(op_builder, status);
+  if (TF_OK != TF_GetCode(status)) {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-REG: _ZenQuantizedMaxPool Op Registration Failed!");
+  } else {
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZEN-OP-REG: _ZenQuantizedMaxPool Op Registration Is Successful!");
+  }
+  TF_DeleteStatus(status);
+}
+
+// Routine for registering _ZenQuantizedAvgPool op.
+void RegisterZenQuantizedAvgPool() {
+  TF_Status* status = TF_NewStatus();
+
+  TF_OpDefinitionBuilder* op_builder =
+      TF_NewOpDefinitionBuilder("_ZenQuantizedAvgPool");
+  TF_OpDefinitionBuilderAddInput(op_builder, "input: T");
+  TF_OpDefinitionBuilderAddInput(op_builder, "min_input: float");
+  TF_OpDefinitionBuilderAddInput(op_builder, "max_input: float");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "output: T");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "min_output: float");
+  TF_OpDefinitionBuilderAddOutput(op_builder, "max_output: float");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "T: quantizedtype");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "ksize: list(int) >= 4");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "strides: list(int) >= 4");
+  TF_OpDefinitionBuilderAddAttr(op_builder, GetPaddingAttrString().c_str());
+  TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
+  TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
+                                                  &unknown_shape_fn);
+
+  TF_RegisterOpDefinition(op_builder, status);
+  if (TF_OK != TF_GetCode(status)) {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-REG: _ZenQuantizedAvgPool Op Registration Failed!");
+  } else {
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZEN-OP-REG: _ZenQuantizedAvgPool Op Registration Is Successful!");
+  }
+  TF_DeleteStatus(status);
+}
+
 // Routine for registering _ZenAvgPool op.
 void RegisterZenAvgPool() {
   TF_Status* status = TF_NewStatus();
@@ -100,4 +174,5 @@ void RegisterZenMaxPool() {
 void RegisterZenPoolingOps() {
   amd_cpu_plugin::RegisterZenMaxPool();
   amd_cpu_plugin::RegisterZenAvgPool();
+  amd_cpu_plugin::RegisterZenQuantizedMaxPool();
 }

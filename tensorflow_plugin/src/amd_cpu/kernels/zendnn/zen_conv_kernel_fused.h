@@ -21,11 +21,11 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_KERNELS_ZENDNN_ZEN_CONV_KERNEL_FUSED_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_KERNELS_ZENDNN_ZEN_CONV_KERNEL_FUSED_H_
 
-// Standard headers
+// Standard headers.
 #include <iostream>
 #include <string>
 #include <vector>
-// TensorFlow plug-in headers
+// TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
@@ -42,6 +42,18 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
                           bool relu_fused, bool batchnorm_fused, bool add_fused,
                           void *bn_scale, void *bn_mean, void *bn_offset,
                           const float ops_alpha = 0.0f);
+
+void ZenQuantizedConv2DBiasOrRelu(
+    zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
+    void *context, void *input_array, int batch_size, int channels, int height,
+    int width, void *filter_array, int output_channels, int kernel_h,
+    int kernel_w, int out_height, int out_width, int pad_t, int pad_l,
+    int pad_b, int pad_r, int stride_h, int stride_w, void *bias_array,
+    const std::vector<float> &scale, void *output_array, void *output_min,
+    void *output_max, bool Tinput, bool Toutput, bool Tbias,
+    const std::vector<float> &bias_scale, bool is_relu, bool is_sum,
+    bool is_signed, float factor, int depth, float scale_output,
+    float scale_summand, void *cached_filter_data_, bool reset);
 
 template <typename T>
 void ZenBlockedConv2DBiasEltSum(
@@ -172,9 +184,9 @@ struct LaunchZenFusedConv2DOp {
       case FusedComputationType::kBiasAddWithRelu: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
         primitive_attr conv_attr;
-        // [Configure post-ops]
+        // Configure post-ops.
         const float ops_scale = 1.f;
-        const float ops_alpha = 0.f;  // relu negative slope
+        const float ops_alpha = 0.f;  // relu negative slope.
         const float ops_beta = 0.f;
         post_ops ops;
         ops.append_eltwise(ops_scale, algorithm::eltwise_relu, ops_alpha,
@@ -221,9 +233,9 @@ struct LaunchZenFusedConv2DOp {
       case FusedComputationType::kBiasAddWithRelu6: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
         primitive_attr conv_attr;
-        // [Configure post-ops]
+        // Configure post-ops.
         const float ops_scale = 1.f;
-        const float ops_alpha = 6.0;  // relu negative slope
+        const float ops_alpha = 6.0;  // relu negative slope.
         const float ops_beta = 0.f;
         post_ops ops;
         ops.append_eltwise(ops_scale, algorithm::eltwise_bounded_relu,
@@ -241,7 +253,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
         } else if (blocked_nhwc) {
-          // Direct convolution
+          // Direct convolution.
           ZenConvolution2DBiasOrRelu<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
               dimensions.in_depth, dimensions.input_rows, dimensions.input_cols,
@@ -253,7 +265,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.out_rows, dimensions.out_cols, is_eager,
               reorder_before, reorder_after, cached_filter_data_, context);
         } else {
-          // GEMM based convolution
+          // GEMM based convolution.
           ZenGemmConvolution2D(
               input_array, dimensions.batch, dimensions.in_depth,
               dimensions.input_rows, dimensions.input_cols, filter_array,
@@ -273,9 +285,9 @@ struct LaunchZenFusedConv2DOp {
       case FusedComputationType::kBiasAddWithLeakyRelu: {
         T *bias_arr = const_cast<T *>(bias.flat<T>().data());
         primitive_attr conv_attr;
-        // [Configure post-ops].
+        // Configure post-ops.
         const float ops_scale = 1.f;
-        const float ops_alpha = alpha;  // Relu negative slope.
+        const float ops_alpha = alpha;  // relu negative slope.
         const float ops_beta = 0.f;
         post_ops ops;
         ops.append_eltwise(ops_scale, algorithm::eltwise_bounded_relu,
@@ -327,12 +339,12 @@ struct LaunchZenFusedConv2DOp {
         if (blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
-          // [Configure post-ops]
+          // Configure post-ops.
           float ops_scale = 1.0;
           post_ops ops;
           ops.append_sum(ops_scale);
           conv_attr.set_post_ops(ops);
-          // [Configure post-ops]
+          // Configure post-ops.
           ZenBlockedConv2DBiasEltSum<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
               dimensions.in_depth, dimensions.input_rows, dimensions.input_cols,
@@ -363,16 +375,16 @@ struct LaunchZenFusedConv2DOp {
         if (blocked_nhwc) {
           // Direct convolution.
           primitive_attr conv_attr;
-          // [Configure post-ops]
+          // Configure post-ops.
           const float ops_scale = 1.f;
-          const float ops_alpha = 0.f;  // relu negative slope
+          const float ops_alpha = 0.f;  // relu negative slope.
           const float ops_beta = 0.f;
           post_ops ops;
           ops.append_sum(ops_scale);
           ops.append_eltwise(ops_scale, algorithm::eltwise_relu, ops_alpha,
                              ops_beta);
           conv_attr.set_post_ops(ops);
-          // [Configure post-ops]
+          // Configure post-ops.
           ZenBlockedConv2DBiasEltSum<T>(
               eng, s, conv_attr, input_array, dimensions.batch,
               dimensions.in_depth, dimensions.input_rows, dimensions.input_cols,
@@ -416,7 +428,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr,
               fused_batch_norm_args.scaling_factor.data(), batch_norm_mean_data,
               batch_norm_offset_data,
-              NULL,  // elementwise_input is not required
+              NULL,  // elementwise_input is not required.
               output_array, dimensions.out_rows, dimensions.out_cols, false,
               true, is_eager, reorder_before, reorder_after,
               cached_filter_data_, context);
@@ -454,7 +466,7 @@ struct LaunchZenFusedConv2DOp {
               dimensions.stride_cols, bias_arr,
               fused_batch_norm_args.scaling_factor.data(), batch_norm_mean_data,
               batch_norm_offset_data,
-              NULL,  // elementwise_input is not required
+              NULL,  // elementwise_input is not required.
               output_array, dimensions.out_rows, dimensions.out_cols, true,
               true, is_eager, reorder_before, reorder_after,
               cached_filter_data_, context);

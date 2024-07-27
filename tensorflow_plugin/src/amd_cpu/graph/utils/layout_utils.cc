@@ -32,7 +32,105 @@ namespace amd_cpu_plugin {
 namespace graph {
 
 //////////////////////////////////////////////////////////////////////////
-// Rewrite functions
+// Rewrite functions for Quantized ops.
+//////////////////////////////////////////////////////////////////////////
+void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
+                              NodeDef* new_node) {
+  CopyAttrsAll(orig_node_view, new_node);
+
+  // Get all attributes from old node.
+  const NodeDef* orig_node_def = orig_node_view->node();
+  DataType out_type;
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "out_type", &out_type));
+
+  // Add attributes to new node.
+  auto* new_attr = new_node->mutable_attr();
+
+  // TODO(plugin): avoid hardcode "NHWC" for QuantizedConv2D.
+  string data_format("NHWC");
+  SetAttrValue(data_format, &(*new_attr)["data_format"]);
+
+  // Tbias is only valid for quantized op meeting 2 requirements:
+  // 1. fused with BiasAdd.
+  // 2. fused with Requantize or Dequantize.
+  DataType Tbias;
+  if (TryGetNodeAttr(*orig_node_def, "Tbias", &Tbias)) {
+    SetAttrValue(Tbias, &(*new_attr)["Tbias"]);
+  }
+}
+
+void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
+                   NodeDef* new_node) {
+  DataType Tinput, Tfilter, out_type, Tbias, Tsummand;
+  bool narrow_range, reset, reorder_after, reorder_before;
+  string padding;
+  string data_format("NHWC");
+
+  std::vector<int32> strides, dilations, padding_list;
+  const NodeDef* orig_node_def = orig_node_view->node();
+  bool has_padding_list = HasNodeAttr(*orig_node_def, "padding_list");
+
+  // Get all attributes from old node.
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tinput", &Tinput));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tfilter", &Tfilter));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tbias", &Tbias));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "strides", &strides));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "padding", &padding));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "out_type", &out_type));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "dilations", &dilations));
+  if (has_padding_list) {
+    TF_CHECK_OK(GetNodeAttr(*orig_node_def, "padding_list", &padding_list));
+  }
+
+  auto* new_attr = new_node->mutable_attr();
+  NodeDef* filter_node = nullptr;
+
+  // Add attributes to new node.
+  SetAttrValue(Tinput, &(*new_attr)["Tinput"]);
+  SetAttrValue(Tfilter, &(*new_attr)["Tfilter"]);
+  SetAttrValue(out_type, &(*new_attr)["out_type"]);
+  SetAttrValue(padding, &(*new_attr)["padding"]);
+  SetAttrValue(strides, &(*new_attr)["strides"]);
+  SetAttrValue(Tbias, &(*new_attr)["Tbias"]);
+  SetAttrValue(dilations, &(*new_attr)["dilations"]);
+  SetAttrValue(data_format, &(*new_attr)["data_format"]);
+  SetAttrValue(reorder_before, &(*new_attr)["reorder_before"]);
+  SetAttrValue(reorder_after, &(*new_attr)["reorder_after"]);
+  SetAttrValue(reset, &(*new_attr)["reset"]);
+  if (has_padding_list) {
+    SetAttrValue(padding_list, &(*new_attr)["padding_list"]);
+  }
+
+  if (HasNodeAttr(*orig_node_def, "Tsummand")) {
+    TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tsummand", &Tsummand));
+    SetAttrValue(Tsummand, &(*new_attr)["Tsummand"]);
+  }
+}
+
+void UpdateZenOpAttrs(const utils::MutableNodeView* orig_node_view,
+                      NodeDef* new_node) {
+  string name;
+  DataType T, out_type, quantizedtype;
+  string mode, round_mode;
+  bool narrow_range, reset, reorder_after, reorder_before;
+  int axis;
+  float ensure_minimum_range;
+  const NodeDef* orig_node_def = orig_node_view->node();
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "T", &T));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "mode", &mode));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "narrow_range", &narrow_range));
+  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "axis", &axis));
+
+  auto* new_attr = new_node->mutable_attr();
+  SetAttrValue(T, &(*new_attr)["T"]);
+  SetAttrValue(mode, &(*new_attr)["mode"]);
+  SetAttrValue(round_mode, &(*new_attr)["round_mode"]);
+  SetAttrValue(narrow_range, &(*new_attr)["narrow_range"]);
+  SetAttrValue(axis, &(*new_attr)["axis"]);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Rewrite functions.
 //////////////////////////////////////////////////////////////////////////
 
 bool AlwaysRewrite(const utils::MutableNodeView& node_view) { return true; }
@@ -40,7 +138,6 @@ bool AlwaysRewrite(const utils::MutableNodeView& node_view) { return true; }
 bool RewriteSupportedDataType(const utils::MutableNodeView& node_view) {
   const NodeDef& node_def = *(node_view.node());
   const string& op_name = node_def.op();
-
   DataType T;
   AttrSlice attr_list(node_def);
   if (!TryGetNodeAttr(attr_list, "T", &T)) {
@@ -48,6 +145,16 @@ bool RewriteSupportedDataType(const utils::MutableNodeView& node_view) {
   }
 
   return IsLayoutRewriteSupportedDataType(op_name, T);
+}
+
+bool RewriteQuantize(const utils::MutableNodeView& node_view) {
+  const NodeDef& node_def = *(node_view.node());
+  const string& op_name = node_def.op();
+  DataType Tinput;
+  GetNodeAttr(node_def, "Tinput", &Tinput);
+  if (Tinput == DT_QUINT8 || Tinput == DT_QINT8) {
+    return true;
+  }
 }
 
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
@@ -83,7 +190,7 @@ bool RewriteFusedMatMul(const utils::MutableNodeView& node_view) {
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Op-specific functions to copy attributes from old node to new node
+// Op-specific functions to copy attributes from old node to new node.
 //////////////////////////////////////////////////////////////////////////
 
 void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,

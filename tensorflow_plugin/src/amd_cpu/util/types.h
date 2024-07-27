@@ -49,7 +49,7 @@ enum MemoryType {
 };
 
 // A DeviceType is just a string, but we wrap it up in a class to give
-// some type checking as we're passing these around
+// some type checking as we're passing these around.
 class DeviceType {
  public:
   DeviceType(const char* type)  // NOLINT(runtime/explicit)
@@ -69,7 +69,7 @@ class DeviceType {
 };
 std::ostream& operator<<(std::ostream& os, const DeviceType& d);
 
-// Convenient constants that can be passed to a DeviceType constructor
+// Convenient constants that can be passed to a DeviceType constructor.
 TF_EXPORT extern const char* const DEVICE_DEFAULT;     // "DEFAULT"
 TF_EXPORT extern const char* const DEVICE_CPU;         // "CPU"
 TF_EXPORT extern const char* const DEVICE_GPU;         // "GPU"
@@ -107,7 +107,7 @@ std::string DeviceTypeString(const DeviceType& device_type);
 // }
 
 // DataTypeSet represents a set of DataType values as a simple and efficient
-// bit mask.  Note that DataTypeSet cannot represent all DataType values; it
+// bit mask. Note that DataTypeSet cannot represent all DataType values; it
 // cannot represent any of the DT_*_REF values.
 class DataTypeSet {
  private:
@@ -257,6 +257,10 @@ constexpr DataTypeSet kAllTypes =
     ToSet(DT_VARIANT) | ToSet(DT_UINT32) | ToSet(DT_UINT64) |
     ToSet(DT_BFLOAT16);
 inline const DataTypeSet& AllTypes() { return kAllTypes; }
+constexpr DataTypeSet kQuantizedTypes = ToSet(DT_QINT8) | ToSet(DT_QUINT8) |
+                                        ToSet(DT_QINT16) | ToSet(DT_QUINT16) |
+                                        ToSet(DT_QINT32);
+inline const DataTypeSet& QuantizedTypes() { return kQuantizedTypes; }
 
 // Validates type T for whether it is a supported DataType.
 template <class T>
@@ -272,7 +276,7 @@ struct DataTypeToEnum {
 // EnumToDataType<VALUE>::Type is the type for DataType constant VALUE, e.g.
 // EnumToDataType<DT_FLOAT>::Type is float.
 template <DataType VALUE>
-struct EnumToDataType {};  // Specializations below
+struct EnumToDataType {};  // Specializations below.
 
 // Template specialization for both DataTypeToEnum and EnumToDataType.
 #define MATCH_TYPE_AND_ENUM(TYPE, ENUM)                 \
@@ -408,9 +412,9 @@ static_assert(IsValidDataType<int32>::value, "Incorrect impl for int32");
 //  return kDataTypeIsComplex.Contains(dt);
 //}
 //
-// inline bool DataTypeIsQuantized(DataType dt) {
-//  return kQuantizedTypes.Contains(dt);
-//}
+inline bool DataTypeIsQuantized(DataType dt) {
+  return kQuantizedTypes.Contains(dt);
+}
 
 // Is the dtype nonquantized integral?
 constexpr DataTypeSet kDataTypeIsInteger =
@@ -434,7 +438,7 @@ inline bool DataTypeIsSigned(DataType dt) {
 //  return kDataTypeIsUnsigned.Contains(dt);
 //}
 //
-//// Returns a 0 on failure
+//// Returns a 0 on failure.
 int DataTypeSize(DataType dt);
 
 // Returns HOST_MEMORY if `dtype` is always on host or is a DT_INT32,

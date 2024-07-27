@@ -105,8 +105,8 @@ class ZenPoolOp : public OpKernel {
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
     ZenMemoryPool<T> *zen_pool_buffer = NULL;
 
-    // ZenMemPool optimization reuse o/p tensors from the pool. By default its
-    // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
+    // ZenMemPool optimization reuse o/p tensors from the pool. By default
+    // it's enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
     // optimization.
     // Cases where tensors in pool are not free or requested size is more than
     // available tensor size in Pool, control will fall back to default way of
@@ -156,8 +156,8 @@ class ZenPoolOp : public OpKernel {
     filter_height = ksize_[1];
     filter_width = ksize_[2];
 
-    // TODO(plugin): Define new function compute_padding for this as its used at
-    // multiple places.
+    // TODO(plugin): Define new function compute_padding for this as it's used
+    // at multiple places.
     if (!(padding_ == SAME)) {
       padding_h_top = padding_h_bottom = padding_w_left = padding_w_right = 0;
     } else {
@@ -226,7 +226,7 @@ class ZenPoolOp : public OpKernel {
 
       algorithm pooling_algo =
           is_maxpool ? algorithm::pooling_max : algorithm::pooling_avg;
-      // [Create pooling primitive]
+      // Create pooling primitive.
       pooling_forward::desc pool_desc = pooling_forward::desc(
           prop_kind::forward_inference, pooling_algo, pool_src_md, pool_dst_md,
           pool_strides, pool_kernel, pool_padding_l, pool_padding_r);
@@ -243,7 +243,7 @@ class ZenPoolOp : public OpKernel {
       net_args.push_back({{ZENDNN_ARG_SRC, pool1_src_memory},
                           {ZENDNN_ARG_DST, pool_dst_memory}});
 
-      // [Execute model]
+      // Execute model.
       assert(net.size() == net_args.size() && "something is missing");
       for (size_t i = 0; i < net.size(); ++i) {
         net.at(i).execute(s, net_args.at(i));
@@ -296,8 +296,205 @@ class ZenPoolOp : public OpKernel {
   //
   // Tensor to hold output buffer memory.
   Tensor cached_buffer_ TF_GUARDED_BY(mu_);
-  /* ZenDNN specific */
+  // ZenDNN specific.
   ZendnnParameters zendnn_params_;
+};
+
+template <typename Toutput>
+class ZenQuantizedPoolOp : public OpKernel {
+ public:
+  explicit ZenQuantizedPoolOp(OpKernelConstruction *context)
+      : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("ksize", &ksize_));
+    OP_REQUIRES(
+        context, ksize_.size() == 4,
+        errors::InvalidArgument("Kernel size field must specify 4 dimensions"));
+    OP_REQUIRES_OK(context, context->GetAttr("strides", &stride_));
+    OP_REQUIRES(context, stride_.size() == 4,
+                errors::InvalidArgument(
+                    "Sliding window stride field must specify 4 dimensions"));
+
+    string padding_str;
+    OP_REQUIRES_OK(context, context->GetAttr("padding", &padding_str));
+    if (padding_str == "VALID") {
+      padding_ = Padding::VALID;
+    } else if (padding_str == "SAME") {
+      padding_ = Padding::SAME;
+    }
+    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
+  }
+
+  void Compute(OpKernelContext *context) override {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: _ZenQuantizedPool (TF kernel): In Compute!");
+
+    const Tensor &input = context->input(0);
+    auto input_map = input.tensor<quint8, 4>();  // experimented and proven that
+                                                 // it is row-major
+    const quint8 *input_array = input_map.data();
+
+    PoolParameters params{
+        context,     ksize_,       stride_, padding_, /*explict padding*/ {},
+        FORMAT_NHWC, input.shape()};
+    TensorShape out_shape = params.forward_output_shape();
+    Tensor *output = nullptr, *output_min = nullptr, *output_max = nullptr;
+    Toutput *output_array;
+    // Update the output type.
+    ZenTensorType out_type = ZenTensorType::kQint8;
+    if (std::is_same<Toutput, quint8>::value) {
+      out_type = ZenTensorType::kQuint8;
+    }
+
+    zendnnEnv zen_env_obj = readEnv();
+    int zen_enable_mempool =
+        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
+    ZenMemoryPool<Toutput> *zen_pool_buffer = NULL;
+
+    if (zen_enable_mempool % MEMPOOL_TYPE) {
+      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
+      zen_pool_buffer = ZenMemoryPool<Toutput>::GetZenMemPool(thread_id);
+      if (zen_pool_buffer) {
+        // Quantized models have 3 outputs. 1 output is used
+        // for computation, other 2 outputs are used during dequantize.
+        int status = zen_pool_buffer->AcquireZenPoolTensor(
+            context, &output, out_shape, zendnn_params_.out_links - 2,
+            zendnn_params_.reset, out_type);
+        if (status) {
+          zen_enable_mempool = 0;
+        }
+      } else {
+        zen_enable_mempool = 0;
+      }
+    }
+    if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
+      // Outtype is not required for default allocation because context
+      // maintains allocation data Type for outputs.
+      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
+    }
+
+    auto output_map = output->tensor<Toutput, 4>();
+    output_array = const_cast<Toutput *>(output_map.data());
+
+    const Tensor &min_input_t = context->input(1);
+    const Tensor &max_input_t = context->input(2);
+    const float min_input = min_input_t.flat<float>()(0);
+    const float max_input = max_input_t.flat<float>()(0);
+
+    TensorShape zen_out_shape_max, zen_out_shape_min;
+
+    OP_REQUIRES_OK(context,
+                   context->allocate_output(1, zen_out_shape_min, &output_min));
+    OP_REQUIRES_OK(context,
+                   context->allocate_output(2, zen_out_shape_max, &output_max));
+
+    output_min->flat<float>()(0) = min_input;
+    output_max->flat<float>()(0) = max_input;
+
+    const int batch_size = params.tensor_in_batch;
+    const int image_height = params.tensor_in_rows;
+    const int image_width = params.tensor_in_cols;
+    const int image_channels = params.depth;
+
+    int stride_h, stride_w, filter_height, filter_width;
+    int padding_h_top, padding_h_bottom, padding_w_left, padding_w_right;
+    int output_height, output_width;
+
+    stride_h = stride_[1];
+    stride_w = stride_[2];
+    filter_height = ksize_[1];
+    filter_width = ksize_[2];
+
+    // Compute Padding Parameters.
+    if (!(padding_ == SAME)) {
+      padding_h_top = padding_h_bottom = padding_w_left = padding_w_right = 0;
+      output_height =
+          std::floor(float(image_height - filter_height) / float(stride_h)) + 1;
+      output_width =
+          std::floor(float(image_width - filter_width) / float(stride_w)) + 1;
+    } else {
+      int total_pad_h, total_pad_w;
+      int mod_h, mod_w;
+      mod_h = image_height % stride_h;
+      mod_w = image_width % stride_w;
+
+      total_pad_h =
+          std::max(filter_height - (mod_h == 0 ? stride_h : mod_h), 0);
+      padding_h_top =
+          (total_pad_h / 2);  // integer division equivalent to floor.
+      padding_h_bottom = total_pad_h - padding_h_top;
+
+      total_pad_w = std::max(filter_width - (mod_w == 0 ? stride_w : mod_w), 0);
+      padding_w_left =
+          (total_pad_w / 2);  // integer division equivalent to floor.
+      padding_w_right = total_pad_w - padding_w_left;
+      output_height = std::ceil(float(image_height) / float(stride_h));
+      output_width = std::ceil(float(image_width) / float(stride_w));
+    }
+    // Primitive creation and Execution.
+    using tag = memory::format_tag;
+    using dt = memory::data_type;
+    ZenExecutor *ex = ex->getInstance();
+    engine eng = ex->getEngine();
+    stream s = ex->getStream();
+    std::vector<primitive> net;
+    std::vector<std::unordered_map<int, memory>> net_args;
+
+    memory::dim out_height, out_width;
+    out_height = (params.tensor_in_rows - params.window_rows + padding_h_top +
+                  padding_h_bottom) /
+                     params.row_stride +
+                 1;
+    out_width = (params.tensor_in_cols - params.window_cols + padding_w_left +
+                 padding_w_right) /
+                    params.col_stride +
+                1;
+
+    memory::dims pool_src_tz = {params.tensor_in_batch, params.depth,
+                                params.tensor_in_rows, params.tensor_in_cols};
+    memory::dims pool_dst_tz = {params.tensor_in_batch, params.depth,
+                                out_height, out_width};
+    memory::dims pool_kernel = {params.window_rows, params.window_cols};
+    memory::dims pool_strides = {params.row_stride, params.col_stride};
+    memory::dims pool_padding_l = {padding_h_top, padding_w_left};
+    memory::dims pool_padding_r = {padding_h_bottom, padding_w_right};
+
+    zendnn::memory pool_src_memory, pool_dst_memory;
+    pool_src_memory =
+        memory({{pool_src_tz}, dt::u8, tag::acdb}, eng, (quint8 *)input_array);
+    pool_dst_memory =
+        memory({{pool_dst_tz}, dt::u8, tag::acdb}, eng, (quint8 *)output_array);
+
+    memory::desc pool_src_md = memory::desc({pool_src_tz}, dt::u8, tag::acdb);
+    memory::desc pool_dst_md = memory::desc({pool_dst_tz}, dt::u8, tag::acdb);
+    // Create pooling primitive.
+    pooling_forward::desc pool_desc = pooling_forward::desc(
+        prop_kind::forward_inference, algorithm::pooling_max, pool_src_md,
+        pool_dst_md, pool_strides, pool_kernel, pool_padding_l, pool_padding_r);
+    pooling_forward::primitive_desc pool_pd =
+        pooling_forward::primitive_desc(pool_desc, eng);
+
+    net.push_back(pooling_forward(pool_pd));
+    net_args.push_back(
+        {{ZENDNN_ARG_SRC, pool_src_memory}, {ZENDNN_ARG_DST, pool_dst_memory}});
+    for (size_t i = 0; i < net.size(); ++i) {
+      net.at(i).execute(s, net_args.at(i));
+    }
+    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) && zen_pool_buffer) {
+      zen_pool_buffer->ZenMemPoolFree(context, (void *)input_array);
+    }
+
+    zendnnInfo(
+        ZENDNN_FWKLOG,
+        "ZEN-OP-DEF: _ZenQuantizedPool (TF kernel): Compute Is Successful!");
+  }
+
+ private:
+  std::vector<int32> ksize_;
+  std::vector<int32> stride_;
+  Padding padding_;
+  // ZenDNN specific
+  ZendnnParameters zendnn_params_;
+  Tensor cached_data_ TF_GUARDED_BY(mu_);
 };
 
 #define REGISTER_POOL_KERNELS(TYPE)                                     \
@@ -307,6 +504,18 @@ class ZenPoolOp : public OpKernel {
   REGISTER_KERNEL_BUILDER(                                              \
       Name("_ZenAvgPool").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
       ZenPoolOp<TYPE, false>);
+REGISTER_KERNEL_BUILDER(
+    Name("_ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
+    ZenQuantizedPoolOp<quint8>);
+REGISTER_KERNEL_BUILDER(
+    Name("_ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
+    ZenQuantizedPoolOp<qint8>);
+REGISTER_KERNEL_BUILDER(
+    Name("_ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
+    ZenQuantizedPoolOp<quint8>);
+REGISTER_KERNEL_BUILDER(
+    Name("_ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
+    ZenQuantizedPoolOp<qint8>);
 
 TF_CALL_float(REGISTER_POOL_KERNELS);
 TF_CALL_bfloat16(REGISTER_POOL_KERNELS);
