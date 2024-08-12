@@ -6,8 +6,7 @@ _COPTS_LIST = select({
     "-DBIAS_ENABLED=1",
     "-DZENDNN_ENABLE=1",
     "-DZENDNN_X64=1",
-    "-DZENDNN_ENABLE_LPGEMM=1",
-    "-DZENDNN_ENABLE_LPGEMM_V4_2=1",
+    "-DZENDNN_ENABLE_LPGEMM_V5_0=1",
 ] + ["-Iexternal/amd_blis/include/zen/"]
 
 _INCLUDES_LIST = [
