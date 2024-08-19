@@ -41,15 +41,15 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
   $ conda create -n tf-v2.17-zendnn-v5.0-rel-env python=3.10 -y
   $ conda activate tf-v2.17-zendnn-v5.0-rel-env
   ```
-* Install TensorFlow v2.16
+* Install TensorFlow v2.17
   ```
-  $ pip install tensorflow-cpu~=2.16
+  $ pip install tensorflow-cpu~=2.17
   ```
 ## Install zenTF wheel.
 
 ### 1. Install wheel file using pip:
 ```
-$ pip install zentf==4.2.0
+$ pip install zentf==5.0.0
 ```
 ### 2. Install zenTF using release package.
 
@@ -61,7 +61,7 @@ $ pip install zentf==4.2.0
   ```
   $ unzip ZENTF_v5.0.0_Python_v3.10.zip
   $ cd ZENTF_v5.0.0_Python_v3.10/
-  $ pip install zentf-5.0.0-cp310-cp310-manylinux2014_x86_64.whl
+  $ pip install zentf-5.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
   ```
 
 * To use the recommended environment settings, execute :
@@ -75,9 +75,9 @@ $ pip install zentf==4.2.0
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
-Note: Repository is defaults to master branch, to build the version 4.2 checkout the branch r4.2.
+Note: Repository is defaults to master branch, to build the version 5.0 checkout the branch r5.0.
 ```
-$ git checkout r4.2
+$ git checkout r5.0
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
@@ -91,7 +91,7 @@ ZenDNN-tensorflow-plugin$ source scripts/zentf_setup.sh
 ### 3. Configure the build options:
 ```
 ZenDNN-tensorflow-plugin$ ./configure
-You have bazel 5.3.0 installed.
+You have bazel 6.5.0 installed.
 Please specify the location of python. [Default is /home/user/anaconda3/envs/zentf-env/bin/python]:
 
 Found possible Python library paths:
@@ -166,7 +166,6 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 # Resources
 * [TensorFlow's Pluggable Device blog](https://blog.tensorflow.org/2021/06/pluggabledevice-device-plugins-for-TensorFlow.html)
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
-* [Download TensorFlow-ZenDNN Plug-in binary](http://ml-ci.amd.com:21096/view/ZenDNN/job/zendnn/job/tensorflow-zendnn-plugin-build-whl-release/)
 
 # Performance tuning and Benchmarking
-* zenTF v4.2.0 is supported with ZenDNN v4.2. Please see the section 2.6 of ZenDNN user guide for performance tuning guidelines.
+* zenTF v5.0.0 is supported with ZenDNN v5.0. Please see the section 5 of ZenDNN user guide for performance tuning guidelines.
