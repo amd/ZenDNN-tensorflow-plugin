@@ -144,26 +144,26 @@ class ZenSoftmaxOp : public OpKernel {
     // {{<physical layout>N,C,H,W}, data_type::f32, format_tag::nhwc};
     // For a 4D Tensor with softmax axis = 3:
     // {{<physical layout>N,H,W,C}, data_type::f32, format_tag::nchw};
+    axis = input_dims - 1;
     switch (input_dims) {
       case 1:
         layout_type = memory::format_tag::x;  // a
-        axis = 0;
         break;
       case 2:
         layout_type = memory::format_tag::nc;  // ab
-        axis = 1;
         break;
       case 3:
         layout_type = memory::format_tag::tnc;  // abc
-        axis = 2;
         break;
       case 4:
         layout_type = memory::format_tag::nchw;  // abcd
-        axis = 3;
+        break;
+      case 5:
+        layout_type = memory::format_tag::abcde;  // abcde
         break;
       default:
         OP_REQUIRES_OK(context,
-                       errors::Aborted("Input dims must be <= 4 and >=1"));
+                       errors::Aborted("Input dims must be <= 5 and >=1"));
     }
 
     // Create softmax memory for src, dst.

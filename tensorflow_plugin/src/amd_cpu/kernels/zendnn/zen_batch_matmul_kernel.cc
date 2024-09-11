@@ -62,12 +62,42 @@ class ZenBatchMatMulOp : public OpKernel {
     }
   }
 
+  using dims = zendnn::memory::dims;
+
+  // This function adjusts the dimensions of an input tensor to match the
+  // dimensions of an output tensor.
+  void ExpandInputDimsToOutputShape(const TensorShape &input_shape,
+                                    const TensorShape &output_shape,
+                                    dims *reshaped_dims) {
+    auto ndims_input = input_shape.dims();
+    auto ndims_output = output_shape.dims();
+    auto dim_offset = ndims_output - ndims_input;
+    DCHECK(dim_offset > 0);
+    reshaped_dims->clear();
+    reshaped_dims->resize(ndims_output, 1);
+    auto input_dims = input_shape.dim_sizes();
+    for (int dim_idx = 0; dim_idx < ndims_input; ++dim_idx) {
+      reshaped_dims->at(dim_idx + dim_offset) = input_dims[dim_idx];
+    }
+  }
+
+  // Extracts dimensions from a TensorFlow shape into a vector of int64_t.
+  std::vector<int64_t> ExtractDimsFromTFShape(
+      const amd_cpu_plugin::TensorShape &shape) {
+    std::vector<int64_t> dims;
+    for (int i = 0; i < shape.dims(); ++i) {
+      dims.push_back(shape.dim_size(i));
+    }
+    return dims;
+  }
+
   void Compute(OpKernelContext *context) override {
     zendnnInfo(ZENDNN_FWKLOG,
                "ZEN-OP-DEF: _ZenBatchMatMul (TF kernel): In Compute!");
 
     const Tensor &lhs = context->input(0);
     const Tensor &rhs = context->input(1);
+
     bool is_float = std::is_same<Scalar, float>::value;
 
     zendnnEnv zen_env_obj = readEnv();
@@ -118,6 +148,9 @@ class ZenBatchMatMulOp : public OpKernel {
     using dt = memory::data_type;
     std::vector<primitive> net;
     std::vector<std::unordered_map<int, memory>> net_args;
+
+    const auto ndims_lhs = lhs.dims();
+    const auto ndims_rhs = rhs.dims();
     const int ndims = lhs.dims();
     OP_REQUIRES(
         context, ndims == 3 || ndims == 4,
@@ -129,21 +162,7 @@ class ZenBatchMatMulOp : public OpKernel {
     Scalar *filter_array;
     Scalar *output_array;
     uint64 M, N, K;
-    if (ndims == 4) {
-      input_array = const_cast<Scalar *>(lhs.tensor<Scalar, 4>().data());
-      filter_array = const_cast<Scalar *>(rhs.tensor<Scalar, 4>().data());
-      auto rhs_reshaped = rhs.template flat_inner_dims<Scalar, 3>();
-      auto lhs_reshaped = lhs.template flat_inner_dims<Scalar, 3>();
-      M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
-      K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
-      N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
-    } else {
-      input_array = const_cast<Scalar *>(lhs.tensor<Scalar, 3>().data());
-      filter_array = const_cast<Scalar *>(rhs.tensor<Scalar, 3>().data());
-      M = adj_x_ ? lhs.dim_size(2) : lhs.dim_size(1);
-      K = adj_x_ ? lhs.dim_size(1) : lhs.dim_size(2);
-      N = adj_y_ ? rhs.dim_size(1) : rhs.dim_size(2);
-    }
+
     MatMulBCast bcast(lhs.shape().dim_sizes(), rhs.shape().dim_sizes());
     OP_REQUIRES(
         context, bcast.IsValid(),
@@ -152,11 +171,89 @@ class ZenBatchMatMulOp : public OpKernel {
             lhs.shape().DebugString(), " vs. ", rhs.shape().DebugString()));
 
     TensorShape out_shape = bcast.output_batch_shape();
-    out_shape.AddDim(M);
-    out_shape.AddDim(N);
+
+    auto lhs_rows = lhs.dim_size(ndims_lhs - 2);
+    auto lhs_cols = lhs.dim_size(ndims_lhs - 1);
+    auto rhs_rows = rhs.dim_size(ndims_rhs - 2);
+    auto rhs_cols = rhs.dim_size(ndims_rhs - 1);
+
+    if (adj_x_) std::swap(lhs_rows, lhs_cols);
+    if (adj_y_) std::swap(rhs_rows, rhs_cols);
+
+    out_shape.AddDim(lhs_rows);
+    out_shape.AddDim(rhs_cols);
+    Tensor *output = nullptr;
+
+    const TensorShape &lhs_shape = lhs.shape();
+    const auto ndims_lhs1 = lhs_shape.dims();
+    const TensorShape &rhs_shape = rhs.shape();
+    const auto ndims_rhs1 = rhs_shape.dims();
+    const auto ndims_out = out_shape.dims();
+
+    auto lhs_dims = ExtractDimsFromTFShape(lhs_shape);
+    auto rhs_dims = ExtractDimsFromTFShape(rhs_shape);
+    auto out_dims = ExtractDimsFromTFShape(out_shape);
+
+    // Check if the number of dimensions in lhs is less than the output
+    // dimensions.
+    if (ndims_lhs1 < ndims_out) {
+      ExpandInputDimsToOutputShape(
+          lhs_shape, out_shape, &lhs_dims);  // Expand lhs dimensions to match
+                                             // the output shape dimensions.
+    }
+
+    // Check if the number of dimensions in rhs is less than the output
+    // dimensions.
+    if (ndims_rhs1 < ndims_out) {
+      ExpandInputDimsToOutputShape(
+          rhs_shape, out_shape, &rhs_dims);  // Expand rhs dimensions to match
+                                             // the output shape dimensions.
+    }
+
+    Tensor rhs_reshaped_tensor;
+    OP_REQUIRES_OK(context, context->allocate_temp(
+                                DataTypeToEnum<Scalar>::value,
+                                TensorShape(rhs_dims), &rhs_reshaped_tensor));
+    std::copy(rhs.flat<Scalar>().data(),
+              rhs.flat<Scalar>().data() + rhs.NumElements(),
+              rhs_reshaped_tensor.flat<Scalar>().data());
+
+    Tensor lhs_reshaped_tensor;
+    OP_REQUIRES_OK(context, context->allocate_temp(
+                                DataTypeToEnum<Scalar>::value,
+                                TensorShape(lhs_dims), &lhs_reshaped_tensor));
+    std::copy(lhs.flat<Scalar>().data(),
+              lhs.flat<Scalar>().data() + lhs.NumElements(),
+              lhs_reshaped_tensor.flat<Scalar>().data());
+
+    if (ndims == 4) {
+      input_array =
+          const_cast<Scalar *>(lhs_reshaped_tensor.tensor<Scalar, 4>().data());
+      filter_array =
+          const_cast<Scalar *>(rhs_reshaped_tensor.tensor<Scalar, 4>().data());
+      auto rhs_reshaped =
+          rhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
+      auto lhs_reshaped =
+          lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
+      M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
+      K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
+      N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+    } else {
+      input_array =
+          const_cast<Scalar *>(lhs_reshaped_tensor.tensor<Scalar, 3>().data());
+      filter_array =
+          const_cast<Scalar *>(rhs_reshaped_tensor.tensor<Scalar, 3>().data());
+      auto lhs_reshaped =
+          lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
+      auto rhs_reshaped =
+          rhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
+      M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
+      K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
+      N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+    }
+
     ZenTensorType out_type =
         is_float ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
-    Tensor *output = nullptr;
 
     ZenMemoryPool<Scalar> *zen_pool_buffer = NULL;
     if (zen_enable_mempool % MEMPOOL_TYPE) {
@@ -216,17 +313,18 @@ class ZenBatchMatMulOp : public OpKernel {
     memory::dims dst_dims;
     tag weight_tag;
     memory::dims bias_dims = {1, 1, 1, N};
+
     if (ndims == 4) {
       format_tag = tag::abcd;
-      src_dims = {lhs.dim_size(0), lhs.dim_size(1), M, K};
-      weight_dims = {rhs.dim_size(0), rhs.dim_size(1), K, N};
-      dst_dims = {lhs.dim_size(0), lhs.dim_size(1), M, N};
+      src_dims = {lhs_dims[0], lhs_dims[1], M, K};
+      weight_dims = {rhs_dims[0], rhs_dims[1], K, N};
+      dst_dims = {lhs_dims[0], lhs_dims[1], M, N};
       weight_tag = adj_y_ ? tag::abdc : tag::abcd;
     } else if (ndims == 3) {
       format_tag = tag::abc;
-      src_dims = {lhs.dim_size(0), M, K};
-      weight_dims = {rhs.dim_size(0), K, N};
-      dst_dims = {lhs.dim_size(0), M, N};
+      src_dims = {lhs_dims[0], M, K};
+      weight_dims = {rhs_dims[0], K, N};
+      dst_dims = {lhs_dims[0], M, N};
       weight_tag = adj_y_ ? tag::acb : tag::abc;
     }
 
