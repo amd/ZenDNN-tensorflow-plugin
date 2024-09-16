@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -194,7 +194,17 @@ struct ContractionWithBiasAndAddActivation {
   int bias_port = kMissingIndex;
 };
 
-// Pad with `VALID` and 'EXPLICIT' padding followed by Depthwise/_Fused(Conv2D)
+// MatMul node followed by a Activation.
+struct ContractionWithActivation {
+  ContractionWithActivation() = default;
+  ContractionWithActivation(int contraction, int activation)
+      : contraction(contraction), activation(activation) {}
+
+  int contraction = kMissingIndex;
+  int activation = kMissingIndex;
+};
+
+// Pad with `VALID` and 'EXPLICIT' padding followed by Depthwise/_Fused(Conv2D).
 // Only `Pad` is supported rather than PadV2/MirrorPad.
 struct PadWithContraction {
   PadWithContraction() = default;
@@ -216,7 +226,7 @@ struct KerasDenseLayerFwd {
   int activation = kMissingIndex;
 };
 
-// BatchMatMul + Mul fusion
+// BatchMatMul + Mul fusion.
 struct ContractionWithMul {
   ContractionWithMul() = default;
   ContractionWithMul(int contraction, int mul, int scalar)
@@ -325,7 +335,7 @@ bool IsBiasSemanticAdd(const RemapperContext& ctx,
   return is_supported_shape(contraction_shape, bias_shape);
 }
 
-// Returns 0: left input scalar, 1: right input scalar, -1: no scalar inputs
+// Returns 0: left input scalar, 1: right input scalar, -1: no scalar inputs.
 int GetMulScalarInputIndex(const RemapperContext& ctx,
                            const NodeDef& node_def) {
   std::vector<OpInfo_TensorProperties> props;
@@ -589,6 +599,41 @@ bool FindContractionWithBiasAddAndAdd(const RemapperContext& ctx,
   matched->bias_port = base.bias_port;
   matched->add = node_view->node_index();
 
+  return true;
+}
+
+bool FindContractionWithActivation(const RemapperContext& ctx, int node_index,
+                                   ContractionWithActivation* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  // Root of the pattern must be an activation node.
+  const auto* node_def = node_view->node();
+  if (node_def == nullptr) return false;
+  if (!IsRelu(*node_def)) return false;
+
+  // Verify the output node has control fanin edge or not.
+  if (HasControlFanin(*node_view)) return false;
+
+  // Input to the Relu must be a MatMul.
+  // We have not yet encountered other Contraction + Activation patterns.
+  if (node_view->NumRegularFanins() < 1) return false;
+  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+  const auto* contraction_node_view = regular_fanin_0.node_view();
+  const auto* contraction_node_def = contraction_node_view->node();
+
+  bool is_matmul = IsMatMul(*contraction_node_def);
+
+  // Verify the input node has a control fanout edge or not.
+  if (HasControlFanout(*contraction_node_view)) return false;
+
+  if (!is_matmul || !HaveSameDataType(node_def, contraction_node_def) ||
+      !HasAtMostOneFanoutAtPort0(*contraction_node_view) ||
+      IsInPreserveSet(ctx, contraction_node_def))
+    return false;
+
+  const ContractionWithActivation pattern{contraction_node_view->node_index(),
+                                          node_index};
+  // We successfully found a Matmul + Relu pattern.
+  *matched = pattern;
   return true;
 }
 
@@ -1593,7 +1638,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
 }
 
 // Fuse BatchMatMul and Mul into FusedBatchMatmul if the other input of
-// Mul is a scalar. For example, we can optimize
+// Mul is a scalar. For example, we can optimize:
 /*
               Mul
              /  \
@@ -1601,7 +1646,7 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
        /   \                     /      |       \
    input1  input2             input1  input2   scale
 */
-// *) scale must be a scalar
+// *) scale must be a scalar.
 
 bool FindContractionWithMul(const RemapperContext& ctx, int node_index,
                             ContractionWithMul* matched) {
@@ -1610,7 +1655,7 @@ bool FindContractionWithMul(const RemapperContext& ctx, int node_index,
 
   const auto* node_def = node_view->node();
   if (!IsAnyMul(*node_def)) return false;
-  // Mul has two inputs, one input should be scalar
+  // Mul has two inputs, one input should be scalar.
   int scalar_input_index = GetMulScalarInputIndex(ctx, *node_def);
   if (scalar_input_index == -1) return false;
 
@@ -1974,6 +2019,46 @@ Status AddFusedContractionNode(
   return OkStatus();
 }
 
+// Contraction + Activation.
+Status AddFusedContractionNode(RemapperContext* ctx,
+                               const ContractionWithActivation& matched,
+                               std::vector<bool>* invalidated_nodes,
+                               std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& contraction = graph->node(matched.contraction);
+  const NodeDef& activation = graph->node(matched.activation);
+
+  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with ",
+             activation.op(), ":", " activation=", activation.name(),
+             " contraction=", contraction.name());
+
+  NodeDef fused_node;
+  fused_node.set_name(activation.name());
+  fused_node.set_device(contraction.device());
+  fused_node.add_input(contraction.input(0));  // 0: input
+  fused_node.add_input(contraction.input(1));  // 1: filter
+
+  if (IsMatMul(contraction)) {
+    fused_node.set_op(kFusedMatMul);
+    CopyMatMulAttributes(contraction, &fused_node);
+  } else {
+    CHECK(false);
+  }
+
+  SetFusedOpAttributesWithActivation(&fused_node, &activation, {}, 0);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_node), &status);
+  TF_ABORT_IF_ERROR(status);
+  TF_ABORT_IF_ERROR(mutation->Apply());
+
+  (*nodes_to_delete)[matched.contraction] = true;
+  (*invalidated_nodes)[matched.activation] = true;
+
+  return OkStatus();
+}
+
 // Contraction + BiasAdd + Add + Activation.
 Status AddFusedContractionNode(
     RemapperContext* ctx, const ContractionWithBiasAndAddActivation& matched,
@@ -2127,7 +2212,7 @@ Status AddFusedBatchNormExNode(RemapperContext* ctx,
              " with FusedBatchNorm: activation=", activation.name(),
              " for fused_batch_norm=", fused_batch_norm.name());
 
-  // Replace FusedBatchNorm with _FusedBatchNormEx + <Activation>.
+  // Replace FusedBatchNorm with _FusedBatchNormEx + Activation.
   NodeDef fused_op;
   fused_op.set_op(kFusedBatchNormEx);
   fused_op.set_name(fused_batch_norm.name());
@@ -2459,6 +2544,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         TF_ABORT_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_add_activation,
                                     &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
+
+      // Remap MatMul+Relu into the _FusedMatMul.
+      ContractionWithActivation contract_with_activation;
+      if (FindContractionWithActivation(ctx, i, &contract_with_activation)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithActivation pattern.");
+        AddFusedContractionNode(&ctx, contract_with_activation,
+                                &invalidated_nodes, &nodes_to_delete);
         continue;
       }
 

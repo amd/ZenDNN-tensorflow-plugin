@@ -43,25 +43,28 @@ template <typename T>
 struct LaunchZenFusedMatMulOp {
   void operator()(OpKernelContext *context, const Tensor &a, const Tensor &b,
                   ZenMatMulParams matmul_params, FusedComputationType fusion,
-                  const FusedComputationArgs &fusion_args, Tensor *output) {
-    const Tensor &bias = context->input(2);
-    if (BiasAddArgs<T>::IsSupported(fusion)) {
-      for (int i = 0; i < bias.dims() - 1; i++) {
-        OP_REQUIRES(
-            context, bias.dim_size(i) == 1,
-            errors::InvalidArgument("For bias_dims > 1, all except the "
-                                    "last dimension (channel) must be 1, got: ",
-                                    bias.shape().DebugString()));
+                  const FusedComputationArgs &fusion_args, Tensor *output,
+                  bool is_biasadd) {
+    T *bias_ptr = nullptr;
+    if (is_biasadd) {
+      const Tensor &bias = context->input(2);
+      if (BiasAddArgs<T>::IsSupported(fusion)) {
+        for (int i = 0; i < bias.dims() - 1; i++) {
+          OP_REQUIRES(context, bias.dim_size(i) == 1,
+                      errors::InvalidArgument(
+                          "For bias_dims > 1, all except the "
+                          "last dimension (channel) must be 1, got: ",
+                          bias.shape().DebugString()));
+        }
       }
+      bias_ptr = const_cast<T *>(bias.flat<T>().data());
     }
 
-    bool is_biasadd = true;
     matmul_params.is_biasadd = is_biasadd;
 
     auto a_ptr = const_cast<T *>(a.template flat<T>().data());
     auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (output->template flat<T>().data());
-    auto bias_ptr = const_cast<T *>(bias.flat<T>().data());
 
     switch (fusion) {
       case FusedComputationType::kBiasAdd: {
@@ -107,6 +110,13 @@ struct LaunchZenFusedMatMulOp {
         matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, is_biasadd);
         break;
       }
+      case FusedComputationType::kRelu: {
+        matmul_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
+        ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
+            ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, false);
+        break;
+      }
       case FusedComputationType::kBiasAddWithRelu6:
         OP_REQUIRES_OK(context, errors::Internal("Fusion type not supported"));
         break;
@@ -144,7 +154,8 @@ class ZenMatMulOp : public OpKernel {
           {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
           {FCT::kBiasAddWithGeluExact, {"BiasAdd", "GeluExact"}},
           {FCT::kBiasAddWithAddAndRelu, {"BiasAdd", "Add", "Relu"}},
-          {FCT::kBiasAddWithGeluApproximate, {"BiasAdd", "GeluApproximate"}}};
+          {FCT::kBiasAddWithGeluApproximate, {"BiasAdd", "GeluApproximate"}},
+          {FCT::kRelu, {"Relu"}}};
       OP_REQUIRES_OK(context,
                      InitializeFusedComputation(context, "_ZenMatMul", patterns,
                                                 &fused_computation_,
@@ -313,9 +324,10 @@ class ZenMatMulOp : public OpKernel {
           ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
       matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
     } else {
+      bool is_biasadd = (fused_computation_ != FusedComputationType::kRelu);
       LaunchZenFusedMatMulOp<T>()(context, a, b, matmul_params,
                                   fused_computation_, fused_computation_args_,
-                                  out);
+                                  out, is_biasadd);
     }
 
     // If ZenMemPool Optimization is enabled(default), update the state of
