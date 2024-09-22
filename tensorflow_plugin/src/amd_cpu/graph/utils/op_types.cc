@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -586,6 +586,8 @@ bool IsShape(const NodeDef& node) { return node.op() == "Shape"; }
 bool IsShapeN(const NodeDef& node) { return node.op() == "ShapeN"; }
 
 bool IsShuffle(const NodeDef& node) { return node.op() == "Shuffle"; }
+
+bool IsSigmoid(const NodeDef& node) { return node.op() == "Sigmoid"; }
 
 bool IsSigmoidGrad(const NodeDef& node) { return node.op() == "SigmoidGrad"; }
 

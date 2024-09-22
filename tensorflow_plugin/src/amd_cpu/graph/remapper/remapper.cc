@@ -644,7 +644,7 @@ bool FindContractionWithBiasAndActivation(
   // Root of the pattern must be an activation node.
   const auto* node_def = node_view->node();
   if (node_def == nullptr) return false;
-  if (!IsSupportedActivation(*node_def)) return false;
+  if (!IsSupportedActivation(*node_def) && !IsSigmoid(*node_def)) return false;
 
   // Verify the output node has control fanin edge or not.
   if (HasControlFanin(*node_view)) return false;
@@ -668,6 +668,10 @@ bool FindContractionWithBiasAndActivation(
   // limitation once it's supported.
   const auto* contraction_node_view = ctx.graph_view.GetNode(base.contraction);
   const auto* contraction_def = contraction_node_view->node();
+
+  // We have not encountered any other Contraction + BiasAdd + {Sigmoid}
+  // pattern.
+  if (IsSigmoid(*node_def) && !IsMatMul(*contraction_def)) return false;
 
   // Verify the inter node has control fanin&fanout or not.
   if (HasControlFaninOrFanout(*bias_add_node_view)) {

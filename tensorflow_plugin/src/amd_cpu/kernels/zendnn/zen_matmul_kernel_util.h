@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -175,7 +175,7 @@ class ZenMatMulPrimitive : public ZenPrimitive {
     post_ops post_ops;
     if (!post_op_params.empty()) {
       for (auto const &post_op_param : post_op_params) {
-        if (post_op_param.name == "relu" ||
+        if (post_op_param.name == "relu" || post_op_param.name == "sigmoid" ||
             post_op_param.name == "GeluApproximate" ||
             post_op_param.name == "GeluExact") {
           DCHECK_EQ(post_op_param.param.size(), 3);
@@ -185,6 +185,9 @@ class ZenMatMulPrimitive : public ZenPrimitive {
           if (post_op_param.name == "relu") {
             post_ops.append_eltwise(op_scale, algorithm::eltwise_relu, op_alpha,
                                     op_beta);
+          } else if (post_op_param.name == "sigmoid") {
+            post_ops.append_eltwise(op_scale, algorithm::eltwise_logsigmoid,
+                                    op_alpha, op_beta);
           } else if (post_op_param.name == "GeluApproximate") {
             post_ops.append_eltwise(op_scale, algorithm::eltwise_gelu, op_alpha,
                                     op_beta);
@@ -289,7 +292,7 @@ class ZenMatMulPrimitiveFactory : public ZenPrimitiveFactory {
 
     // Generate keys for post-ops.
     for (auto const &post_op_param : matmul_dims.post_op_params) {
-      if (post_op_param.name == "relu" ||
+      if (post_op_param.name == "relu" || post_op_param.name == "sigmoid" ||
           post_op_param.name == "GeluApproximate" ||
           post_op_param.name == "GeluExact") {
         DCHECK_EQ(post_op_param.param.size(), 3);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -188,6 +188,7 @@ bool IsSend(const NodeDef& node);
 bool IsShape(const NodeDef& node);
 bool IsShapeN(const NodeDef& node);
 bool IsShuffle(const NodeDef& node);
+bool IsSigmoid(const NodeDef& node);
 bool IsSigmoidGrad(const NodeDef& node);
 bool IsSize(const NodeDef& node);
 bool IsSlice(const NodeDef& node);

@@ -43,6 +43,7 @@ namespace amd_cpu_plugin {
 enum class FusedComputationType {
   kUndefined,
   kBiasAdd,
+  kBiasAddWithSigmoid,
   kBiasAddWithRelu,
   kBiasAddWithRelu6,
   kBiasAddWithElu,

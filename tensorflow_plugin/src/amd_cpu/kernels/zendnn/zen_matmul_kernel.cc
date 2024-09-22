@@ -87,6 +87,13 @@ struct LaunchZenFusedMatMulOp {
         matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, is_biasadd);
         break;
       }
+      case FusedComputationType::kBiasAddWithSigmoid: {
+        matmul_params.post_op_params.push_back({"sigmoid", {1.0, 0.0, 0.0}});
+        ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
+            ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 0);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, is_biasadd);
+        break;
+      }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
         matmul_params.post_op_params.push_back({"sum", {1.0}});
         matmul_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
@@ -152,6 +159,7 @@ class ZenMatMulOp : public OpKernel {
           {FCT::kBiasAdd, {"BiasAdd"}},
           {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
           {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
+          {FCT::kBiasAddWithSigmoid, {"BiasAdd", "Sigmoid"}},
           {FCT::kBiasAddWithGeluExact, {"BiasAdd", "GeluExact"}},
           {FCT::kBiasAddWithAddAndRelu, {"BiasAdd", "Add", "Relu"}},
           {FCT::kBiasAddWithGeluApproximate, {"BiasAdd", "GeluApproximate"}},
