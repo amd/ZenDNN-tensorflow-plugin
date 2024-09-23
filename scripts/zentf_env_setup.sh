@@ -55,8 +55,9 @@ echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 export ZENDNN_CONV_ALGO=3
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 # Switch to set Matmul algo type.
-# By default, its set to BRGEMM kernel path.
-export ZENDNN_MATMUL_ALGO=FP32:4,BF16:3
+# By default, its set to Blocked BRGEMM kernel path for FP32 and 
+# Autotuner for BF16.
+export ZENDNN_MATMUL_ALGO=FP32:3,BF16:0
 echo "ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
 # Enable/Disable primitive reuse.
 export TF_ZEN_PRIMITIVE_REUSE_DISABLE=FALSE
