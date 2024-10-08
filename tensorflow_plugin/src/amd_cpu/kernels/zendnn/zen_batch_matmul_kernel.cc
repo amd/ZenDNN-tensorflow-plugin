@@ -194,12 +194,17 @@ class ZenBatchMatMulOp : public OpKernel {
     auto rhs_dims = ExtractDimsFromTFShape(rhs_shape);
     auto out_dims = ExtractDimsFromTFShape(out_shape);
 
+    // TODO(plugin) : Added the below flags to differentiate the broadcasting
+    // path. Clean it up in future release.
+    bool lhs_flag = false, rhs_flag = false;
+
     // Check if the number of dimensions in lhs is less than the output
     // dimensions.
     if (ndims_lhs1 < ndims_out) {
       ExpandInputDimsToOutputShape(
           lhs_shape, out_shape, &lhs_dims);  // Expand lhs dimensions to match
                                              // the output shape dimensions.
+      lhs_flag = true;
     }
 
     // Check if the number of dimensions in rhs is less than the output
@@ -208,49 +213,63 @@ class ZenBatchMatMulOp : public OpKernel {
       ExpandInputDimsToOutputShape(
           rhs_shape, out_shape, &rhs_dims);  // Expand rhs dimensions to match
                                              // the output shape dimensions.
+      rhs_flag = true;
     }
 
     Tensor rhs_reshaped_tensor;
-    OP_REQUIRES_OK(context, context->allocate_temp(
-                                DataTypeToEnum<Scalar>::value,
-                                TensorShape(rhs_dims), &rhs_reshaped_tensor));
-    std::copy(rhs.flat<Scalar>().data(),
-              rhs.flat<Scalar>().data() + rhs.NumElements(),
-              rhs_reshaped_tensor.flat<Scalar>().data());
+    if (rhs_flag) {
+      // TODO(plugin) : Remove the below copy for broadcasting as well.
+      OP_REQUIRES_OK(context, context->allocate_temp(
+                                  DataTypeToEnum<Scalar>::value,
+                                  TensorShape(rhs_dims), &rhs_reshaped_tensor));
+      std::copy(rhs.flat<Scalar>().data(),
+                rhs.flat<Scalar>().data() + rhs.NumElements(),
+                rhs_reshaped_tensor.flat<Scalar>().data());
+    }
 
     Tensor lhs_reshaped_tensor;
-    OP_REQUIRES_OK(context, context->allocate_temp(
-                                DataTypeToEnum<Scalar>::value,
-                                TensorShape(lhs_dims), &lhs_reshaped_tensor));
-    std::copy(lhs.flat<Scalar>().data(),
-              lhs.flat<Scalar>().data() + lhs.NumElements(),
-              lhs_reshaped_tensor.flat<Scalar>().data());
+    if (lhs_flag) {
+      // TODO(plugin) : Remove the below copy for broadcasting as well.
+      OP_REQUIRES_OK(context, context->allocate_temp(
+                                  DataTypeToEnum<Scalar>::value,
+                                  TensorShape(lhs_dims), &lhs_reshaped_tensor));
+      std::copy(lhs.flat<Scalar>().data(),
+                lhs.flat<Scalar>().data() + lhs.NumElements(),
+                lhs_reshaped_tensor.flat<Scalar>().data());
+    }
 
     if (ndims == 4) {
-      input_array =
-          const_cast<Scalar *>(lhs_reshaped_tensor.tensor<Scalar, 4>().data());
-      filter_array =
-          const_cast<Scalar *>(rhs_reshaped_tensor.tensor<Scalar, 4>().data());
-      auto rhs_reshaped =
-          rhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
-      auto lhs_reshaped =
-          lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
-      M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
-      K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
-      N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+      input_array = lhs_flag
+                        ? const_cast<Scalar *>(
+                              lhs_reshaped_tensor.tensor<Scalar, 4>().data())
+                        : const_cast<Scalar *>(lhs.tensor<Scalar, 4>().data());
+      filter_array = rhs_flag
+                         ? const_cast<Scalar *>(
+                               rhs_reshaped_tensor.tensor<Scalar, 4>().data())
+                         : const_cast<Scalar *>(rhs.tensor<Scalar, 4>().data());
     } else {
-      input_array =
-          const_cast<Scalar *>(lhs_reshaped_tensor.tensor<Scalar, 3>().data());
-      filter_array =
-          const_cast<Scalar *>(rhs_reshaped_tensor.tensor<Scalar, 3>().data());
-      auto lhs_reshaped =
-          lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
-      auto rhs_reshaped =
-          rhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>();
-      M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
-      K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
-      N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+      input_array = lhs_flag
+                        ? const_cast<Scalar *>(
+                              lhs_reshaped_tensor.tensor<Scalar, 3>().data())
+                        : const_cast<Scalar *>(lhs.tensor<Scalar, 3>().data());
+      filter_array = rhs_flag
+                         ? const_cast<Scalar *>(
+                               rhs_reshaped_tensor.tensor<Scalar, 3>().data())
+                         : const_cast<Scalar *>(rhs.tensor<Scalar, 3>().data());
     }
+
+    M = lhs_flag ? lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>()
+                       .dimension(adj_x_ ? 2 : 1)
+                 : lhs.template flat_inner_dims<Scalar, 3>().dimension(
+                       adj_x_ ? 2 : 1);
+    K = lhs_flag ? lhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>()
+                       .dimension(adj_x_ ? 1 : 2)
+                 : lhs.template flat_inner_dims<Scalar, 3>().dimension(
+                       adj_x_ ? 1 : 2);
+    N = rhs_flag ? rhs_reshaped_tensor.template flat_inner_dims<Scalar, 3>()
+                       .dimension(adj_y_ ? 1 : 2)
+                 : rhs.template flat_inner_dims<Scalar, 3>().dimension(
+                       adj_y_ ? 1 : 2);
 
     ZenTensorType out_type =
         is_float ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
