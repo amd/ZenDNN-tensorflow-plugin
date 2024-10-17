@@ -11,7 +11,7 @@ genrule(
         "include/zen/bli_config.h",
         "include/zen/blis.h",
         "include/zen/cblas.h",
-        "libblis-mt.so.4",
+        "libblis-mt.so.5",
     ],
     cmd = "cd external/amd_blis " +
           "&& make clean " +
@@ -23,7 +23,7 @@ genrule(
           "&& cp external/amd_blis/bli_config.h $(location include/zen/bli_config.h) " +
           "&& cp external/amd_blis/include/**/blis.h $(location include/zen/blis.h) " +
           "&& cp external/amd_blis/include/**/cblas.h $(location include/zen/cblas.h) " +
-          "&& cp external/amd_blis/lib/**/libblis-mt.so.4 $(location  libblis-mt.so.4) ",
+          "&& cp external/amd_blis/lib/**/libblis-mt.so.5 $(location  libblis-mt.so.5) ",
     visibility = ["//visibility:public"],
 )
 
