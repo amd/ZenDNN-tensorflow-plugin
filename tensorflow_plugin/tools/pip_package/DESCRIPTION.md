@@ -5,11 +5,9 @@
 
 This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
 
-zentf 5.0 takes deep learning to new heights with significant enhancements for bfloat16 performance and expanded support for cutting-edge models like Llama 3.1 and 3.2, Microsoft Phi, amongst others.
+zentf 5.0 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-Under the hood, zentf introduces robust improvements in kernel performance and efficiency. The zentf plugin leverages microkernels and operators from the ZenDNN 5.0 library. Notable updates to the ZenDNN library include enhancements to BFloat16 and related fusions to better leverage the EPYC microarchitecture and cache hierarchy. The zentf 5.0 plugin-in has been specifically optimized to accelerate the performance of generative LLM models on EPYC. Some of these enhancements are additive in nature -- for e.g., optimized attention or positional embedding operators. The zentf plugin also includes custom pattern matching passes to select the fusions that maximize throughput and minimize latency.
-
-The zentf 5.0 plugs seamlessly with TensorFlow version 2.17, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.0 plugin works seamlessly with TensorFlow versions 2.17 and 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms. 
 
 ## Support
 
