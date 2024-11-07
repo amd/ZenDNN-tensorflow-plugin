@@ -1,15 +1,19 @@
 [![Python](https://img.shields.io/pypi/pyversions/tensorflow.svg?style=plastic)](https://badge.fury.io/py/zentf)
 [![PyPI](https://badge.fury.io/py/tensorflow.svg)](https://badge.fury.io/py/zentf)
 
-**EARLY ACCESS:** The ZenDNN TensorFlow* Plugin (zenTF) extends TensorFlow* with an innovative upgrade that's set to revolutionize performance on AMD hardware.
+**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0 is here!**
 
-As of version 5.0, AMD is unveiling a game-changing upgrade to ZenDNN, introducing a cutting-edge plug-in mechanism and an enhanced architecture under the hood. This isn't just about extensions; ZenDNN's aggressive AMD-specific optimizations operate at every level. It delves into comprehensive graph optimizations, including pattern identification, graph reordering, and seeking opportunities for graph fusions. At the operator level, ZenDNN boasts enhancements with microkernels, mempool optimizations, and efficient multi-threading on the large number of AMD EPYC cores. Microkernel optimizations further exploit all possible low-level math libraries, including AOCL BLIS.
+This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
 
-The result? Enhanced performance with respect to baseline TensorFlow*. The ZenDNN TensorFlow* Plugin is compatible with TensorFlow versions 2.16 and later.
+zentf 5.0 takes deep learning to new heights with significant enhancements for bfloat16 performance and expanded support for cutting-edge models like Llama 3.1 and 3.2, Microsoft Phi, amongst others.
+
+Under the hood, zentf introduces robust improvements in kernel performance and efficiency. The zentf plugin leverages microkernels and operators from the ZenDNN 5.0 library. Notable updates to the ZenDNN library include enhancements to BFloat16 and related fusions to better leverage the EPYC microarchitecture and cache hierarchy. The zentf 5.0 plugin-in has been specifically optimized to accelerate the performance of generative LLM models on EPYC. Some of these enhancements are additive in nature -- for e.g., optimized attention or positional embedding operators. The zentf plugin also includes custom pattern matching passes to select the fusions that maximize throughput and minimize latency.
+
+The zentf 5.0 plugs seamlessly with TensorFlow version 2.17, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
-Please note that zenTF is currently in “Early Access” mode. We welcome feedback, suggestions, and bug reports. Should you have any of these, please contact us on zendnn.maintainers@amd.com
+We welcome feedback, suggestions, and bug reports. Should you have any of the these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page: https://github.com/amd/ZenDNN-tensorflow-plugin/issues
 
 ## License
 
