@@ -1,14 +1,16 @@
 # TensorFlow-ZenDNN Plug-in For AMD CPUs
 
-**EARLY ACCESS:** The ZenDNN TensorFlow* Plugin (zenTF) extends TensorFlow* with an innovative upgrade that's set to revolutionize performance on AMD hardware.
+**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0 is here!**
 
-As of version 5.0, AMD is unveiling a game-changing upgrade to ZenDNN, introducing a cutting-edge plug-in mechanism and an enhanced architecture under the hood. This isn't just about extensions; ZenDNN's aggressive AMD-specific optimizations operate at every level. It delves into comprehensive graph optimizations, including pattern identification, graph reordering, and seeking opportunities for graph fusions. At the operator level, ZenDNN boasts enhancements with microkernels, mempool optimizations, and efficient multi-threading on the large number of AMD EPYC cores. Microkernel optimizations further exploit all possible low-level math libraries, including [AOCL BLIS](https://www.amd.com/en/developer/aocl/blis.html).
+This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
 
-The result? Enhanced performance with respect to baseline TensorFlow*. The ZenDNN TensorFlow* Plugin is compatible with TensorFlow versions 2.16 and later.
+zentf 5.0 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
+
+The zentf 5.0 plugin works seamlessly with TensorFlow versions 2.17 and 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
-Please note that zenTF is currently in “Early Access” mode. We welcome feedback, suggestions, and bug reports. Should you have any of these, please contact us on zendnn.maintainers@amd.com
+We welcome feedback, suggestions, and bug reports. Should you have any of the these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page: https://github.com/amd/ZenDNN-tensorflow-plugin/issues
 
 ## License
 
