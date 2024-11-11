@@ -28,6 +28,7 @@ cc_library(
         ":grappler_item",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@local_config_gcc//:tensorflow_cc_lib",
     ],
 )
 

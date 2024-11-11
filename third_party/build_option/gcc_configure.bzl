@@ -11,6 +11,13 @@ cc_import(
   # system_provided = 1,
   visibility = ['//visibility:public'],
 )
+cc_import(
+  name = "tensorflow_cc_lib",
+  shared_library = "proper/libtensorflow_cc.so.2",
+  # interface_library = "libtensorflow_cc.so",
+  # system_provided = 1,
+  visibility = ['//visibility:public'],
+)
 """)
 
 gcc_configure = repository_rule(
