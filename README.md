@@ -45,7 +45,7 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
   ```
 * Install TensorFlow v2.17
   ```
-  $ pip install tensorflow-cpu~=2.17
+  $ pip install tensorflow-cpu==2.17
   ```
 ## Install zenTF wheel.
 
