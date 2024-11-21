@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -52,11 +52,11 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       {"AvgPool", "_ZenAvgPool", CopyAttrsAll, RewriteSupportedDataType},
       {"MatMul", "_ZenMatMul", CopyAttrsAll, RewriteSupportedDataType},
       {"_FusedMatMul", "_ZenFusedMatMul", CopyAttrsAll, RewriteFusedMatMul},
-      {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsAll,
+      {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsZenBatchMatMul,
        RewriteSupportedDataType},
-      {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsAll,
+      {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsZenBatchMatMul,
        RewriteSupportedDataType},
-      {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsAll,
+      {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsZenBatchMatMul,
        RewriteSupportedDataType},
       // We are not supporting BLOCKED format execution.
       {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll,

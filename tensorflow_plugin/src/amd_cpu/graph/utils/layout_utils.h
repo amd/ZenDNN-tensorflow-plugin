@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -69,6 +69,9 @@ void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
                         NodeDef* new_node);
 
 void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
+                             NodeDef* new_node);
+
+void CopyAttrsZenBatchMatMul(const utils::MutableNodeView* orig_node_view,
                              NodeDef* new_node);
 
 //////////////////////////////////////////////////////////////////////////

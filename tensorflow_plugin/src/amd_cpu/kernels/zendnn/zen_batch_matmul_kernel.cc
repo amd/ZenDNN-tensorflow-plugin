@@ -48,6 +48,9 @@ class ZenBatchMatMulOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("adj_x", &adj_x_));
     OP_REQUIRES_OK(context, context->GetAttr("adj_y", &adj_y_));
 
+    OP_REQUIRES_OK(context,
+                   context->GetAttr("is_cache_weight", &is_cache_weight_));
+
     std::vector<FusedComputationPattern> patterns;
     if (fusion_enabled) {
       using FCT = FusedComputationType;
@@ -354,7 +357,7 @@ class ZenBatchMatMulOp : public OpKernel {
     memory::desc src_md = memory::desc({src_dims}, dtype, format_tag);
     memory::desc dst_md = memory::desc({dst_dims}, dtype, format_tag);
     memory::desc matmul_weights_md =
-        memory::desc({weight_dims}, dtype, weight_tag);
+        memory::desc({weight_dims}, dtype, weight_tag, is_cache_weight_);
     memory::desc bias_md = memory::desc();
     zendnn::memory user_weights_memory, src_memory, dst_memory;
     src_memory = memory({{src_dims}, dtype, format_tag}, eng, input_array);
@@ -445,6 +448,7 @@ class ZenBatchMatMulOp : public OpKernel {
  private:
   bool adj_x_ = false;
   bool adj_y_ = false;
+  bool is_cache_weight_ = false;
   ZendnnParameters zendnn_params_;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that

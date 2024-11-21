@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/layout_utils.h"
 
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -336,6 +337,33 @@ void CopyAttrsZenFusedConv2D(const utils::MutableNodeView* orig_node_view,
   SetAttrValue(epsilon, &(*new_attr)["epsilon"]);
   if (HasNodeAttr(*orig_node_def, "leakyrelu_alpha")) {
     SetAttrValue(leakyrelu_alpha, &(*new_attr)["leakyrelu_alpha"]);
+  }
+}
+
+// Copy the attributes from _FusedMatMul op to _ZenFusedMatMul op.
+void CopyAttrsZenBatchMatMul(const utils::MutableNodeView* orig_node_view,
+                             NodeDef* new_node) {
+  // Setup ZenDNN specific attributes.
+  CopyZenAttrs(*(orig_node_view->node()), new_node);
+
+  CopyAllAttrs(*(orig_node_view->node()), new_node);
+
+  AddNodeAttr("is_cache_weight", true, new_node);
+
+  // Add the is_cache_weight Attribute.
+  auto* new_attr = new_node->mutable_attr();
+
+  NodeDef& node_def = *(orig_node_view->node());
+  for (const string& input : node_def.input()) {
+    // The non-constant weights for BatchMatMul are found in the
+    // attention block, so setting is_cache_weight=false for it.
+    // This will work only when weight is non constant and op name
+    // contains 'attention'.
+    // TODO (plugin) : Currently, this is based on the pattern observed
+    // in the models. This has to be generalized for all the cases.
+    if (regex_search(input, std::regex("attention"))) {
+      SetAttrValue(false, &(*new_attr)["is_cache_weight"]);
+    }
   }
 }
 
