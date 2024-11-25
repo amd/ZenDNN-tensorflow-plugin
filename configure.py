@@ -243,7 +243,8 @@ def setup_python(environ_cp):
   # Do not check tensorflow-estimator version
   package_list = subprocess.Popen(
       os.path.sep.join(python_bin_path.split(os.path.sep)[:-1]) + os.path.sep +
-      "pip" + r' list | grep "^tensorflow \|^tensorflow-cpu \|^tf_nightly "',
+      "pip list | " +
+      r'grep "^tensorflow \|^tensorflow-cpu \|^tensorflow_cpu \|^tf_nightly "',
       shell=True,
       stdout=subprocess.PIPE).stdout.read().decode()
   tensorflow_list = package_list.splitlines()
@@ -251,7 +252,8 @@ def setup_python(environ_cp):
     print('Please install tensorflow version >= 2.16.0')
     sys.exit(1)
   for line in tensorflow_list:
-    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tf_nightly ")):
+    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tensorflow_cpu ", 
+    "tf_nightly ")):
       name, version = line.split()
       version = version.split(".dev")[0]
       version = version.split("rc")[0]
