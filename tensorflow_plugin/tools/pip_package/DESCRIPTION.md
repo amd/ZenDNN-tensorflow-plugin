@@ -1,13 +1,13 @@
 [![Python](https://img.shields.io/pypi/pyversions/tensorflow.svg?style=plastic)](https://badge.fury.io/py/zentf)
 [![PyPI](https://badge.fury.io/py/tensorflow.svg)](https://badge.fury.io/py/zentf)
 
-**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0 is here!**
+**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0.1 is here!**
 
 This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
 
-zentf 5.0 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
+zentf 5.0.1 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0.1 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-The zentf 5.0 plugin works seamlessly with TensorFlow versions 2.17 and 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms. 
+The zentf 5.0.1 plugin works seamlessly with TensorFlow versions 2.17 and 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
