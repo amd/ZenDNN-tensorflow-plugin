@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -72,7 +72,14 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
                       graph_def, &optimized_graph_def));
       optimized_graph_def.Swap(&graph_def);
     }
-    DumpGraphDefToFile("remapped_graph", graph_def, "./");
+    // Dump the optimized graph to a file for debugging/analysis.
+    // The output path can be configured via ZENDNN_DUMP_GRAPH
+    // environment variable.
+    bool dump_graph = false;
+    ReadBoolFromEnvVar("ZENDNN_DUMP_GRAPH", false, &dump_graph);
+    if (dump_graph) {
+      DumpGraphDefToFile("remapped_graph", graph_def, "./");
+    }
     SET_STATUS_IF_ERROR(
         tf_status,
         RunZenLayout((static_cast<Optimizer*>(optimizer))->device_name, item,
