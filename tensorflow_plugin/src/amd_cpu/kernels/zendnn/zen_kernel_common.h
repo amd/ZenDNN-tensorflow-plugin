@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ namespace amd_cpu_plugin {
 
 // Common parameters for ZenDNN nodes.
 struct ZendnnParameters {
-  bool reorder_before;
-  bool reorder_after;
-  bool is_eager;
-  int in_links;
-  int out_links;
-  bool reset;
+  bool reorder_before = false;
+  bool reorder_after = false;
+  bool is_eager = false;
+  int in_links = 0;
+  int out_links = 0;
+  bool reset = false;
 };
 
 // Initializes and validates ZenDNN parameters configured

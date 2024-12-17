@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -33,14 +33,14 @@ Status InitializeFusedComputation(
   // 'fused_ops' and 'num_args' attributes are specified by the Grappler
   // Remapper optimizer (see grappler/optimizers/remapper.cc).
 
-  std::vector<string> fused_ops;
+  std::vector<string> fused_ops = {};
   TF_RETURN_IF_ERROR(context->GetAttr("fused_ops", &fused_ops));
   if (fused_ops.empty()) {
     return errors::InvalidArgument("Fused ", kernel_name,
                                    " must have at least one fused op.");
   }
 
-  int num_args;
+  int num_args = 0;
   TF_RETURN_IF_ERROR(context->GetAttr("num_args", &num_args));
 
   // TODO(ezhulenev): Add support for fusion element-wise op chains defined

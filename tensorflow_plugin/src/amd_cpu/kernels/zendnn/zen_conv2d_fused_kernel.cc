@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -343,7 +343,7 @@ class ZenFusedConv2DOp : public OpKernel {
     OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
     using FCT = FusedComputationType;
 
-    std::vector<FusedComputationPattern> patterns;
+    std::vector<FusedComputationPattern> patterns = {};
     patterns = {
         {FCT::kBiasAdd, {"BiasAdd"}},
         {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
@@ -493,7 +493,7 @@ class ZenFusedConv2DOp : public OpKernel {
 
  private:
   Conv2DParameters params_;
-  float alpha_;
+  float alpha_ = 0.0;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that
   // a shared variable is guarded by some unspecified mutex, for use in rare

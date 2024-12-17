@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -42,11 +42,11 @@ namespace amd_cpu_plugin {
 
 // Convolution parameters specified by Op attributes.
 struct Conv2DParameters {
-  std::vector<int32> dilations;
-  std::vector<int32> strides;
-  Padding padding;
-  TensorFormat data_format;
-  std::vector<int64_t> explicit_paddings;
+  std::vector<int32> dilations = {};
+  std::vector<int32> strides = {};
+  Padding padding = Padding::SAME;
+  TensorFormat data_format = TensorFormat::FORMAT_NHWC;
+  std::vector<int64_t> explicit_paddings = {};
 };
 
 // Convolution dimensions inferred from parameters, input and filter tensors.

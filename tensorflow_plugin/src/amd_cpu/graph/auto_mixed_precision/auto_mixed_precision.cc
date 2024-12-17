@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -214,8 +214,8 @@ class GraphTypeTopologyView {
 
   // We need a valid reference to return from GetFanin/GetFanout if the
   // `node_idx` argument is outside of the [0, num_nodes_) range.
-  absl::InlinedVector<int, 4> empty_fanin_;
-  absl::InlinedVector<int, 2> empty_fanout_;
+  absl::InlinedVector<int, 4> empty_fanin_ = {};
+  absl::InlinedVector<int, 2> empty_fanout_ = {};
 };
 
 template <typename T>
@@ -675,14 +675,14 @@ class AutoMixedPrecisionImpl {
   MutableGraphView graph_view_;
   NodeTypeAttrMap node_type_map_;
   GraphTypeTopologyView graph_type_view_;
-  bool force_all_f16_;
+  bool force_all_f16_ = false;
   AutoMixedPrecisionMode mode_;
   gtl::FlatSet<string> f16_allowlist_;
   gtl::FlatSet<string> f16_denylist_;
   gtl::FlatSet<string> f16_inferlist_;
   gtl::FlatSet<string> f16_clearlist_;
   absl::flat_hash_set<const NodeDef*> should_process_nodes_;
-  DataType target_dtype_;  // DT_BFLOAT16.
+  DataType target_dtype_ = DT_BFLOAT16;
 };
 
 NodeDef AutoMixedPrecisionImpl::BuildCastNode(

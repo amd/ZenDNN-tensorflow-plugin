@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -35,16 +35,16 @@ class ZenFusedBatchNormOp : public OpKernel {
  public:
   explicit ZenFusedBatchNormOp(OpKernelConstruction *context)
       : OpKernel(context) {
-    float epsilon;
+    float epsilon = 0.0;
     OP_REQUIRES_OK(context, context->GetAttr("epsilon", &epsilon));
     epsilon_ = U(epsilon);
 
-    float exponential_avg_factor;
+    float exponential_avg_factor = 0.0;
     OP_REQUIRES_OK(context, context->GetAttr("exponential_avg_factor",
                                              &exponential_avg_factor));
     exponential_avg_factor_ = U(exponential_avg_factor);
 
-    string tensor_format;
+    string tensor_format = {};
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &tensor_format));
     OP_REQUIRES(context, FormatFromString(tensor_format, &tensor_format_),
                 errors::InvalidArgument("Invalid data format"));
@@ -53,7 +53,7 @@ class ZenFusedBatchNormOp : public OpKernel {
     if (!is_batch_norm_ex) {
       activation_mode_ = FusedBNActivationMode::kIdentity;
     } else {
-      int num_side_inputs;
+      int num_side_inputs = 0;
       OP_REQUIRES_OK(context,
                      context->GetAttr("num_side_inputs", &num_side_inputs));
       OP_REQUIRES(context, num_side_inputs == 0,
@@ -329,14 +329,15 @@ class ZenFusedBatchNormOp : public OpKernel {
   }
 
  private:
-  float epsilon_;
-  U exponential_avg_factor_;
-  TensorFormat tensor_format_;
-  bool is_training_;
-  U *mean_values_;
-  U *variance_values_;
-  size_t depth_;  // Batch normalization is performed for per channel.
-  FusedBNActivationMode activation_mode_;
+  float epsilon_ = 0.0;
+  U exponential_avg_factor_ = 0.0;
+  TensorFormat tensor_format_ = TensorFormat::FORMAT_NHWC;
+  bool is_training_ = false;
+  U *mean_values_ = nullptr;
+  U *variance_values_ = nullptr;
+  size_t depth_ = 0;  // Batch normalization is performed for per channel.
+  FusedBNActivationMode activation_mode_ =
+      functor::FusedBatchNormActivationMode::kIdentity;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that
   // a shared variable is guarded by some unspecified mutex, for use in rare

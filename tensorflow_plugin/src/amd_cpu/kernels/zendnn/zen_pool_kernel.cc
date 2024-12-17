@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -53,7 +53,7 @@ class ZenPoolOp : public OpKernel {
                 errors::InvalidArgument(
                     "Sliding window stride field must specify 4 dimensions"));
 
-    string padding_str;
+    string padding_str = "";
     OP_REQUIRES_OK(context, context->GetAttr("padding", &padding_str));
     if (padding_str == "VALID") {
       padding_ = Padding::VALID;
@@ -67,7 +67,7 @@ class ZenPoolOp : public OpKernel {
           context, context->GetAttr("explicit_paddings", &explicit_paddings_));
     }
 
-    string data_format_str;
+    string data_format_str = "";
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format_str));
     OP_REQUIRES(context, FormatFromString(data_format_str, &data_format_),
                 errors::InvalidArgument("Invalid data format"));
@@ -285,10 +285,13 @@ class ZenPoolOp : public OpKernel {
   }
 
  private:
-  std::vector<int32> ksize_, stride_;
-  Padding padding_;
-  std::vector<int64_t> explicit_paddings_;
-  TensorFormat data_format_;
+  std::vector<int32> ksize_ = {};
+  std::vector<int32> stride_ = {};
+  Padding padding_ = Padding::VALID;
+  std::vector<int64_t> explicit_paddings_ = {};
+  // FORMAT_NHWC is the default data format in TensorFlow. Hence initializing
+  // with it. Reference from tensorflow_plugin/src/amd_cpu/util/tensor_format.h
+  TensorFormat data_format_ = TensorFormat::FORMAT_NHWC;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that
   // a shared variable is guarded by some unspecified mutex, for use in rare
@@ -314,7 +317,7 @@ class ZenQuantizedPoolOp : public OpKernel {
                 errors::InvalidArgument(
                     "Sliding window stride field must specify 4 dimensions"));
 
-    string padding_str;
+    string padding_str = "";
     OP_REQUIRES_OK(context, context->GetAttr("padding", &padding_str));
     if (padding_str == "VALID") {
       padding_ = Padding::VALID;
@@ -489,9 +492,9 @@ class ZenQuantizedPoolOp : public OpKernel {
   }
 
  private:
-  std::vector<int32> ksize_;
-  std::vector<int32> stride_;
-  Padding padding_;
+  std::vector<int32> ksize_ = {};
+  std::vector<int32> stride_ = {};
+  Padding padding_ = Padding::VALID;
   // ZenDNN specific
   ZendnnParameters zendnn_params_;
   Tensor cached_data_ TF_GUARDED_BY(mu_);
