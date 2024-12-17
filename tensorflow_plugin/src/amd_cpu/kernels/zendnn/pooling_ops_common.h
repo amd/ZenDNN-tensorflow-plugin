@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -43,32 +43,32 @@ struct PoolParameters {
   // Returns the shape of the output for "forward" pooling operations.
   TensorShape forward_output_shape();
 
-  int depth;
+  int depth = 0;
 
-  int tensor_in_cols;
-  int tensor_in_rows;
-  int tensor_in_batch;
+  int tensor_in_cols = 0;
+  int tensor_in_rows = 0;
+  int tensor_in_batch = 0;
 
-  int window_rows;
-  int window_cols;
-  int depth_window;
+  int window_rows = 0;
+  int window_cols = 0;
+  int depth_window = 0;
 
-  int row_stride;
-  int col_stride;
-  int depth_stride;
+  int row_stride = 0;
+  int col_stride = 0;
+  int depth_stride = 0;
 
-  int64_t out_height;
-  int64_t out_width;
-  int out_depth;
+  int64_t out_height = 0;
+  int64_t out_width = 0;
+  int out_depth = 0;
 
-  int64_t pad_top;
-  int64_t pad_bottom;
-  int64_t pad_left;
-  int64_t pad_right;
+  int64_t pad_top = 0;
+  int64_t pad_bottom = 0;
+  int64_t pad_left = 0;
+  int64_t pad_right = 0;
 
-  int pad_depth;
+  int pad_depth = 0;
 
-  TensorFormat data_format;
+  TensorFormat data_format = TensorFormat::FORMAT_NHWC;
 };
 
 }  // namespace amd_cpu_plugin

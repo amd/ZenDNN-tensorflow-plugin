@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -23,7 +23,7 @@ namespace amd_cpu_plugin {
 
 ZenBinaryOpShared::ZenBinaryOpShared(OpKernelConstruction *ctx, DataType out,
                                      DataType in)
-    : OpKernel(ctx) {
+    : OpKernel(ctx), incompatible_shape_error(false) {
   // TODO(plugin): Skip Signature checking, as cannot get input types and output
   // types from OpKernelConstruction in function MatchSignature. It can be done
   // after intergrating graph c api.
@@ -70,7 +70,12 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
       bcast(BCast::FromShape(in0.shape()), BCast::FromShape(in1.shape())),
       zendnn_params(zendnn_params),
       in0_reuse(false),
-      in1_reuse(false) {
+      in1_reuse(false),
+      result(false),
+      out_num_elements(0),
+      in0_num_elements(0),
+      in1_num_elements(0),
+      ndims(0) {
   if (!bcast.IsValid()) {
     if (has_attr && !incompatible_shape_error) {
       OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({}), &out));

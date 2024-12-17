@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -971,7 +971,8 @@ void ZenConvolution2DBatchNormOrRelu(
     }
     uint64_t bias_offset = 0;
     for (int i = 0; i < batch_size; ++i) {
-      bias_offset = (out_height * out_width) * output_channels * i;
+      bias_offset =
+          static_cast<uint64_t>(out_height) * out_width * output_channels * i;
       zenPostOps(zen_env_obj, static_cast<float *>(output_array),
                  const_cast<const float *>(elementwise_input_new), out_height,
                  out_width, output_channels, output_channels, bias_offset, bias,

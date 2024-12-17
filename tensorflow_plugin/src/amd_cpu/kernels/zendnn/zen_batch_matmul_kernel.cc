@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -202,8 +202,9 @@ class ZenBatchMatMulOp : public OpKernel {
     // dimensions.
     if (ndims_lhs1 < ndims_out) {
       ExpandInputDimsToOutputShape(
-          lhs_shape, out_shape, &lhs_dims);  // Expand lhs dimensions to match
-                                             // the output shape dimensions.
+          lhs_shape, out_shape,
+          &lhs_dims);  // Expand lhs dimensions to match
+                       // the output shape dimensions.
       lhs_flag = true;
     }
 
@@ -211,8 +212,9 @@ class ZenBatchMatMulOp : public OpKernel {
     // dimensions.
     if (ndims_rhs1 < ndims_out) {
       ExpandInputDimsToOutputShape(
-          rhs_shape, out_shape, &rhs_dims);  // Expand rhs dimensions to match
-                                             // the output shape dimensions.
+          rhs_shape, out_shape,
+          &rhs_dims);  // Expand rhs dimensions to match
+                       // the output shape dimensions.
       rhs_flag = true;
     }
 
@@ -441,7 +443,8 @@ class ZenBatchMatMulOp : public OpKernel {
   }
 
  private:
-  bool adj_x_, adj_y_;
+  bool adj_x_ = false;
+  bool adj_y_ = false;
   ZendnnParameters zendnn_params_;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that

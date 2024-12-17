@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -331,9 +331,9 @@ class ZenMatMulOp : public OpKernel {
   }
 
  private:
-  bool is_reshape_;
-  bool transpose_a_;
-  bool transpose_b_;
+  bool is_reshape_ = false;
+  bool transpose_a_ = false;
+  bool transpose_b_ = false;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that
   // a shared variable is guarded by some unspecified mutex, for use in rare

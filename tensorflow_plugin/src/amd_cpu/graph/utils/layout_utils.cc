@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -155,6 +155,7 @@ bool RewriteQuantize(const utils::MutableNodeView& node_view) {
   if (Tinput == DT_QUINT8 || Tinput == DT_QINT8) {
     return true;
   }
+  return false;
 }
 
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {

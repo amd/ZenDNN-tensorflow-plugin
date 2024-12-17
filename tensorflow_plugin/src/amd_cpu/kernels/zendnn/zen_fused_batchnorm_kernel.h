@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -266,7 +266,7 @@ class ZenFusedBatchNormFwdPrimitive : public ZenPrimitive {
 
     // BatchNorm forward primitive.
     if (!fwdParams.training && !(IS_SET(use_global_stats))) {
-      if ((IS_SET(use_scale_shift)) && zendnn_use_scaleshift) {
+      if ((IS_SET(use_scale_shift)) && zendnn_use_scaleshift == 2) {
         context_.net_args.push_back(
             {{ZENDNN_ARG_SRC, *context_.src_mem},
              {ZENDNN_ARG_WEIGHTS, *context_.weights_mem},

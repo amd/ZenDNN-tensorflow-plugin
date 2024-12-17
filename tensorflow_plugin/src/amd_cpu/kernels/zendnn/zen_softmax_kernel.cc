@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -41,7 +41,7 @@ class ZenSoftmaxOp : public OpKernel {
   explicit ZenSoftmaxOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
 
-    string data_format_str;
+    string data_format_str = "";
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format_str));
     OP_REQUIRES(context, FormatFromString(data_format_str, &data_format_),
                 errors::InvalidArgument("Invalid data format"));
@@ -134,9 +134,9 @@ class ZenSoftmaxOp : public OpKernel {
 
     T* output_array = output->template flat<T>().data();
     memory::dims output_dims = src_dims;
-    int axis;
+    int axis = -1;
 
-    memory::format_tag layout_type;
+    memory::format_tag layout_type = memory::format_tag::any;
     // We use axis to define on which dimension to do softmax. Softmax axis
     // is attached to logical dimensions which always go in a specific
     // order. For softmax it would be N, C, H, W.
@@ -205,7 +205,7 @@ class ZenSoftmaxOp : public OpKernel {
   }
 
  private:
-  TensorFormat data_format_;
+  TensorFormat data_format_ = TensorFormat::FORMAT_NHWC;
   ZendnnParameters zendnn_params_;
   // TF_GUARDED_BY allows the user to specify a particular mutex that should be
   // held when accessing the annotated variable. GUARDED_VAR indicates that
