@@ -25,7 +25,7 @@ The following is a high-level block diagram for the zenTF package which utilizes
 This file shows how to implement, build, install and run a TensorFlow-ZenDNN plug-in for AMD CPUs.
 
 ## Supported OS
-* Linux
+Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getting-started) for the list of supported operating system.
 
 ## Prerequisites
 
