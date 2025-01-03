@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+# Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
 # reserved. Notified per clause 4(b) of the license.
 #*******************************************************************************
 #
@@ -241,34 +241,39 @@ def setup_python(environ_cp):
 
   # Check tensorflow version
   # Do not check tensorflow-estimator version
-  package_list = subprocess.Popen(
-      os.path.sep.join(python_bin_path.split(os.path.sep)[:-1]) + os.path.sep +
-      "pip list | " +
-      r'grep "^tensorflow \|^tensorflow-cpu \|^tensorflow_cpu \|^tf_nightly "',
-      shell=True,
-      stdout=subprocess.PIPE).stdout.read().decode()
-  tensorflow_list = package_list.splitlines()
+  command = [os.path.sep.join(python_bin_path.split(os.path.sep)[:-1])
+            + os.path.sep + "pip", "list"]
+  process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
+  package_list, error = process.communicate()
+  tensorflow_list = []
+  package_list.splitlines()
+  for line in package_list.splitlines():
+    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tensorflow_cpu ",
+    "tf_nightly ")):
+      tensorflow_list.append(line)
   if not tensorflow_list:
     print('Please install tensorflow version >= 2.16.0')
     sys.exit(1)
-  for line in tensorflow_list:
-    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tensorflow_cpu ", 
-    "tf_nightly ")):
-      name, version = line.split()
-      version = version.split(".dev")[0]
-      version = version.split("rc")[0]
-      current_tensorflow_version = convert_version_to_int(version)
-      tf_major_version = version.split(".")[0]
-      tf_minor_version = version.split(".")[1]
-      write_to_bazelrc('build --define=tf_main_version=' + tf_major_version +
-                       '.' + tf_minor_version)
-      min_tf_version = convert_version_to_int("2.16.0")
-      if current_tensorflow_version < min_tf_version:
-        print('Make sure you installed tensorflow version >= 2.16.0')
-        sys.exit(1)
-    else:
-      print('Make sure you installed tensorflow version >= 2.16.0')
-      sys.exit(1)
+  if len(tensorflow_list) > 1:
+    print('Multiple installation of tensorflow utility found as below:')
+    print(tensorflow_list)
+    print('Please install one tensorflow utility with version >= 2.16.0')
+    sys.exit(1)
+
+  # tensorflow_list will have only one entry here.
+  name, version = tensorflow_list[0].split()
+  version = version.split(".dev")[0]
+  version = version.split("rc")[0]
+  version = version.split(".post")[0]
+  current_tensorflow_version = convert_version_to_int(version)
+  tf_major_version = version.split(".")[0]
+  tf_minor_version = version.split(".")[1]
+  write_to_bazelrc('build --define=tf_main_version=' + tf_major_version +
+                    '.' + tf_minor_version)
+  min_tf_version = convert_version_to_int("2.16.0")
+  if current_tensorflow_version < min_tf_version:
+    print('Make sure you installed tensorflow version >= 2.16.0')
+    sys.exit(1)
 
   # Write tools/python_bin_path.sh
   with open(
