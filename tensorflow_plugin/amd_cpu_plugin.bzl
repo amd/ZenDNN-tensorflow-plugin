@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ def tf_copts(android_optimization_level_override = "-O2", is_external = False):
     return (
         [
             "-Wno-sign-compare",
-            "-fno-exceptions",
+            "-fexceptions",
             "-ftemplate-depth=900",
             "-msse3",
             "-pthread",
