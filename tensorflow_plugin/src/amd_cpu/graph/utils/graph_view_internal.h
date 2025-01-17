@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -569,7 +569,8 @@ inline bool RemoveRegularFanin(NodeViewDiff<GraphViewT>* diff, int index) {
       return false;
     }
     // Remove added fanin.
-    if (relative_add_index < diff->regular_inputs_to_add.size())
+    if (static_cast<long unsigned int>(relative_add_index) <
+        diff->regular_inputs_to_add.size())
       diff->regular_inputs_to_add[relative_add_index] = EmptyTensorId();
     --diff->num_regular_inputs_to_add;
   }
@@ -856,7 +857,7 @@ inline void RemoveRegularFanin(NewNode<GraphViewT>* new_node, int index) {
       IsEmptyTensorId(new_node->regular_fanins[index])) {
     return;
   }
-  if (index < new_node->regular_fanins.size())
+  if (static_cast<long unsigned int>(index) < new_node->regular_fanins.size())
     new_node->regular_fanins[index] = EmptyTensorId();
   --new_node->num_regular_fanins;
 }

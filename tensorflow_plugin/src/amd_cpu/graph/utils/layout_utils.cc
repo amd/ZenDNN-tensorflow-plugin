@@ -63,7 +63,7 @@ void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
 void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
                    NodeDef* new_node) {
   DataType Tinput, Tfilter, out_type, Tbias, Tsummand;
-  bool narrow_range, reset, reorder_after, reorder_before;
+  bool reset = false, reorder_after = false, reorder_before = false;
   string padding;
   string data_format("NHWC");
 
@@ -84,7 +84,6 @@ void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
   }
 
   auto* new_attr = new_node->mutable_attr();
-  NodeDef* filter_node = nullptr;
 
   // Add attributes to new node.
   SetAttrValue(Tinput, &(*new_attr)["Tinput"]);
@@ -111,11 +110,10 @@ void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
 void UpdateZenOpAttrs(const utils::MutableNodeView* orig_node_view,
                       NodeDef* new_node) {
   string name;
-  DataType T, out_type, quantizedtype;
+  DataType T;
   string mode, round_mode;
-  bool narrow_range, reset, reorder_after, reorder_before;
+  bool narrow_range;
   int axis;
-  float ensure_minimum_range;
   const NodeDef* orig_node_def = orig_node_view->node();
   TF_CHECK_OK(GetNodeAttr(*orig_node_def, "T", &T));
   TF_CHECK_OK(GetNodeAttr(*orig_node_def, "mode", &mode));
@@ -150,7 +148,6 @@ bool RewriteSupportedDataType(const utils::MutableNodeView& node_view) {
 
 bool RewriteQuantize(const utils::MutableNodeView& node_view) {
   const NodeDef& node_def = *(node_view.node());
-  const string& op_name = node_def.op();
   DataType Tinput;
   GetNodeAttr(node_def, "Tinput", &Tinput);
   if (Tinput == DT_QUINT8 || Tinput == DT_QINT8) {

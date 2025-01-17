@@ -95,8 +95,6 @@ class ZenQuantizedConv2DOp : public OpKernel {
 
     TensorShape zen_out_shape_max, zen_out_shape_min;
 
-    Conv2DDimensions dimensions;
-
     // Compute Convolution/Quantization Specific parameters.
 
     Tensor *output = nullptr, *output_min = nullptr, *output_max = nullptr;
@@ -104,7 +102,7 @@ class ZenQuantizedConv2DOp : public OpKernel {
     int batch_size, channels, height, width, output_channels, kernel_height,
         kernel_width;
     int bias_index_offset = bias_enabled ? 1 : 0;
-    float scale_output, scale_summand;
+    float scale_output = 0.0, scale_summand = 0.0;
 
     const int stride_rows =
         GetTensorDim(params_.strides, params_.data_format, 'H');
@@ -207,9 +205,6 @@ class ZenQuantizedConv2DOp : public OpKernel {
                                                std::abs(max_filter[i])));
     }
 
-    Toutput *output_array, *sum_array;
-    int status = 0;
-    Tensor *sum = nullptr;
     zendnnEnv zen_env_obj = readEnv();
     int zen_enable_mempool =
         zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
@@ -277,7 +272,7 @@ class ZenQuantizedConv2DOp : public OpKernel {
     }
 
     auto output_map = output->tensor<Toutput, 4>();
-    output_array = const_cast<Toutput *>(output_map.data());
+    void *output_array = const_cast<Toutput *>(output_map.data());
 
     // There are edge cases where destination memory type from registered Op is
     // unsigned but results of the Operations are signed. Example patterns is

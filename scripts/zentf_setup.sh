@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,8 @@ echo "Configure TensorFlow-ZenDNN Plug-in"
 
 # Building the TensorFlow-ZenDNN Plug-in.
 echo "Building the TensorFlow-ZenDNN Plug-in, please wait..."
-bazel build  -c opt --show_result 0 //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --spawn_strategy=standalone >& bazel_build_output.txt
+bazel build  -c opt --show_result 0 //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --copt=-Wall --copt=-Werror --spawn_strategy=standalone >& bazel_build_output.txt
+
 if [[ $? -ne 0 ]]
 then
     echo "Build failed. Please see the bazel_build_output.txt file for more details."
@@ -57,7 +58,7 @@ echo "Installation successful."
 
 # Extract the script location.
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-bash $SCRIPT_DIR/zentf_env_setup.sh
+source $SCRIPT_DIR/zentf_env_setup.sh
 
 # Execute sample kernel.
 python tests/softmax.py

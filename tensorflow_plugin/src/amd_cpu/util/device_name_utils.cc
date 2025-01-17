@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -35,12 +35,6 @@ static bool IsAlpha(char c) {
 
 static bool IsAlphaNumOrUnderscore(char c) {
   return IsAlpha(c) || (c >= '0' && c <= '9') || c == '_';
-}
-
-// Returns true iff "in" is a valid job name.
-static bool IsJobName(StringPiece in) {
-  return !in.empty() && IsAlpha(in.front()) &&
-         std::all_of(in.begin(), in.end(), IsAlphaNumOrUnderscore);
 }
 
 static bool ConsumePrefix(StringPiece* in, std::string* out,

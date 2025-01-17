@@ -196,7 +196,7 @@ class ZenFusedBatchNormOp : public OpKernel {
     // Pack scale & shift as "weights":
     // <scale>...<scale><shift>...<shift>
     Tensor weights_tensor;
-    TensorShape weights_shape({2, depth_});
+    TensorShape weights_shape({2, static_cast<long int>(depth_)});
     OP_REQUIRES_OK(
         context, context->allocate_temp(DataTypeToEnum<U>::value, weights_shape,
                                         &weights_tensor));
@@ -469,5 +469,5 @@ class ZenFusedBatchNormOp : public OpKernel {
                           ZenFusedBatchNormOp<CPUDevice, T, U, true, true>);
 
 REGISTER_ZEN_FUSED_BATCHNORM_CPU(float, float);
-#undef REGISTER_ZEN_FUSED_BATCHNORM_CPU(T, U)
+#undef REGISTER_ZEN_FUSED_BATCHNORM_CPU
 }  // namespace amd_cpu_plugin

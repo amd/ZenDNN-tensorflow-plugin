@@ -273,7 +273,6 @@ void ZenQuantizedConv2DBiasOrRelu(
   }
 #endif
   TensorShape filter_tf_shape;
-  Tensor *filter_tensor_ptr = nullptr;
 
   filter_tf_shape.AddDim(user_weights_memory.get_desc().get_size());
 
@@ -308,8 +307,10 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
   memory::dims bias_dims = {output_channels};
   memory::dims dst_dims = {batch_size, output_channels, out_height, out_width};
   memory::dims strides = {stride_h, stride_w};
-  memory::dims padding_left = {pad_t, pad_l};
-  memory::dims padding_right = {pad_b, pad_r};
+  memory::dims padding_left = {static_cast<long int>(pad_t),
+                               static_cast<long int>(pad_l)};
+  memory::dims padding_right = {static_cast<long int>(pad_b),
+                                static_cast<long int>(pad_r)};
 
   std::vector<float> vect;
   ZenConvParams conv_params(
@@ -520,8 +521,10 @@ void ZenConvolution2DDepthwise(
   memory::dims conv1_dst_tz = {batch_size, output_channels, out_height,
                                out_width};
   memory::dims conv1_strides = {stride_h, stride_w};
-  memory::dims conv1_padding1 = {pad_t, pad_l};
-  memory::dims conv1_padding2 = {pad_b, pad_r};
+  memory::dims conv1_padding1 = {static_cast<long int>(pad_t),
+                                 static_cast<long int>(pad_l)};
+  memory::dims conv1_padding2 = {static_cast<long int>(pad_b),
+                                 static_cast<long int>(pad_r)};
 
   std::vector<primitive> net;
   std::vector<std::unordered_map<int, memory>> net_args;
@@ -531,9 +534,6 @@ void ZenConvolution2DDepthwise(
 
   int res = cached_filter_data_tensor.NumElements();
   void *filter_data = NULL;
-
-  zendnnEnv zen_env_obj = readEnv();
-  bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
   // filter Tag:: d = height,e = width, c = ic, a = group, b = oc.
   auto filter_format = tag::decab;
@@ -546,7 +546,6 @@ void ZenConvolution2DDepthwise(
         static_cast<OpKernelContext *>(context), result,
         errors::Internal(
             "BF16 AVX512 instruction set is not supported in the machine."));
-    blocked_nhwc = 1;
   }
 
   // BF16 support.
@@ -618,7 +617,6 @@ void ZenConvolution2DDepthwise(
 
   if (res <= 0) {
     TensorShape filter_tf_shape;
-    Tensor *filter_tensor_ptr = nullptr;
     filter_tf_shape.AddDim(conv1_weights_memory.get_desc().get_size());
     static_cast<OpKernelContext *>(context)->allocate_temp(
         is_input_float ? DT_FLOAT : DT_BFLOAT16, filter_tf_shape,
@@ -660,8 +658,10 @@ void ZenConvolution2DBiasOrRelu(
                                out_width};
   memory::dims conv1_strides = {stride_h, stride_w};
 
-  memory::dims conv1_padding1 = {pad_t, pad_l};
-  memory::dims conv1_padding2 = {pad_b, pad_r};
+  memory::dims conv1_padding1 = {static_cast<long int>(pad_t),
+                                 static_cast<long int>(pad_l)};
+  memory::dims conv1_padding2 = {static_cast<long int>(pad_b),
+                                 static_cast<long int>(pad_r)};
 
   std::vector<primitive> net;
   std::vector<std::unordered_map<int, memory>> net_args;
@@ -764,7 +764,6 @@ void ZenConvolution2DBiasOrRelu(
 
     if (res <= 0) {
       TensorShape filter_tf_shape;
-      Tensor *filter_tensor_ptr = nullptr;
       filter_tf_shape.AddDim(conv1_weights_memory.get_desc().get_size());
       static_cast<OpKernelContext *>(context)->allocate_temp(
           is_input_float ? DT_FLOAT : DT_BFLOAT16, filter_tf_shape,
@@ -845,8 +844,10 @@ void ZenConvolution2DBatchNormOrRelu(
   memory::dims batch_norm_tz = {output_channels};
   memory::dims conv1_strides = {stride_h, stride_w};
 
-  memory::dims conv1_padding1 = {pad_t, pad_l};
-  memory::dims conv1_padding2 = {pad_b, pad_r};
+  memory::dims conv1_padding1 = {static_cast<long int>(pad_t),
+                                 static_cast<long int>(pad_l)};
+  memory::dims conv1_padding2 = {static_cast<long int>(pad_b),
+                                 static_cast<long int>(pad_r)};
 
   std::vector<primitive> net;
   std::vector<std::unordered_map<int, memory>> net_args;

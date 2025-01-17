@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -72,7 +72,7 @@ inline std::vector<int> GetChildrenIndices(const OpTypePattern& pattern,
   bool has_n_input = HasUndeterminedSameTypeInputs(pattern);
   if (has_n_input) {
     int start = 0;
-    for (int i = 0; i < pattern.children.size(); i++) {
+    for (long unsigned int i = 0; i < pattern.children.size(); i++) {
       if (absl::EndsWith(pattern.children[i].op, "*")) {
         start = i;
         break;

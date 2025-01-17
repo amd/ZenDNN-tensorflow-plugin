@@ -69,13 +69,13 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
       in1(ctx->input(1)),
       bcast(BCast::FromShape(in0.shape()), BCast::FromShape(in1.shape())),
       zendnn_params(zendnn_params),
-      in0_reuse(false),
-      in1_reuse(false),
-      result(false),
       out_num_elements(0),
       in0_num_elements(0),
       in1_num_elements(0),
-      ndims(0) {
+      result(false),
+      ndims(0),
+      in0_reuse(false),
+      in1_reuse(false) {
   if (!bcast.IsValid()) {
     if (has_attr && !incompatible_shape_error) {
       OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({}), &out));

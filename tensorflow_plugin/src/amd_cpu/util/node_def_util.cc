@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -948,7 +948,7 @@ Status MaybeAddPrefixToColocationConstraints(
     return OkStatus();
   }
   auto constraints_list = attr->second.mutable_list();
-  auto constraints_size = constraints_list->s_size();
+  long unsigned int constraints_size = constraints_list->s_size();
   for (size_t i = 0; i < constraints_size; ++i) {
     StringPiece original(constraints_list->s(i));
     if (absl::ConsumePrefix(&original, kColocationGroupPrefixStringPiece)) {

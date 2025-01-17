@@ -865,8 +865,6 @@ Status AutoMixedPrecisionImpl::Optimize() {
   TF_RETURN_IF_ERROR(ValidateLists(f16_allowlist_, f16_denylist_,
                                    f16_inferlist_, f16_clearlist_));
 
-  size_t timestamp = EnvTime::NowMicros() / 1000;
-
   zendnnVerbose(ZENDNN_FWKLOG, "Identifying nodes that should be processed");
   for (const NodeDef& node : graph_->node()) {
     bool should_process =

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -22,7 +22,6 @@ limitations under the License.
 
 #include <string>
 
-#define EIGEN_USE_THREADS
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
@@ -323,15 +322,15 @@ class ZenBinaryOpShared : public OpKernel {
 
     BCast bcast;
     Tensor* out = nullptr;
+    ZendnnParameters zendnn_params;
     int64 out_num_elements;
 
     int64 in0_num_elements;
     int64 in1_num_elements;
 
-    int ndims;
     bool result;
+    int ndims;
 
-    ZendnnParameters zendnn_params;
     bool in0_reuse;
     bool in1_reuse;
   };

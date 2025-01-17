@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -417,7 +417,7 @@ void Name::Build(const char* device_name, const char* backend) {
           << " kernel with attribute " << name;
     };
 
-    for (int i = 0; i < type_constraints_.size(); i++) {
+    for (long unsigned int i = 0; i < type_constraints_.size(); i++) {
       auto& type_constraint = type_constraints_[i];
       auto& type_value = type_values_[i];
       check_type_constraint(type_value, type_constraint.c_str());

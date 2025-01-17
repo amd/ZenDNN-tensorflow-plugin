@@ -393,14 +393,11 @@ class ZenQuantizedPoolOp : public OpKernel {
     output_min->flat<float>()(0) = min_input;
     output_max->flat<float>()(0) = max_input;
 
-    const int batch_size = params.tensor_in_batch;
     const int image_height = params.tensor_in_rows;
     const int image_width = params.tensor_in_cols;
-    const int image_channels = params.depth;
 
     int stride_h, stride_w, filter_height, filter_width;
     int padding_h_top, padding_h_bottom, padding_w_left, padding_w_right;
-    int output_height, output_width;
 
     stride_h = stride_[1];
     stride_w = stride_[2];
@@ -410,10 +407,6 @@ class ZenQuantizedPoolOp : public OpKernel {
     // Compute Padding Parameters.
     if (!(padding_ == SAME)) {
       padding_h_top = padding_h_bottom = padding_w_left = padding_w_right = 0;
-      output_height =
-          std::floor(float(image_height - filter_height) / float(stride_h)) + 1;
-      output_width =
-          std::floor(float(image_width - filter_width) / float(stride_w)) + 1;
     } else {
       int total_pad_h, total_pad_w;
       int mod_h, mod_w;
@@ -430,8 +423,6 @@ class ZenQuantizedPoolOp : public OpKernel {
       padding_w_left =
           (total_pad_w / 2);  // integer division equivalent to floor.
       padding_w_right = total_pad_w - padding_w_left;
-      output_height = std::ceil(float(image_height) / float(stride_h));
-      output_width = std::ceil(float(image_width) / float(stride_w));
     }
     // Primitive creation and Execution.
     using tag = memory::format_tag;

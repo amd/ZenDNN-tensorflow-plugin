@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -531,6 +531,9 @@ struct LaunchZenFusedConv2DOp {
         }
         break;
       }
+      default:
+        OP_REQUIRES_OK(context, errors::Internal("Fusion type not supported"));
+        break;
     }
   }
 };

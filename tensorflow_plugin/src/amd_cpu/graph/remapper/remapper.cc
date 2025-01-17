@@ -735,7 +735,6 @@ bool FindFusedBatchNormEx(const RemapperContext& ctx, int node_index,
   if (node_view->NumRegularFanins() < 1) return false;
   const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
   const auto* relu_fanin_0_node_view = regular_fanin_0.node_view();
-  const auto* relu_fanin_0_node_def = relu_fanin_0_node_view->node();
 
   // Input to a Relu can be a FusedBatchNorm.
   if (valid_batch_norm(*relu_fanin_0_node_view)) {

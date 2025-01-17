@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -1097,7 +1097,7 @@ inline void MutableGraphView::UpdateRegularFaninInternal(
   ++fanin_node_view->num_regular_fanouts_;
 
   // Replace fanin in node.
-  if (i < node_view->regular_fanins_.size())
+  if (static_cast<long unsigned int>(i) < node_view->regular_fanins_.size())
     node_view->regular_fanins_[i] =
         MutableFanoutView(this, fanin_node_view->node_index(), fanin_id.index(),
                           fanouts.size() - 1);
@@ -1526,7 +1526,8 @@ Status MutableGraphView::SortTopologically(
             // index would be, so there will not be a need for inversion later
             // on. The value set is in decending order so the reversed
             // post-order is returned.
-            if (curr_index < order->size()) (*order)[curr_index] = *curr_pos;
+            if (static_cast<long unsigned int>(curr_index) < order->size())
+              (*order)[curr_index] = *curr_pos;
             curr_traversal_state = PROCESSED;
             --(*curr_pos);
           } else {

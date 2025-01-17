@@ -336,19 +336,25 @@ class ZenBatchMatMulOp : public OpKernel {
     memory::dims weight_dims;
     memory::dims dst_dims;
     tag weight_tag;
-    memory::dims bias_dims = {1, 1, 1, N};
+    memory::dims bias_dims = {1, 1, 1, static_cast<long int>(N)};
 
     if (ndims == 4) {
       format_tag = tag::abcd;
-      src_dims = {lhs_dims[0], lhs_dims[1], M, K};
-      weight_dims = {rhs_dims[0], rhs_dims[1], K, N};
-      dst_dims = {lhs_dims[0], lhs_dims[1], M, N};
+      src_dims = {lhs_dims[0], lhs_dims[1], static_cast<long int>(M),
+                  static_cast<long int>(K)};
+      weight_dims = {rhs_dims[0], rhs_dims[1], static_cast<long int>(K),
+                     static_cast<long int>(N)};
+      dst_dims = {lhs_dims[0], lhs_dims[1], static_cast<long int>(M),
+                  static_cast<long int>(N)};
       weight_tag = adj_y_ ? tag::abdc : tag::abcd;
     } else if (ndims == 3) {
       format_tag = tag::abc;
-      src_dims = {lhs_dims[0], M, K};
-      weight_dims = {rhs_dims[0], K, N};
-      dst_dims = {lhs_dims[0], M, N};
+      src_dims = {lhs_dims[0], static_cast<long int>(M),
+                  static_cast<long int>(K)};
+      weight_dims = {rhs_dims[0], static_cast<long int>(K),
+                     static_cast<long int>(N)};
+      dst_dims = {lhs_dims[0], static_cast<long int>(M),
+                  static_cast<long int>(N)};
       weight_tag = adj_y_ ? tag::acb : tag::abc;
     }
 

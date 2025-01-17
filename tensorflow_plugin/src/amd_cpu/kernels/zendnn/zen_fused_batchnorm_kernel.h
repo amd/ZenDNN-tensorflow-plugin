@@ -56,12 +56,15 @@ namespace functor {
 // (2) batch norm + side input + activation
 enum class FusedBatchNormActivationMode { kIdentity, kRelu };
 
+// TODO (Plugin): Check the function that calls ToString if "" is handled.
 string ToString(FusedBatchNormActivationMode activation_mode) {
   switch (activation_mode) {
     case FusedBatchNormActivationMode::kIdentity:
       return "Identity";
     case FusedBatchNormActivationMode::kRelu:
       return "Relu";
+    default:
+      return "";
   }
 }
 

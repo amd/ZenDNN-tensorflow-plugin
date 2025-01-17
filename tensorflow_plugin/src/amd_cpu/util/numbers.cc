@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -390,7 +390,8 @@ size_t FloatToBuffer(float value, char* buffer) {
 
 string FpToString(Fprint fp) {
   char buf[17];
-  snprintf(buf, sizeof(buf), "%016llx", static_cast<int64>(fp));
+  snprintf(buf, sizeof(buf), "%016llx",
+           static_cast<long long unsigned int>(fp));
   return string(buf);
 }
 
@@ -444,7 +445,7 @@ string HumanReadableNum(int64 value) {
     value = -value;
   }
   if (value < 1000) {
-    Appendf(&s, "%lld", static_cast<int64>(value));
+    Appendf(&s, "%lld", static_cast<long long unsigned int>(value));
   } else if (value >= static_cast<int64>(1e15)) {
     // Number bigger than 1E15; use that notation.
     Appendf(&s, "%0.3G", static_cast<double>(value));
@@ -477,7 +478,7 @@ string HumanReadableNumBytes(int64 num_bytes) {
     // No fractions for bytes.
     char buf[8];  // Longest possible string is '-XXXXB'
     snprintf(buf, sizeof(buf), "%s%lldB", neg_str,
-             static_cast<int64>(num_bytes));
+             static_cast<long long unsigned int>(num_bytes));
     return string(buf);
   }
 
