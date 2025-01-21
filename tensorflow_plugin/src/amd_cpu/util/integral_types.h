@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -20,6 +20,8 @@ limitations under the License.
 
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_INTEGRAL_TYPES_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_INTEGRAL_TYPES_H_
+
+#include <cstdlib>
 
 namespace amd_cpu_plugin {
 
