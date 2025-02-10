@@ -21,6 +21,8 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_INTEGRAL_TYPES_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_INTEGRAL_TYPES_H_
 
+#include <cstdint>
+
 namespace amd_cpu_plugin {
 
 typedef signed char int8;
