@@ -6,7 +6,7 @@ This powerful upgrade continues to redefine deep learning performance on AMD EPY
 
 zentf 5.0.1 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0.1 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-The zentf 5.0.1 plugin works seamlessly with TensorFlow versions 2.17 and 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.0.1 plugin works seamlessly with TensorFlow versions from the latest 2.18 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
@@ -40,12 +40,12 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.17-zendnn-v5.0.1-rel-env python=3.10 -y
-  $ conda activate tf-v2.17-zendnn-v5.0.1-rel-env
+  $ conda create -n tf-v2.18-zendnn-v5.0.1-rel-env python=3.10 -y
+  $ conda activate tf-v2.18-zendnn-v5.0.1-rel-env
   ```
-* Install TensorFlow v2.17
+* Install TensorFlow v2.18
   ```
-  $ pip install tensorflow-cpu==2.17
+  $ pip install tensorflow-cpu==2.18.0
   ```
 ## Install zenTF wheel.
 
