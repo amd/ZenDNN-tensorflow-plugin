@@ -46,6 +46,8 @@ if sys.byteorder == 'little':
 # The wheel package name, change it as your requirements.
 project_name = 'zentf'
 
+# numpy v1.26.4 requires to perform zentf well with TF v2.18.
+REQUIRED_PACKAGES.append('numpy == 1.26.4')
 # python3 requires wheel 0.26
 if sys.version_info.major == 3:
   REQUIRED_PACKAGES.append('wheel >= 0.26')
