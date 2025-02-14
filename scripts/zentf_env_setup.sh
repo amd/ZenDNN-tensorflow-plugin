@@ -1,5 +1,5 @@
 #*******************************************************************************
-# Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,12 +55,13 @@ echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 export ZENDNN_CONV_ALGO=3
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 
-# Matmul Algorithms Settings. By default, it is ZENDNN_MATMUL_ALGO=FP32:4,BF16:3.
+# Matmul Algorithms Settings. By default, it is ZENDNN_MATMUL_ALGO=FP32:4,BF16:4.
+echo "By default, ZENDNN_MATMUL_ALGO=FP32:4,BF16:4"
 # We recommend to override the default settings for NLPs & LLMs models by 
 # uncommenting the following 'export' and 'echo' commands.
 # Note: Do not uncomment for AMP (Auto-Mixed Precision) mode runs of any models.
-# export ZENDNN_MATMUL_ALGO=FP32:3,BF16:0
-# echo "ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
+# export ZENDNN_MATMUL_ALGO=FP32:2,BF16:0
+# echo "Overriding with ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
 
 # Enable/Disable primitive reuse.
 export TF_ZEN_PRIMITIVE_REUSE_DISABLE=FALSE
