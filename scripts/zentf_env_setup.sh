@@ -73,3 +73,18 @@ echo "ZENDNN_PRIMITIVE_CACHE_CAPACITY=$ZENDNN_PRIMITIVE_CACHE_CAPACITY"
 # By default, ZenDNN logs are disabled.
 export ZENDNN_LOG_OPTS=ALL:0
 echo "ZENDNN_LOG_OPTS=$ZENDNN_LOG_OPTS"
+
+# OMP settings
+# The below settings are for Turin. Please update it based on your machine.
+echo -e "\nBy default, OMP settings are based on Turin machine."
+echo "Please update it based on your machine."
+export OMP_NUM_THREADS=128
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+export GOMP_CPU_AFFINITY="0-127"
+echo "GOMP_CPU_AFFINITY=$GOMP_CPU_AFFINITY"
+export OMP_PROC_BIND=FALSE
+echo "OMP_PROC_BIND=$OMP_PROC_BIND"
+export OMP_WAIT_POLICY=ACTIVE
+echo "OMP_WAIT_POLICY=$OMP_WAIT_POLICY"
+export OMP_DYNAMIC=FALSE
+echo "OMP_DYNAMIC=$OMP_DYNAMIC"
