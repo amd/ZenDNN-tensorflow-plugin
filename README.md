@@ -43,6 +43,7 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
   $ conda create -n tf-v2.18-zendnn-v5.0.1-rel-env python=3.10 -y
   $ conda activate tf-v2.18-zendnn-v5.0.1-rel-env
   ```
+  Note: Python 3.10 used here for example.
 * Install TensorFlow v2.18
   ```
   $ pip install tensorflow-cpu==2.18.0

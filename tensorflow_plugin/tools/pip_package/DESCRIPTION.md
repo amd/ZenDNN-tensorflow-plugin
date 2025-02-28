@@ -11,7 +11,7 @@ The zentf 5.0.1 plugin works seamlessly with TensorFlow versions from the latest
 
 ## Support
 
-We welcome feedback, suggestions, and bug reports. Should you have any of the these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page: https://github.com/amd/ZenDNN-tensorflow-plugin/issues
+We welcome feedback, suggestions, and bug reports. Should you have any of the these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page [here](https://github.com/amd/ZenDNN-tensorflow-plugin/issues)
 
 ## License
 
