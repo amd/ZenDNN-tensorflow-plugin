@@ -1,6 +1,3 @@
-[![Python](https://img.shields.io/pypi/pyversions/tensorflow.svg?style=plastic)](https://badge.fury.io/py/zentf)
-[![PyPI](https://badge.fury.io/py/tensorflow.svg)](https://badge.fury.io/py/zentf)
-
 **The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0.1 is here!**
 
 This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
