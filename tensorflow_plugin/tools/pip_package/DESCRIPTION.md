@@ -1,10 +1,10 @@
-**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0.1 is here!**
+**The latest ZenDNN Plugin for TensorFlow*** **(zentf) 5.0.2 is here!**
 
 This powerful upgrade continues to redefine deep learning performance on AMD EPYC™ CPUs, combining relentless optimization, innovative features, and industry-leading support for modern workloads.
 
-zentf 5.0.1 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0.1 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
+zentf 5.0.2 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0.2 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-The zentf 5.0.1 plugin works seamlessly with TensorFlow versions from the latest 2.18 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.0.2 plugin works seamlessly with TensorFlow versions from the latest 2.18 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
