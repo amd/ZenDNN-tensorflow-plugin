@@ -22,6 +22,10 @@
 # This script sets ZenDNN environment variables, to enable zenTF.
 #
 #----------------------------------------------------------------------------
+# Set the user interface Python/C++/Java. The first argument of this script
+# specifies the interface. If the first argument is not specified then the
+# default will work for Python/C++.
+interface="$1"
 
 # Enable TensorFlow-ZenDNN Plug-in.
 export TF_ENABLE_ZENDNN_OPTS=1
@@ -37,6 +41,9 @@ echo "The following settings gave us the best results. However, these details sh
 #   2 - For NLP and LLM models.
 #   3 - For CNN models.
 export ZENDNN_ENABLE_MEMPOOL=2
+if [ "$interface" = "java" ]; then
+    export ZENDNN_ENABLE_MEMPOOL=0
+fi
 echo "ZENDNN_ENABLE_MEMPOOL=$ZENDNN_ENABLE_MEMPOOL"
 # Variable to set the max no. of tensors that can be used inside zen memory pool.
 export ZENDNN_TENSOR_POOL_LIMIT=1024
@@ -57,7 +64,7 @@ echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 
 # Matmul Algorithms Settings. By default, it is ZENDNN_MATMUL_ALGO=FP32:4,BF16:4.
 echo "By default, ZENDNN_MATMUL_ALGO=FP32:4,BF16:4"
-# We recommend to override the default settings for NLPs & LLMs models by 
+# We recommend to override the default settings for NLPs & LLMs models by
 # uncommenting the following 'export' and 'echo' commands.
 # Note: Do not uncomment for AMP (Auto-Mixed Precision) mode runs of any models.
 # export ZENDNN_MATMUL_ALGO=FP32:2,BF16:0
