@@ -186,7 +186,11 @@ class ZenMatMulPrimitive : public ZenPrimitive {
             post_ops.append_eltwise(op_scale, algorithm::eltwise_relu, op_alpha,
                                     op_beta);
           } else if (post_op_param.name == "sigmoid") {
-            post_ops.append_eltwise(op_scale, algorithm::eltwise_logsigmoid,
+            // NOTE: In TensorFlow, tf.nn.sigmoid corresponds to the
+            // eltwise_logistic algorithm in OneDNN, which is used here to
+            // ensure compatibility with the standard Sigmoid activation (output
+            // range 0-1).
+            post_ops.append_eltwise(op_scale, algorithm::eltwise_logistic,
                                     op_alpha, op_beta);
           } else if (post_op_param.name == "GeluApproximate") {
             post_ops.append_eltwise(op_scale, algorithm::eltwise_gelu, op_alpha,

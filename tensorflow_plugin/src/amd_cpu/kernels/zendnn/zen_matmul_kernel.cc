@@ -88,7 +88,7 @@ struct LaunchZenFusedMatMulOp {
         break;
       }
       case FusedComputationType::kBiasAddWithSigmoid: {
-        matmul_params.post_op_params.push_back({"sigmoid", {1.0, 0.0, 0.0}});
+        matmul_params.post_op_params.push_back({"sigmoid", {1.0, 1.0, 0.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 0);
         matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, is_biasadd);

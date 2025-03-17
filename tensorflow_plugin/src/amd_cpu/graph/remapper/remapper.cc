@@ -39,8 +39,8 @@ bool HasDataType(const NodeDef* node, const DataType& expected,
 }
 
 bool IsSupportedActivation(const NodeDef& node) {
-  bool is_default_supported =
-      IsRelu(node) || IsRelu6(node) || IsElu(node) || IsLeakyRelu(node);
+  bool is_default_supported = IsRelu(node) || IsRelu6(node) || IsElu(node) ||
+                              IsLeakyRelu(node) || IsSigmoid(node);
   return is_default_supported;
 }
 
@@ -637,6 +637,50 @@ bool FindContractionWithActivation(const RemapperContext& ctx, int node_index,
   return true;
 }
 
+bool FindContractionWithSigmoid(const RemapperContext& ctx, int node_index,
+                                ContractionWithActivation* matched) {
+  // Get the node at the given index.
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  const auto* node_def = node_view->node();
+  if (node_def == nullptr) return false;
+
+  // The root of the pattern must be a Sigmoid node.
+  if (!IsSigmoid(*node_def)) return false;
+
+  // Sigmoid should have no control inputs.
+  if (HasControlFanin(*node_view)) return false;
+
+  // Ensure Sigmoid has at least one regular input.
+  if (node_view->NumRegularFanins() < 1) return false;
+  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+  const auto* contraction_node_view = regular_fanin_0.node_view();
+  const auto* contraction_node_def = contraction_node_view->node();
+
+  // Verify the input is _FusedMatMul as we have encountered _FuseMatMul +
+  // Sigmoid.
+  if (contraction_node_def->op() != "_FusedMatMul") return false;
+
+  // Check if _FusedMatMul contains only BiasAdd.
+  auto fused_ops = contraction_node_def->attr().at("fused_ops").list().s();
+  if (fused_ops.size() != 1 || fused_ops.at(0) != "BiasAdd") return false;
+
+  // Additional constraints for fusion.
+  if (HasControlFanout(*contraction_node_view) ||  // No control outputs.
+      !HaveSameDataType(node_def,
+                        contraction_node_def) ||  // Matching data types.
+      !HasAtMostOneFanoutAtPort0(
+          *contraction_node_view) ||                 // At most one fanout.
+      IsInPreserveSet(ctx, contraction_node_def)) {  // Not preserved.
+    return false;
+  }
+
+  // Pattern matched; store the node indices.
+  const ContractionWithActivation pattern{contraction_node_view->node_index(),
+                                          node_index};
+  *matched = pattern;
+  return true;
+}
+
 bool FindContractionWithBiasAndActivation(
     const RemapperContext& ctx, int node_index,
     ContractionWithBiasAddAndActivation* matched) {
@@ -644,7 +688,8 @@ bool FindContractionWithBiasAndActivation(
   // Root of the pattern must be an activation node.
   const auto* node_def = node_view->node();
   if (node_def == nullptr) return false;
-  if (!IsSupportedActivation(*node_def) && !IsSigmoid(*node_def)) return false;
+  // TODO: Add check for Convolution + BiasAdd + Sigmoid fusion.
+  if (!IsSupportedActivation(*node_def)) return false;
 
   // Verify the output node has control fanin edge or not.
   if (HasControlFanin(*node_view)) return false;
@@ -2022,6 +2067,53 @@ Status AddFusedContractionNode(
   return OkStatus();
 }
 
+Status AddFusedMatMulSigmoidNode(RemapperContext* ctx,
+                                 const ContractionWithActivation& matched,
+                                 std::vector<bool>* invalidated_nodes,
+                                 std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& contraction =
+      graph->node(matched.contraction);  // _FusedMatMul (MatMul + BiasAdd).
+  const NodeDef& activation = graph->node(matched.activation);  // Sigmoid.
+
+  // Log the fusion operation.
+  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with ",
+             activation.op(), ":", " activation=", activation.name(),
+             " contraction=", contraction.name());
+
+  // Create the new fused node.
+  NodeDef fused_node;
+  fused_node.set_name(activation.name());  // Name it after the Sigmoid node.
+  fused_node.set_device(
+      contraction.device());  // Use the device of the original _FusedMatMul.
+  fused_node.add_input(
+      contraction.input(0));  // Input tensor (e.g., from concat).
+  fused_node.add_input(contraction.input(1));  // Filter (constant kernel).
+  fused_node.add_input(contraction.input(2));  // Bias (constant bias).
+
+  // Set the operation to _FusedMatMul.
+  fused_node.set_op(kFusedMatMul);
+
+  // Copy attributes from the original _FusedMatMul.
+  CopyMatMulAttributes(contraction, &fused_node);
+
+  // Set the fused operations to include both BiasAdd and Sigmoid.
+  SetFusedOpAttributesWithActivation(&fused_node, &activation, {"BiasAdd"});
+
+  // Add the new node to the graph.
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_node), &status);
+  TF_ABORT_IF_ERROR(status);
+  TF_ABORT_IF_ERROR(mutation->Apply());
+
+  // Mark the original _FusedMatMul for deletion and the Sigmoid as invalidated.
+  (*nodes_to_delete)[matched.contraction] = true;
+  (*invalidated_nodes)[matched.activation] = true;
+
+  return OkStatus();
+}
+
 // Contraction + Activation.
 Status AddFusedContractionNode(RemapperContext* ctx,
                                const ContractionWithActivation& matched,
@@ -2556,6 +2648,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithActivation pattern.");
         AddFusedContractionNode(&ctx, contract_with_activation,
                                 &invalidated_nodes, &nodes_to_delete);
+        continue;
+      }
+
+      // Remap _FusedMatMul{MatMul + BiasAdd} + Sigmoid into the _FusedMatMul.
+      ContractionWithActivation contract_with_sigmoid;
+      if (FindContractionWithSigmoid(ctx, i, &contract_with_sigmoid)) {
+        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithSigmoid pattern.");
+        AddFusedMatMulSigmoidNode(&ctx, contract_with_sigmoid,
+                                  &invalidated_nodes, &nodes_to_delete);
         continue;
       }
 
