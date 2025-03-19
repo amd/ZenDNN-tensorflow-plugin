@@ -121,24 +121,12 @@ def load_and_run_model(batch_size=512, warm_iter=10, num_batches=50):
         start_time = time.time()
 
       # Run inference with both inputs fed in the feed_dict.
-      _ = sess.run(output_tensor, dict(zip(input_tensor,
+      output = sess.run(output_tensor, dict(zip(input_tensor,
       [features_list[i][0], features_list[i][1]])))
 
-      if i >= warm_iter:
-        total_infer_time += time.time() - start_time
-
-  effective_batches = num_batches - warm_iter
-  # Calculate average latency per batch in milliseconds.
-  latency = (1000 * total_infer_time) / effective_batches
-  throughput = (batch_size * effective_batches) / total_infer_time
-
   print('--------------------------------------------------')
-  print(f'Batch size: {batch_size}')
-  print(f"Number of Samples:", no_of_test_samples)
-  print(f'Number of batches: {num_batches}')
-  print(f'Inference duration (seconds): {round(total_infer_time, 4)}')
-  print(f'Average Latency (ms/batch): {round(latency, 4)}')
-  print(f'Throughput (records/sec): {round(throughput, 3)}')
+  print("Output tensor shape:", output.shape)
+  print("Output tensor value:", output)
   print('--------------------------------------------------')
 
 if __name__ == "__main__":

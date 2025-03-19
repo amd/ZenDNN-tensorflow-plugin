@@ -3,3 +3,4 @@ transformers
 tf-keras
 pandas
 wget
+pytz
