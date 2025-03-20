@@ -1,6 +1,19 @@
 # Use TensorFlow-ZenDNN Plug-in with C++ APIs
 
-This file describes how to use C++ package and inference the Public CNN models with it.
+This file detail on setting up zentf for C++ interface. This set-up enables C++ applications to exploit zentf in DNN inference using TensorFlow.
+
+You can download zentf C++ package from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
+
+## C++ package structure
+```
+.
+├── examples/
+├── lib-tensorflow-plugins/
+├── README.md
+├── tensorflow_<version>/
+├── zentf_cc_api_setup.sh
+└── zentf_env_setup.sh
+```
 
 ## How to use C++ package?
 
@@ -9,19 +22,16 @@ This file describes how to use C++ package and inference the Public CNN models w
 $ unzip <cpp_package_name>.zip
 $ cd <cpp_package_name>/
 ```
-### 2. Set env and library path
+### 2. Set required library path
 ```
-$ source zentf_cc_api_env_setup.sh
+$ source zentf_cc_api_setup.sh
+```
+### 3. Set ZenDNN specific environment variables
+```
+$ source zentf_env_setup.sh
 ```
 Set up is done!
 
-## Sample inferencing of the model
+## Examples
+To try the set-up made on an example inference application, please refer README file from './examples' folder of this package.
 
-### 1. Compile the sample inference script
-```
-$ g++ sample_inference.cpp -o sample_inference -I./<tf_folder>/tensorflow/include -L./<tf_folder>/tensorflow/ -ltensorflow_framework -ltensorflow_cc -Wl,-rpath=./<tf_folder>/tensorflow/ -std=c++17
-```
-### 2. Run the model
-```
-$ ./sample_inference <model_path(.pb)> <input_node> <output_node> <batch_size> <input_height> <input_width> <input_channels>
-```

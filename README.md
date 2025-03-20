@@ -27,6 +27,11 @@ This file shows how to implement, build, install and run a TensorFlow-ZenDNN plu
 ## Supported OS
 Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getting-started) for the list of supported operating system.
 
+## Supported User Interfaces
+* Python
+* Java
+* C++
+
 ## Prerequisites
 
 | Tools/Frameworks | Version |
@@ -37,6 +42,7 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 | [TensorFlow](https://www.tensorflow.org/) | >=2.16 |
 
 # Installation Guide
+This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder.
 ## Prerequisite
 * Create conda environment and activate it.
   ```
