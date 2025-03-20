@@ -19,12 +19,15 @@
 
 #----------------------------------------------------------------------------
 #
-# This script sets ZenDNN environment variables, to enable zenTF.
+#   This script does following:
+#   -Enables TensorFlow-ZenDNN Plugin.
+#   -Sets the ZenDNN environment variables.
 #
 #----------------------------------------------------------------------------
 # Set the user interface Python/C++/Java. The first argument of this script
 # specifies the interface. If the first argument is not specified then the
-# default will work for Python/C++.
+# default environment settings will work for Python/C++.
+
 interface="$1"
 
 # Enable TensorFlow-ZenDNN Plug-in.
