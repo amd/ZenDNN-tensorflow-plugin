@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -173,6 +173,7 @@ class AutoMixedPrecisionLists {
       "BiasAddGrad",
       "BiasAddV1",
       "Erf",
+      "Erfc",
       "FusedBatchNormV2",
       "FusedBatchNormGradV2",
       "FusedBatchNormV3",

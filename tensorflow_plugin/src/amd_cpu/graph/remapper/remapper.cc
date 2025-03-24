@@ -1150,8 +1150,42 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
         }
       }
     });  // Mul: "output"
-  // clang-format on
 
+  // Pattern 4: Erfc
+  //                                     Const: 1/sqrt(2) Const: 1/2
+  //                                      \                \
+  //  _FusedMatMul --> Reshape --> Neg --> Mul --> Erfc --> Mul --> Mul
+  //                            \____________________________________/
+  gelu_exact_patterns.push_back(
+    {"Mul", "output", NodeStatus::kReplace,
+      {
+        {"Mul", "one_half_x_erfc", NodeStatus::kRemove,
+          {
+            {"Const|Cast", "one_half", NodeStatus::kRemain},
+            {"Erfc", "erfc", NodeStatus::kRemove,
+              {
+                {"Mul", "neg_bias_add_x_sqrt_one_half", NodeStatus::kRemove,
+                  {
+                    {"Const|Cast", "sqrt_one_half", NodeStatus::kRemain},
+                    {"Neg", "neg", NodeStatus::kRemove,
+                      {{"Reshape", "reshape", NodeStatus::kRemove}}
+                    },  // Neg: "neg"
+                  }
+                }  // Mul: "neg_bias_add_x_sqrt_one_half"
+              }  // Erfc: "erfc"
+            }
+          }  // Mul: "one_half_x_erfc"
+        },
+        {"Reshape", "reshape", NodeStatus::kRemove,
+          {
+            {"_FusedMatMul", "matmul", NodeStatus::kRemove},
+            {"Const|Cast", "expand_dims", NodeStatus::kRemain}
+          }
+        }
+      }
+    });  // Mul: "output"
+
+  // clang-format on
   utils::SubGraphMatcher<MatchingDirection::kFollowInputs> graph_matcher(
       &(ctx.graph_view));
   // Find GeluExact
@@ -1172,7 +1206,7 @@ bool IsMatchedMatMulBiasAddAndGeluExact(
       break;
     }
   }
-  if (found_pattern_index == 3) {
+  if (found_pattern_index == 3 || found_pattern_index == 4) {
     *expand_dims = true;
   }
   return found_gelu_exact;
@@ -1512,12 +1546,18 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
     // MatMul op.
     bool cpu_ok = matmul_node->attr().contains("transpose_a") &&
                   !matmul_node->attr().at("transpose_a").b();
-
     if (!cpu_ok) return false;
 
     // Check if the matched constants have desired values.
-    std::map<string, float> values_map = {
-        {"sqrt_one_half", 0.707106}, {"one", 1.0}, {"one_half", 0.5}};
+    std::map<string, float> values_map = {{"sqrt_one_half", 0.707106},
+                                          {"one_half", 0.5}};
+
+    // Gelu exact pattern with TF version 2.19 does not have the constant one.
+    // Check is added to see if the matched pattern has this constant, if True
+    // it is added. For TF version 2.18 it is added.
+    if (matched_nodes_map->find("one") != matched_nodes_map->end()) {
+      values_map["one"] = 1.0;
+    }
     if (!VerifyConstants(ctx, matched_nodes_map, &values_map)) return false;
   } else if (*is_gelu_approximate) {
     NodeDef* matmul_node =
