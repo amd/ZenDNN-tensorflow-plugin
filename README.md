@@ -118,7 +118,7 @@ Configuration finished
 ### 4. Build the TensorFlow-ZenDNN Plug-in:
 ```
 ZenDNN-tensorflow-plugin$ bazel clean --expunge
-ZenDNN-tensorflow-plugin$ bazel build  -c opt //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --spawn_strategy=standalone
+ZenDNN-tensorflow-plugin$ bazel build  -c opt //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --copt=-Wall --copt=-Werror --spawn_strategy=standalone
 ```
 
 ### 5. Generate python wheel file:

@@ -36,7 +36,7 @@ echo "Configure TensorFlow-ZenDNN Plug-in"
 
 # Building the TensorFlow-ZenDNN Plug-in.
 echo "Building the TensorFlow-ZenDNN Plug-in, please wait..."
-bazel build  -c opt --show_result 0 //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --copt=-Wall --copt=-Werror --spawn_strategy=standalone >& bazel_build_output.txt
+bazel build  -c opt //tensorflow_plugin/tools/pip_package:build_pip_package --verbose_failures --copt=-Wall --copt=-Werror --spawn_strategy=standalone >& bazel_build_output.txt
 
 if [[ $? -ne 0 ]]
 then

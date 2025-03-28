@@ -18,7 +18,7 @@ wget https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/wide_
 ```
 
 ```bash
-cd <path to zentf plugin>/ZenDNN_TensorFlow_Plugin/examples/java
+cd <Path to zentf plugin parent folder>/ZenDNN_TensorFlow_Plugin/examples/java
 mvn clean package
 ```
 
