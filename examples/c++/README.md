@@ -2,13 +2,13 @@
 This document provides examples for running inference on CNN models using zentf C++ interface.
 
 ## Table of Contents
-- [Set-up zentf for C++ user inetrface](#set_up-zentf-for-c_user-inetrface)
+- [Set-up zentf for C++ user interface](#set_up-zentf-for-c_user-interface)
 - [Build C++ inference application](#build-c_inference-application)
 - [CNN examples](#cnn-examples)
 
-## Set-up zentf for C++ user inetrface
+## Set-up zentf for C++ user interface
 
-Please follow the instructions in the [README.md](https://github.com/amd/ZenDNN-tensorflow-plugin/blob/main/scripts/c%2B%2B/README.md) file for setting up zetntf.
+Please follow the instructions in the [README.md](https://github.com/amd/ZenDNN-tensorflow-plugin/blob/main/scripts/c%2B%2B/README.md) file for setting up zentf.
 
 ## Build C++ inference application
 
