@@ -1,10 +1,8 @@
-Third Party Notices for ZenDNN v5.0.1 + Tensorflow
+Third Party Notices for ZenDNN v5.0.2 + Tensorflow
 
 This summary and the license information provided below is for reference purposes and is not intended to be a comprehensive list of all copyright notices or license terms and conditions applicable to the Software.
 
 With respect to any license that requires AMD to make available to recipients of object code distributed by AMD pursuant to such license the corresponding source code, and if you desire to receive such source code from AMD, then AMD hereby offers (which offer is valid for as long as required by the applicable license; and we may charge you the cost thereof unless prohibited by the license) to provide you with a copy of such source code; and to accept such offer send a letter requesting such source code (please be specific by identifying the particular Software you are inquiring about (name and version number), to:  Advanced Micro Devices, Inc., Legal Department, Attention: Software Compliance Officer, 2485 Augustine Drive, Santa Clara, CA U.S.A. 95054.
-
-Third_Party_Notices_SWCSD-10534(ZenDNN v5.0.1 GA TensorFlow Plugin)
 
 abseil-abseil-cpp v-u (Apache-2.0)
 Copyright Statements
