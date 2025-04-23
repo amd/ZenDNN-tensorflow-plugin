@@ -22,9 +22,7 @@ build -c opt
 
 # Ignore below folders while -Werror check since
 # these files are coming from thrid-party
-build --per_file_copt=external/llvm_openmp/runtime/src/.*@-Wno-error
-build --per_file_copt=external/nsync/internal/.*@-Wno-error
-build --per_file_copt=external/zen_dnn/.*@-Wno-error
+build --per_file_copt=external/.*@-Wno-error
 build --copt=-Wno-error=stringop-overflow
 build --copt=-Wno-comment
 build --copt=-Wno-int-in-bool-context
