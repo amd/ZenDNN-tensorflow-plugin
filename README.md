@@ -1,12 +1,12 @@
 # TensorFlow-ZenDNN Plug-in For AMD CPUs
 
-The ZenDNN plugin for TensorFlow is called zentf. zentf 5.0.2 is a minor upgrade to zentf 5.0 release.
+The ZenDNN plugin for TensorFlow is called zentf.
 
 This upgrade includes support for a Java interface to zentf through TensorFlow-Java.
 
-zentf 5.0.2 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.0.2 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
+zentf 5.1.0 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.1.0 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-The zentf 5.0.2 plugin works seamlessly with TensorFlow versions from 2.18 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.1.0 plugin works seamlessly with TensorFlow versions from 2.18 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
@@ -46,8 +46,8 @@ This section explains how to use the Python interface. For Java and C++ interfac
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.18-zendnn-v5.0.2-rel-env python=3.10 -y
-  $ conda activate tf-v2.18-zendnn-v5.0.2-rel-env
+  $ conda create -n tf-v2.18-zendnn-v5.1.0-rel-env python=3.10 -y
+  $ conda activate tf-v2.18-zendnn-v5.1.0-rel-env
   ```
   Note: Python 3.10 used here for example.
 * Install TensorFlow v2.18
@@ -58,7 +58,7 @@ This section explains how to use the Python interface. For Java and C++ interfac
 
 ### 1. Install wheel file using pip:
 ```
-$ pip install zentf==5.0.2
+$ pip install zentf==5.1.0
 ```
 ### 2. Install zenTF using release package.
 
@@ -68,9 +68,9 @@ $ pip install zentf==5.0.2
   > NOTE : We are taking an example for release package with Python version 3.10.
 
   ```
-  $ unzip ZENTF_v5.0.2_Python_v3.10.zip
-  $ cd ZENTF_v5.0.2_Python_v3.10/
-  $ pip install zentf-5.0.2-cp310-cp310-manylinux_2_28_x86_64.whl
+  $ unzip ZENTF_v5.1.0_Python_v3.10.zip
+  $ cd ZENTF_v5.1.0_Python_v3.10/
+  $ pip install zentf-5.1.0-cp310-cp310-manylinux_2_28_x86_64.whl
   ```
 
 * To use the recommended environment settings, execute :
@@ -84,9 +84,9 @@ $ pip install zentf==5.0.2
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
-Note: Repository is defaults to master branch, to build the version 5.0.2 checkout the branch r5.0.2.
+Note: Repository is defaults to master branch, to build the version 5.1.0 checkout the branch r5.1.0.
 ```
-$ git checkout r5.0.2
+$ git checkout r5.1.0
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
@@ -129,7 +129,7 @@ ZenDNN-tensorflow-plugin$ bazel-bin/tensorflow_plugin/tools/pip_package/build_pi
 
 ### 6. Install wheel file using pip:
 ```
-ZenDNN-tensorflow-plugin$ pip install zentf-5.0.2-cp310-cp310-linux_x86_64.whl
+ZenDNN-tensorflow-plugin$ pip install zentf-5.1.0-cp310-cp310-linux_x86_64.whl
 ```
 
 **The build and installation from source is done!**
@@ -177,4 +177,4 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
 
 # Performance tuning and Benchmarking
-* zenTF v5.0.2 is supported with ZenDNN v5.0.2. Please see the [section 5](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) of ZenDNN user guide for performance tuning guidelines.
+* zentf v5.1.0 is supported with ZenDNN v5.1.0. Please see the [section 5](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) of ZenDNN user guide for performance tuning guidelines.
