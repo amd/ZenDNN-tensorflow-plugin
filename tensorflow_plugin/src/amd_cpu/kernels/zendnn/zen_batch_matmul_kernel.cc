@@ -56,7 +56,8 @@ class ZenBatchMatMulOp : public OpKernel {
       using FCT = FusedComputationType;
 
       patterns = {{FCT::kBinaryMul, {"BinaryMul"}},
-                  {FCT::kBinaryMulAdd, {"BinaryMul", "Add"}}};
+                  {FCT::kBinaryMulAdd, {"BinaryMul", "Add"}},
+                  {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}}};
 
       OP_REQUIRES_OK(context,
                      InitializeFusedComputation(context, "_ZenBatchMatMul",
@@ -375,54 +376,81 @@ class ZenBatchMatMulOp : public OpKernel {
     zendnn::primitive_attr matmul_attr;
 
     if (fusion_enabled) {
-      // Create Mul PostOp.
-      const Tensor &mul_tensor = context->input(2);
-      Scalar *mul_arr = const_cast<Scalar *>(mul_tensor.flat<Scalar>().data());
-      memory::dims mul_dims = {1, 1, 1, 1};
       zendnn::post_ops post_ops;
-      post_ops.append_binary(algorithm::binary_mul,
-                             memory::desc({mul_dims}, dtype, tag::abcd));
+      if (fused_computation_ == FusedComputationType::kBiasAddWithRelu) {
+        // Create BiasAdd PostOp.
+        const Tensor &bias_add_tensor = context->input(2);
+        Scalar *bias_add_arr =
+            const_cast<Scalar *>(bias_add_tensor.flat<Scalar>().data());
+        bias_dims = ndims == 3
+                        ? memory::dims{1, 1, static_cast<long int>(N)}
+                        : memory::dims{1, 1, 1, static_cast<long int>(N)};
+        bias_md = memory::desc({bias_dims}, dtype, format_tag);
+        auto bias_mem = memory(bias_md, eng, bias_add_arr);
 
-      zendnn::memory postop_memory1, postop_memory2;
-      postop_memory1 = memory({{mul_dims}, dtype, tag::abcd}, eng, mul_arr);
+        post_ops.append_eltwise(1.0f, algorithm::eltwise_relu, 0.0f, 0.0f);
+        matmul_attr.set_post_ops(post_ops);
 
-      if (fused_computation_ == FusedComputationType::kBinaryMulAdd) {
-        // Create Add PostOp.
-        const Tensor &add_tensor = context->input(3);
-        Scalar *add_arr =
-            const_cast<Scalar *>(add_tensor.flat<Scalar>().data());
-        memory::dims add_dims = {add_tensor.dim_size(0), add_tensor.dim_size(1),
-                                 add_tensor.dim_size(2),
-                                 add_tensor.dim_size(3)};
-        post_ops.append_binary(algorithm::binary_add,
-                               memory::desc({add_dims}, dtype, tag::abcd));
-        postop_memory2 = memory({{add_dims}, dtype, tag::abcd}, eng, add_arr);
-      }
-      matmul_attr.set_post_ops(post_ops);
+        auto matmul_d =
+            zendnn::matmul::desc(src_md, matmul_weights_md, bias_md, dst_md);
+        auto matmul_pd =
+            zendnn::matmul::primitive_desc(matmul_d, matmul_attr, eng);
 
-      zendnn::matmul::desc matmul_pd1 =
-          zendnn::matmul::desc(src_md, matmul_weights_md, dst_md);
-      zendnn::matmul::primitive_desc matmul_pd =
-          zendnn::matmul::primitive_desc(matmul_pd1, matmul_attr, eng);
-      net.push_back(zendnn::matmul(matmul_pd));
-      if (fused_computation_ == FusedComputationType::kBinaryMul) {
-        // BatchMatMul + Mul.
-        net_args.push_back(
-            {{ZENDNN_ARG_SRC, src_memory},
-             {ZENDNN_ARG_WEIGHTS, user_weights_memory},
-             {ZENDNN_ARG_DST, dst_memory},
-             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
-              postop_memory1}});
+        net.push_back(zendnn::matmul(matmul_pd));
+        net_args.push_back({{ZENDNN_ARG_SRC, src_memory},
+                            {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+                            {ZENDNN_ARG_BIAS, bias_mem},
+                            {ZENDNN_ARG_DST, dst_memory}});
       } else {
-        // BatchMatMul + Mul + Add.
-        net_args.push_back(
-            {{ZENDNN_ARG_SRC, src_memory},
-             {ZENDNN_ARG_WEIGHTS, user_weights_memory},
-             {ZENDNN_ARG_DST, dst_memory},
-             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
-              postop_memory1},
-             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(1) | ZENDNN_ARG_SRC_1,
-              postop_memory2}});
+        // Create Mul PostOp.
+        const Tensor &mul_tensor = context->input(2);
+        Scalar *mul_arr =
+            const_cast<Scalar *>(mul_tensor.flat<Scalar>().data());
+        memory::dims mul_dims = {1, 1, 1, 1};
+        post_ops.append_binary(algorithm::binary_mul,
+                               memory::desc({mul_dims}, dtype, tag::abcd));
+
+        zendnn::memory postop_memory1, postop_memory2;
+        postop_memory1 = memory({{mul_dims}, dtype, tag::abcd}, eng, mul_arr);
+
+        if (fused_computation_ == FusedComputationType::kBinaryMulAdd) {
+          // Create Add PostOp.
+          const Tensor &add_tensor = context->input(3);
+          Scalar *add_arr =
+              const_cast<Scalar *>(add_tensor.flat<Scalar>().data());
+          memory::dims add_dims = {
+              add_tensor.dim_size(0), add_tensor.dim_size(1),
+              add_tensor.dim_size(2), add_tensor.dim_size(3)};
+          post_ops.append_binary(algorithm::binary_add,
+                                 memory::desc({add_dims}, dtype, tag::abcd));
+          postop_memory2 = memory({{add_dims}, dtype, tag::abcd}, eng, add_arr);
+        }
+        matmul_attr.set_post_ops(post_ops);
+
+        zendnn::matmul::desc matmul_pd1 =
+            zendnn::matmul::desc(src_md, matmul_weights_md, dst_md);
+        zendnn::matmul::primitive_desc matmul_pd =
+            zendnn::matmul::primitive_desc(matmul_pd1, matmul_attr, eng);
+        net.push_back(zendnn::matmul(matmul_pd));
+        if (fused_computation_ == FusedComputationType::kBinaryMul) {
+          // BatchMatMul + Mul.
+          net_args.push_back(
+              {{ZENDNN_ARG_SRC, src_memory},
+               {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+               {ZENDNN_ARG_DST, dst_memory},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
+                postop_memory1}});
+        } else {
+          // BatchMatMul + Mul + Add.
+          net_args.push_back(
+              {{ZENDNN_ARG_SRC, src_memory},
+               {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+               {ZENDNN_ARG_DST, dst_memory},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
+                postop_memory1},
+               {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(1) | ZENDNN_ARG_SRC_1,
+                postop_memory2}});
+        }
       }
     } else {
       zendnn::matmul::desc matmul_pd1 =

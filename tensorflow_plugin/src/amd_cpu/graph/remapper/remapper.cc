@@ -109,6 +109,31 @@ struct ContractionWithBiasAdd {
   int bias_port = kMissingIndex;
 };
 
+struct BatchMatMulWithBiasAdd {
+  BatchMatMulWithBiasAdd() = default;
+  BatchMatMulWithBiasAdd(int batch_matmul, int bias_add, int bias_port)
+      : batch_matmul(batch_matmul), bias_add(bias_add), bias_port(bias_port) {}
+
+  int batch_matmul = kMissingIndex;
+  int bias_add = kMissingIndex;
+  int bias_port = kMissingIndex;
+};
+
+struct BatchMatMulWithBiasAddAndActivation {
+  BatchMatMulWithBiasAddAndActivation() = default;
+  BatchMatMulWithBiasAddAndActivation(int batch_matmul, int bias_add,
+                                      int activation, int bias_port)
+      : batch_matmul(batch_matmul),
+        bias_add(bias_add),
+        activation(activation),
+        bias_port(bias_port) {}
+
+  int batch_matmul = kMissingIndex;
+  int bias_add = kMissingIndex;
+  int activation = kMissingIndex;
+  int bias_port = kMissingIndex;
+};
+
 // Contraction node followed by a BiasAdd and Activation.
 struct ContractionWithBiasAddAndActivation {
   ContractionWithBiasAddAndActivation() = default;
@@ -493,6 +518,41 @@ bool FindKerasDenseLayerFwd(const RemapperContext& ctx, int node_index,
   const KerasDenseLayerFwd pattern{matmul->node_index(),
                                    node_view->node_index(), bias_index,
                                    activation_index};
+  *matched = pattern;
+  return true;
+}
+
+bool FindBatchMatMulWithBiasAdd(const RemapperContext& ctx, int node_index,
+                                BatchMatMulWithBiasAdd* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+
+  // Verify the output node has control fanin edge or not.
+  if (HasControlFanin(*node_view)) return false;
+
+  int bias_port = 1;
+  const auto* node_def = node_view->node();
+  if (!IsBiasAdd(*node_def)) return false;
+
+  // Input to the BiasAdd must be a BatchMatMul.
+  if (node_view->NumRegularFanins() < 1) return false;
+  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+  const auto* batchmatmul_node_view = regular_fanin_0.node_view();
+  const auto* batchmatmul_node_def = batchmatmul_node_view->node();
+
+  // Verify the input node has a control fanout edge or not.
+  if (HasControlFanout(*batchmatmul_node_view)) return false;
+
+  // BatchMatMul.
+  bool is_batchmatmul = IsAnyBatchMatMul(*batchmatmul_node_def);
+
+  if (!is_batchmatmul || !HaveSameDataType(node_def, batchmatmul_node_def) ||
+      !HasAtMostOneFanoutAtPort0(*batchmatmul_node_view) ||
+      IsInPreserveSet(ctx, batchmatmul_node_def))
+    return false;
+
+  const BatchMatMulWithBiasAdd pattern{batchmatmul_node_view->node_index(),
+                                       node_index, bias_port};
+  // We successfully found a BatchMatMul+BiasAdd pattern.
   *matched = pattern;
   return true;
 }
@@ -1591,6 +1651,54 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
   return (found_gelu_exact || *is_gelu_approximate);
 }
 
+bool FindBatchMatMulBiasAddActivation(
+    RemapperContext& ctx, int node_index,
+    BatchMatMulWithBiasAddAndActivation* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  // Root of the pattern must be an Relu node.
+  // TODO (plugin): Add support for other activations.
+  const auto* node_def = node_view->node();
+  if (node_def == nullptr) return false;
+
+  if (!IsRelu(*node_def)) return false;
+
+  // Verify the output node has control fanin edge or not.
+  if (HasControlFanin(*node_view)) return false;
+
+  // And input to the activation node must match BatchMatMulWithBiasAdd pattern.
+  if (node_view->NumRegularFanins() < 1) return false;
+  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
+  const auto* bias_add_node_view = regular_fanin_0.node_view();
+  const auto* bias_add_node_def = bias_add_node_view->node();
+
+  BatchMatMulWithBiasAdd base;
+  if (!FindBatchMatMulWithBiasAdd(ctx, bias_add_node_view->node_index(),
+                                  &base) ||
+      !HasAtMostOneFanoutAtPort0(*bias_add_node_view) ||
+      (!HaveSameDataType(node_def, bias_add_node_def) &&
+       !(GetDataTypeFromAttr(*node_def, "T") == DT_FLOAT)) ||
+      IsInPreserveSet(ctx, bias_add_node_def))
+    return false;
+
+  // Verify the inter node has control fanin&fanout or not.
+  if (HasControlFaninOrFanout(*bias_add_node_view)) {
+    return false;
+  }
+
+  const auto* batchmatmul_node_view = ctx.graph_view.GetNode(base.batch_matmul);
+
+  // Verify the input node has a control fanout edge or not.
+  if (HasControlFanout(*batchmatmul_node_view)) return false;
+
+  const BatchMatMulWithBiasAddAndActivation pattern{
+      base.batch_matmul, base.bias_add, node_index, base.bias_port};
+
+  // We successfully found a BatchMatMul+BiasAdd+Activation pattern.
+  *matched = pattern;
+
+  return true;
+}
+
 bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
                           std::map<string, int>* matched_nodes_map,
                           std::set<int>* remove_node_indices,
@@ -2562,6 +2670,46 @@ Status AddFusedMatMulBiasAddAndGelu(
   return OkStatus();
 }
 
+Status AddFusedBatchMatMulBiasAddActivation(
+    RemapperContext* ctx, const BatchMatMulWithBiasAddAndActivation& matched,
+    std::vector<bool>* invalidated_nodes, std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& batch_matmul = graph->node(matched.batch_matmul);
+  const NodeDef& bias_add = graph->node(matched.bias_add);
+  const NodeDef& activation = graph->node(matched.activation);
+
+  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", batch_matmul.op(), " with BiasAdd and ",
+             activation.op(), ":", " activation=", activation.name(),
+             " bias_add=", bias_add.name(),
+             " batch_matmul=", batch_matmul.name());
+
+  NodeDef fused_node;
+  fused_node.set_name(activation.name());
+  fused_node.set_device(batch_matmul.device());
+  fused_node.add_input(batch_matmul.input(0));              // 0: input
+  fused_node.add_input(batch_matmul.input(1));              // 1: filter
+  fused_node.add_input(bias_add.input(matched.bias_port));  // 2: bias
+  // Note: The op and kernel definition for the "_FusedBatchMatMulV2" op is not
+  // present. We are sure that it will be rewritten with
+  // "_ZenFusedBatchMatMulV2" from zen layout pass.
+  fused_node.set_op(kFusedBatchMatMulV2);
+
+  CopyBatchMatMulAttributes(batch_matmul, &fused_node);
+  SetFusedOpAttributesWithActivation(&fused_node, &activation, {"BiasAdd"});
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_node), &status);
+  TF_RETURN_IF_ERROR(status);
+  TF_RETURN_IF_ERROR(mutation->Apply());
+
+  (*nodes_to_delete)[matched.batch_matmul] = true;
+  (*nodes_to_delete)[matched.bias_add] = true;
+  (*invalidated_nodes)[matched.activation] = true;
+
+  return OkStatus();
+}
+
 Status AddFusedBatchMatMul(RemapperContext* ctx,
                            const std::map<string, int>& matched_nodes_map,
                            const std::set<int>& remove_node_indices,
@@ -2802,6 +2950,18 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
             &ctx, matched_nodes_map, remove_node_indices, input_node_names,
             &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
+
+      // Remap BatchMatMul + BiadAdd + Activation into the _FusedBatchMatMul.
+      BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
+      if (FindBatchMatMulBiasAddActivation(ctx, i,
+                                           &batchmatmul_biasadd_activation)) {
+        zendnnInfo(ZENDNN_FWKLOG,
+                   " Found BatchMatMul pattern with BiasAdd and Activation.");
+        TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
+            &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
+            &nodes_to_delete));
         continue;
       }
 
