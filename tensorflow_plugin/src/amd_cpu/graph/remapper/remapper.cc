@@ -520,8 +520,7 @@ bool FindContractionWithBias(const RemapperContext& ctx, int node_index,
   if (HasControlFanout(*contraction_node_view)) return false;
 
   // Conv, MatMul or DepthwiseConv2D.
-  bool is_contraction = IsConvOrMatMul(*contraction_node_def) ||
-                        IsAnyBatchMatMul(*contraction_node_def);
+  bool is_contraction = IsConvOrMatMul(*contraction_node_def);
 
   if (!is_contraction || !HaveSameDataType(node_def, contraction_node_def) ||
       !HasAtMostOneFanoutAtPort0(*contraction_node_view) ||
