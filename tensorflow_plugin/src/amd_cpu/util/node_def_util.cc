@@ -72,8 +72,12 @@ string SummarizeAttrsHelper(AttrSlice attrs, StringPiece device) {
   for (const string& attr_name : attr_names) {
     if (!first) strings::StrAppend(&ret, ", ");
     first = false;
-    strings::StrAppend(&ret, attr_name, "=",
-                       SummarizeAttrValue(*attrs.Find(attr_name)));
+    const auto* attr_value = attrs.Find(attr_name);
+    if (attr_value) {
+      strings::StrAppend(&ret, attr_name, "=", SummarizeAttrValue(*attr_value));
+    } else {
+      strings::StrAppend(&ret, attr_name, "=<unknown>");
+    }
   }
 
   // Consider the device to be a final attr with name "_device".

@@ -343,7 +343,6 @@ bool safe_strtof(StringPiece str, float* value) {
 
   // If string length exceeds buffer size or int max, fail.
   if (len >= kFastToBufferSize) return false;
-  if (len > std::numeric_limits<int>::max()) return false;
 
   *value = StringToFloatConverter().StringToFloat(
       str.data(), static_cast<int>(len), &processed_characters_count);
@@ -356,7 +355,6 @@ bool safe_strtod(StringPiece str, double* value) {
 
   // If string length exceeds buffer size or int max, fail.
   if (len >= kFastToBufferSize) return false;
-  if (len > std::numeric_limits<int>::max()) return false;
 
   *value = StringToFloatConverter().StringToDouble(
       str.data(), static_cast<int>(len), &processed_characters_count);
