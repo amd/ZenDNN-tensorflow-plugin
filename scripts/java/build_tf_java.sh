@@ -36,6 +36,8 @@ wget https://patch-diff.githubusercontent.com/raw/tensorflow/java/pull/605.patch
 
 # Change directory to java.
 cd $current_dir/tf_java.git
+# Checking out to v1.0.0 relase tag.
+git checkout v1.0.0
 
 # Check if bazel is installed.
 if ! command -v bazel &> /dev/null; then
