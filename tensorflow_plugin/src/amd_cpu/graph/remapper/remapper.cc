@@ -2778,6 +2778,18 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
   for (int i = num_nodes - 1; i >= 0;) {
     NodeDef* node_def = (ctx.graph_view.GetNode(i))->node();
 
+    const string& type_attr = "T";
+    if (HasNodeAttr(*node_def, type_attr)) {
+      const auto& attr = node_def->attr().at(type_attr);
+      DataType dtype = attr.type();
+      if ((dtype == DT_BFLOAT16) &&
+          !tensorflow::port::TestCPUFeature(
+              tensorflow::port::CPUFeature::AVX512F)) {
+        return errors::FailedPrecondition(
+            "Platform does not support AVX512 instruction set for BF16 Op!");
+      }
+    }
+
     // IMPORTANT: Always keep this dynamic check in the start.
     // Dynamic check node status:
     //   1. Do normal fusion check when current node is visited first time.
