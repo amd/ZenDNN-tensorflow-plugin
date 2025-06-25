@@ -52,7 +52,7 @@ This section explains how to use the Python interface. For Java and C++ interfac
   Note: Python 3.10 used here for example.
 * Install TensorFlow v2.19
   ```
-  $ pip install tensorflow-cpu==2.19.0
+  $ pip install tensorflow==2.19.0
   ```
 ## Install zenTF wheel.
 

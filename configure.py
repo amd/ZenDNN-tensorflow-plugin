@@ -248,8 +248,7 @@ def setup_python(environ_cp):
   tensorflow_list = []
   package_list.splitlines()
   for line in package_list.splitlines():
-    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tensorflow_cpu ",
-    "tf_nightly ")):
+    if line.startswith(("tensorflow ")):
       tensorflow_list.append(line)
   if not tensorflow_list:
     print('Please install tensorflow version >= 2.16.0')
