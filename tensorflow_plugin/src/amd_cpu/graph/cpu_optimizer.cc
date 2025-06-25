@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/cpu_optimizer.h"
 
+#include "absl/base/call_once.h"
 #include "tensorflow/c/experimental/grappler/grappler.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/auto_mixed_precision/auto_mixed_precision.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/remapper/remapper.h"
@@ -63,13 +64,23 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
     // Optimizations like Gelu require fused ops such as _FusedMatMul,
     // thus we need two sets of passes of remapper, one to generate fused ops
     // and the next to replace set patterns.
+    static absl::once_flag once;
     for (int i = 0; i < 2; i++) {
+      Status remapper_status =
+          RunRemapper((static_cast<Optimizer*>(optimizer))->device_name, item,
+                      graph_def, &optimized_graph_def);
+      if (!remapper_status.ok()) {
+        TF_StatusFromStatus(remapper_status, tf_status);
+        absl::call_once(once, [&]() {
+          LOG(WARNING)
+              << "ZenDNN supports DT_BFLOAT16 only on platforms with AVX512 "
+                 "instruction set. Falling back to the vanilla implementation.";
+        });
+        return;
+      }
       // Executing fusions before layout pass opts, i.e before Zen layout pass
       // if that is enabled.
-      SET_STATUS_IF_ERROR(
-          tf_status,
-          RunRemapper((static_cast<Optimizer*>(optimizer))->device_name, item,
-                      graph_def, &optimized_graph_def));
+      SET_STATUS_IF_ERROR(tf_status, std::move(remapper_status));
       optimized_graph_def.Swap(&graph_def);
     }
     // Dump the optimized graph to a file for debugging/analysis.
