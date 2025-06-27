@@ -31,8 +31,6 @@ limitations under the License.
 
 namespace amd_cpu_plugin {
 
-zendnnEnv zen_env_obj = readEnv();
-
 void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
                           int height, int width, void *filter_array,
                           int output_channels, int kernel_h, int kernel_w,
