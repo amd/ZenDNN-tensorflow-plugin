@@ -315,37 +315,54 @@ class ZenMatMulOp : public OpKernel {
     auto a_ptr = const_cast<T *>(a.template flat<T>().data());
     auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (out->template flat<T>().data());
-
-    // Dimensions of matmul source, weights, bias and destination tensors.
-    memory::dims src_dims = {m, k};
-    memory::dims weight_dims = {k, n};
-    memory::dims bias_dims = {1, n};
-    memory::dims dst_dims = {m, n};
-    memory::format_tag src_format = memory::format_tag::nc;
-    memory::format_tag weight_format = (dim_pair[0].second == 1)
-                                           ? memory::format_tag::io
-                                           : memory::format_tag::oi;
-
-    ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
-                                  src_format, weight_format);
-
-    if (!is_fused) {
-      T *bias_ptr = NULL;
-      if (is_bias_add_gelu) {
-        const Tensor &bias = context->input(2);
-        bias_ptr = const_cast<T *>(bias.template flat<T>().data());
-        matmul_params.post_op_params.push_back({"gelu", {1.0, 0.0, 0.0}});
-      }
-      ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
-          ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-      matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
-    } else {
-      bool is_biasadd = (fused_computation_ != FusedComputationType::kRelu);
-      LaunchZenFusedMatMulOp<T>()(context, a, b, matmul_params,
-                                  fused_computation_, fused_computation_args_,
-                                  out, is_biasadd);
+    // Check if USE_ZENDNN_MATMUL_DIRECT environment variable is set to enable
+    // direct kernel This allows bypassing the standard ZenDNN matmul primitive
+    // path and using a more optimized direct kernel implementation for specific
+    // fusion types.
+    const char *env_value = std::getenv("USE_ZENDNN_MATMUL_DIRECT");
+    const int int_env_value = env_value ? std::atoi(env_value) : 0;
+    const Tensor *bias = nullptr;
+    if (is_fused && fused_computation_ != FusedComputationType::kRelu) {
+      bias = &context->input(2);
     }
+    const bool used_zendnn_direct_kernel =
+        int_env_value && may_i_use_zendnn_direct_kernel(
+                             a, b, bias, out, fused_computation_, is_fused);
 
+    if (used_zendnn_direct_kernel) {
+      zendnn_direct_kernel<T>(a, b, bias, out, transpose_a_, transpose_b_,
+                              fused_computation_);
+    } else {
+      // Dimensions of matmul source, weights, bias and destination tensors.
+      memory::dims src_dims = {m, k};
+      memory::dims weight_dims = {k, n};
+      memory::dims bias_dims = {1, n};
+      memory::dims dst_dims = {m, n};
+      memory::format_tag src_format = memory::format_tag::nc;
+      memory::format_tag weight_format = (dim_pair[0].second == 1)
+                                             ? memory::format_tag::io
+                                             : memory::format_tag::oi;
+
+      ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
+                                    src_format, weight_format);
+
+      if (!is_fused) {
+        T *bias_ptr = NULL;
+        if (is_bias_add_gelu) {
+          const Tensor &bias = context->input(2);
+          bias_ptr = const_cast<T *>(bias.template flat<T>().data());
+          matmul_params.post_op_params.push_back({"gelu", {1.0, 0.0, 0.0}});
+        }
+        ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
+            ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+      } else {
+        bool is_biasadd = (fused_computation_ != FusedComputationType::kRelu);
+        LaunchZenFusedMatMulOp<T>()(context, a, b, matmul_params,
+                                    fused_computation_, fused_computation_args_,
+                                    out, is_biasadd);
+      }
+    }
     // If ZenMemPool Optimization is enabled(default), update the state of
     // Memory pool based on input_array address.
     if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&

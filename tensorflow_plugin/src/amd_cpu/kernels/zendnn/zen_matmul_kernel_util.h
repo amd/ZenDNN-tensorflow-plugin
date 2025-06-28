@@ -330,6 +330,119 @@ class ZenMatMulPrimitiveFactory : public ZenPrimitiveFactory {
   }
 };
 
+inline bool may_i_use_zendnn_direct_kernel(const Tensor &a, const Tensor &b,
+                                           const Tensor *bias,
+                                           const Tensor *out,
+                                           FusedComputationType fusion,
+                                           bool is_fused) {
+  // Float is only supported for direct kernel.
+  if (a.dtype() != DataType::DT_FLOAT || b.dtype() != DataType::DT_FLOAT ||
+      out->dtype() != DataType::DT_FLOAT) {
+    return false;
+  }
+
+  // Fusion type supported for direct kernel.
+  const bool is_supported_fusion =
+      fusion == FusedComputationType::kBiasAdd ||
+      fusion == FusedComputationType::kBiasAddWithRelu ||
+      fusion == FusedComputationType::kBiasAddWithSigmoid ||
+      fusion == FusedComputationType::kBiasAddWithTanh ||
+      fusion == FusedComputationType::kBiasAddWithGeluApproximate ||
+      fusion == FusedComputationType::kBiasAddWithGeluExact ||
+      fusion == FusedComputationType::kRelu;
+
+  // Binary post ops are not supported in direct kernel.
+  const bool is_binary_post_op =
+      fusion == FusedComputationType::kBiasAddWithAdd ||
+      fusion == FusedComputationType::kBiasAddWithAddAndRelu;
+
+  // Bias should be 1D.
+  const bool bias1d =
+      is_fused && fusion != FusedComputationType::kRelu && bias->dims() == 1;
+
+  if (!is_supported_fusion && is_binary_post_op && !bias1d) {
+    return false;
+  }
+
+  return true;
+}
+
+template <typename T>
+void zendnn_direct_kernel(const Tensor &a, const Tensor &b, const Tensor *bias,
+                          Tensor *out, bool transpose_a, bool transpose_b,
+                          FusedComputationType fusion) {
+  int M = a.dim_size(0);
+  int K = a.dim_size(1);
+  int N = b.dim_size(1);
+
+  if (transpose_a) {
+    M = a.dim_size(1);
+    K = a.dim_size(0);
+  }
+
+  if (transpose_b) {
+    N = b.dim_size(0);
+  }
+
+  auto a_ptr = const_cast<T *>(a.template flat<T>().data());
+  auto b_ptr = const_cast<T *>(b.template flat<T>().data());
+  auto c_ptr = (out->template flat<T>().data());
+
+  auto bias_ptr = bias ? const_cast<T *>(bias->flat<T>().data()) : nullptr;
+
+  // Check if any of the pointers is null.
+  if (a_ptr == nullptr || b_ptr == nullptr || c_ptr == nullptr) {
+    zendnnInfo(ZENDNN_FWKLOG,
+               "ZEN-OP-DEF: zendnn_direct_kernel: Null pointer detected, "
+               "returning early!");
+    return;
+  }
+
+  int lda = K, ldb = N, ldc = N;
+
+  if (transpose_a) {
+    lda = M;
+  }
+
+  if (transpose_b) {
+    ldb = K;
+  }
+  int batch_A = 1, batch_B = 1;
+
+  zendnn::ActivationPostOp zendnn_post_op = zendnn::ActivationPostOp::NONE;
+  float alpha = 1.0, beta = 0.0;
+
+  switch (fusion) {
+    case FusedComputationType::kBiasAddWithRelu:
+      zendnn_post_op = zendnn::ActivationPostOp::RELU;
+      break;
+    case FusedComputationType::kBiasAddWithSigmoid:
+      zendnn_post_op = zendnn::ActivationPostOp::SIGMOID;
+      break;
+    case FusedComputationType::kBiasAddWithTanh:
+      zendnn_post_op = zendnn::ActivationPostOp::TANH;
+      break;
+    case FusedComputationType::kBiasAddWithGeluApproximate:
+      zendnn_post_op = zendnn::ActivationPostOp::GELU_TANH;
+      break;
+    case FusedComputationType::kBiasAddWithGeluExact:
+      zendnn_post_op = zendnn::ActivationPostOp::GELU_ERF;
+      break;
+    case FusedComputationType::kRelu:
+      zendnn_post_op = zendnn::ActivationPostOp::RELU;
+      break;
+    default:
+      zendnn_post_op = zendnn::ActivationPostOp::NONE;
+      break;
+  }
+  // TODO(plugin): Below API call has to be generalised for other data types.
+  zendnn::data_types dt(zendnn_f32, zendnn_f32, zendnn_f32, zendnn_f32);
+
+  zendnn::zendnn_custom_op::zendnn_matmul_direct_fp32(
+      a_ptr, b_ptr, c_ptr, bias_ptr, alpha, beta, M, N, K, transpose_a,
+      transpose_b, lda, ldb, ldc, dt, zendnn_post_op, batch_A, batch_B);
+}
+
 }  // namespace amd_cpu_plugin
 
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_KERNELS_ZENDNN_ZEN_MATMUL_KERNEL_UTIL_H_
