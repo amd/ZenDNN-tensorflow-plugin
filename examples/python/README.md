@@ -1,6 +1,10 @@
 # zentf Python Examples
 
-This document provides examples for running inference on various models using the ZenDNN TensorFlow plugin with Python user interface.
+This document provides examples for running inference on various models using the ZenDNN TensorFlow plugin with Python user interface. Note that you may need to install additional packages in your environment if not already present. Assuming you have installed ZenDNN TensorFlow plugin in your environment, you can install the rest of the packages by running:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Table of Contents
 - [BERT](#bert)
@@ -57,13 +61,6 @@ plane, carpenter's plane, woodworking plane
 ```
 
 ## Wide&Deep
-
-For the Wide & Deep model, ensure you have the required dependencies specified in requirements.txt. Once the zentf plugin is set up, install these dependencies by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 For running this model, ensure that you download the following files in your directory:
 
 #### Download and preprocess the dataset
@@ -103,12 +100,12 @@ On successful execution, the output would be as follows.
 ```
 --------------------------------------------------
 Output tensor shape: (512, 2)
-Output tensor value: [[0.90496653 0.09503343]
- [0.86235213 0.13764788]
- [0.78273624 0.21726385]
+Output tensor value: [[0.90496653 0.09503351]
+ [0.86235213 0.13764785]
+ [0.78273624 0.21726371]
  ...
- [0.7851487  0.21485144]
- [0.9839513  0.01604871]
- [0.55811113 0.44188884]]
+ [0.7851486  0.21485138]
+ [0.98395133 0.01604872]
+ [0.558111   0.44188896]]
 --------------------------------------------------
 ```
