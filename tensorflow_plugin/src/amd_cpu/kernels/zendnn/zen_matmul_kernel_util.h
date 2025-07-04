@@ -335,12 +335,6 @@ inline bool may_i_use_zendnn_direct_kernel(const Tensor &a, const Tensor &b,
                                            const Tensor *out,
                                            FusedComputationType fusion,
                                            bool is_fused) {
-  // Float is only supported for direct kernel.
-  if (a.dtype() != DataType::DT_FLOAT || b.dtype() != DataType::DT_FLOAT ||
-      out->dtype() != DataType::DT_FLOAT) {
-    return false;
-  }
-
   // Fusion type supported for direct kernel.
   const bool is_supported_fusion =
       fusion == FusedComputationType::kBiasAdd ||
@@ -435,12 +429,21 @@ void zendnn_direct_kernel(const Tensor &a, const Tensor &b, const Tensor *bias,
       zendnn_post_op = zendnn::ActivationPostOp::NONE;
       break;
   }
-  // TODO(plugin): Below API call has to be generalised for other data types.
-  zendnn::data_types dt(zendnn_f32, zendnn_f32, zendnn_f32, zendnn_f32);
 
-  zendnn::zendnn_custom_op::zendnn_matmul_direct_fp32(
+  bool is_input_float = std::is_same<T, float>::value;
+  // If input is Float, then use Float. Otherwise, use default BF16.
+  zendnn::data_types dt =
+      is_input_float
+          ? zendnn::data_types(zendnn_f32, zendnn_f32, zendnn_f32, zendnn_f32)
+          : zendnn::data_types(zendnn_bf16, zendnn_bf16, zendnn_bf16,
+                               zendnn_bf16);
+
+  // NOTE: The 'weight_const' argument is currently hardcoded to true.
+  // TODO(plugin): Update this if support for non-constant weights is required.
+  zendnn::zendnn_custom_op::zendnn_matmul_direct(
       a_ptr, b_ptr, c_ptr, bias_ptr, alpha, beta, M, N, K, transpose_a,
-      transpose_b, lda, ldb, ldc, dt, zendnn_post_op, batch_A, batch_B);
+      transpose_b, lda, ldb, ldc, true /* weight_const */, dt, zendnn_post_op,
+      batch_A, batch_B);
 }
 
 }  // namespace amd_cpu_plugin
