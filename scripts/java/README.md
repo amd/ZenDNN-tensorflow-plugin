@@ -49,19 +49,19 @@ cd <Path to zentf plugin parent folder>/ZenDNN_TensorFlow_Plugin/scripts/java
 bash build_tf_java.sh
 ```
 ### Set-up zentf plugin
-Download zentf C++ plugin package of 5.0.2 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
+Download zentf C++ plugin package of 5.1.0 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
 
 Set the environment variable 'LD_LIBRARY_PATH' with the path to zentf plugin libraries.
 ```bash
-unzip ZENTF_v5.0.2_C++_API.zip
-export LD_LIBRARY_PATH=<Path to zentf C++ parent folder>/ZENTF_v5.0.2_C++_API/lib-tensorflow-plugins
+unzip ZENTF_v5.1.0_C++_API.zip
+export LD_LIBRARY_PATH=<Path to zentf C++ parent folder>/ZENTF_v5.1.0_C++_API/lib-tensorflow-plugins
 ```
 
 Set ZenDNN specific environment variables as shown below,
 ```bash
-cd <Path to zentf C++ parent folder>/ZENTF_v5.0.2_C++_API
+cd <Path to zentf C++ parent folder>/ZENTF_v5.1.0_C++_API
 source zentf_env_setup.sh java
 ```
 
 ## Examples
-To try the set-up made on an example inference application, please refer README file from './examples/java' folder of this repository.
+To try the set-up made on an example inference application, please refer [zentf Java Examples](../../examples/java/README.md).

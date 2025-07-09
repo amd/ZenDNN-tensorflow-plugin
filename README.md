@@ -1,5 +1,7 @@
 # TensorFlow-ZenDNN Plug-in For AMD CPUs
 
+__The latest ZenDNN Plugin for TensorFlow* (zentf) 5.1 is here!__
+
 The ZenDNN plugin for TensorFlow is called zentf.
 
 This upgrade includes support for a Java interface to zentf through TensorFlow-Java.
@@ -18,7 +20,7 @@ AMD copyrighted code in ZenDNN is subject to the [Apache-2.0, MIT, or BSD-3-Clau
 
 ## Overview
 
-The following is a high-level block diagram for the zenTF package which utilizes [ZenDNN](https://github.com/amd/ZenDNN) as the core inference library:
+The following is a high-level block diagram for the zentf package which utilizes [ZenDNN](https://github.com/amd/ZenDNN) as the core inference library:
 
 ![TensorFlow-ZenDNN Plug-in](./images/zentf_overview.png)
 
@@ -39,7 +41,7 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 | [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=5.3.0 and <=6.5.0 |
 | Git | >=1.8 |
 | Python | >=3.9 and <=3.12 |
-| [TensorFlow](https://www.tensorflow.org/) | >=2.16 |
+| [TensorFlow](https://www.tensorflow.org/) | >=2.16 and <=2.19 |
 
 # Installation Guide
 This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder.
@@ -50,17 +52,17 @@ This section explains how to use the Python interface. For Java and C++ interfac
   $ conda activate tf-v2.19-zendnn-v5.1.0-rel-env
   ```
   Note: Python 3.10 used here for example.
-* Install TensorFlow v2.19
+* Install TensorFlow v2.19.0
   ```
   $ pip install tensorflow==2.19.0
   ```
-## Install zenTF wheel.
+## Install zentf wheel.
 
 ### 1. Install wheel file using pip:
 ```
 $ pip install zentf==5.1.0
 ```
-### 2. Install zenTF using release package.
+### 2. Install zentf using release package.
 
 * Download the package and the user-guide from [AMD developer portal](https://www.amd.com/en/developer/zendnn.html).
 
@@ -84,9 +86,9 @@ $ pip install zentf==5.1.0
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
-Note: Repository is defaults to master branch, to build the version 5.1.0 checkout the branch r5.1.0.
+Note: Repository is defaults to master branch, to build the version 5.1.0 checkout the r5.1 branch.
 ```
-$ git checkout r5.1.0
+$ git checkout r5.1
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
@@ -144,30 +146,42 @@ Note: To disable ZenDNN optimizations in your inference execution, you can set t
 ## Execute sample kernel:
 ```
 ZenDNN-tensorflow-plugin$ python tests/softmax.py
-2024-03-27 22:51:57.292569: I tensorflow/core/util/port.cc:140] ZenDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ZENDNN_OPTS=0`.
-2024-03-27 22:51:57.292832: I external/local_tsl/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
-2024-03-27 22:51:57.295704: I external/local_tsl/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
-2024-03-27 22:51:57.339363: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2024-03-27 22:51:57.969156: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+2025-07-09 23:27:04.455149: I tensorflow/core/util/port.cc:180] ZenDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ZENDNN_OPTS=0`.
+2025-07-09 23:27:04.456705: I external/local_xla/xla/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
+2025-07-09 23:27:04.461392: I external/local_xla/xla/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
+2025-07-09 23:27:04.471716: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1752125224.487565 3745134 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1752125224.492265 3745134 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1752125224.506752 3745134 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1752125224.506784 3745134 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1752125224.506788 3745134 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1752125224.506791 3745134 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-07-09 23:27:04.510814: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-07-09 23:27:08.109060: E external/local_xla/xla/stream_executor/cuda/cuda_platform.cc:51] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: UNKNOWN ERROR (303)
 Tensor("random_normal:0", shape=(10,), dtype=float32)
-2024-03-27 22:51:58.407520: I tensorflow/core/common_runtime/direct_session.cc:380] Device mapping: no known devices.
-2024-03-27 22:51:58.408159: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:388] MLIR V1 optimization pass is not enabled
+2025-07-09 23:27:08.907570: I tensorflow/core/common_runtime/direct_session.cc:378] Device mapping: no known devices.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1752125228.908789 3745134 mlir_graph_optimization_pass.cc:425] MLIR V1 optimization pass is not enabled
 random_normal/RandomStandardNormal: (RandomStandardNormal): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.409983: I tensorflow/core/common_runtime/placer.cc:125] random_normal/RandomStandardNormal: (RandomStandardNormal): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.912901: I tensorflow/core/common_runtime/placer.cc:162] random_normal/RandomStandardNormal: (RandomStandardNormal): /job:localhost/replica:0/task:0/device:CPU:0
 random_normal/mul: (Mul): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.409998: I tensorflow/core/common_runtime/placer.cc:125] random_normal/mul: (Mul): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.913119: I tensorflow/core/common_runtime/placer.cc:162] random_normal/mul: (Mul): /job:localhost/replica:0/task:0/device:CPU:0
 random_normal: (AddV2): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.410008: I tensorflow/core/common_runtime/placer.cc:125] random_normal: (AddV2): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.913340: I tensorflow/core/common_runtime/placer.cc:162] random_normal: (AddV2): /job:localhost/replica:0/task:0/device:CPU:0
 Softmax: (Softmax): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.410018: I tensorflow/core/common_runtime/placer.cc:125] Softmax: (Softmax): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.913537: I tensorflow/core/common_runtime/placer.cc:162] Softmax: (Softmax): /job:localhost/replica:0/task:0/device:CPU:0
 random_normal/shape: (Const): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.410025: I tensorflow/core/common_runtime/placer.cc:125] random_normal/shape: (Const): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.913736: I tensorflow/core/common_runtime/placer.cc:162] random_normal/shape: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 random_normal/mean: (Const): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.410033: I tensorflow/core/common_runtime/placer.cc:125] random_normal/mean: (Const): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.913933: I tensorflow/core/common_runtime/placer.cc:162] random_normal/mean: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.410041: I tensorflow/core/common_runtime/placer.cc:125] random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
-2024-03-27 22:51:58.429409: I tensorflow/core/grappler/optimizers/custom_graph_optimizer_registry.cc:117] Plugin optimizer for device_type CPU is enabled.
+2025-07-09 23:27:08.914123: I tensorflow/core/common_runtime/placer.cc:162] random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
+2025-07-09 23:27:08.914921: I tensorflow/core/grappler/optimizers/custom_graph_optimizer_registry.cc:117] Plugin optimizer for device_type CPU is enabled.
+
+ZenDNN Info: Execution has entered the ZenDNN library. Optimized deep learning kernels are now active for high-performance inference on AMD CPUs.
+
 [0.05660784 0.09040404 0.03201076 0.11204024 0.2344563  0.162052
  0.09466095 0.11205972 0.0752109  0.03049729]
 ```
@@ -177,4 +191,4 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
 
 # Performance tuning and Benchmarking
-* zentf v5.1.0 is supported with ZenDNN v5.1.0. Please see the [section 5](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) of ZenDNN user guide for performance tuning guidelines.
+* zentf v5.1.0 is supported with ZenDNN v5.1.0. For detailed performance tuning guidelines, refer to the [Performance Tuning](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) section of the ZenDNN user guide.

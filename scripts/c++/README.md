@@ -33,5 +33,4 @@ $ source zentf_env_setup.sh
 Set up is done!
 
 ## Examples
-To try the set-up made on an example inference application, please refer README file from './examples' folder of this package.
-
+To try the set-up made on an example inference application, please refer [zentf C++ Examples](../../examples/c++/README.md).
