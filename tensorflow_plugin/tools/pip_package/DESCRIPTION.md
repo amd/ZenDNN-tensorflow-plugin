@@ -1,3 +1,5 @@
+__The latest ZenDNN Plugin for TensorFlow* (zentf) 5.1 is here!__
+
 The ZenDNN plugin for TensorFlow is called zentf.
 
 This upgrade includes support for a Java interface to zentf through TensorFlow-Java.

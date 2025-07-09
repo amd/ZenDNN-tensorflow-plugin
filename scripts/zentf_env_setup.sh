@@ -65,13 +65,24 @@ echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 export ZENDNN_CONV_ALGO=3
 echo "ZENDNN_CONV_ALGO=$ZENDNN_CONV_ALGO"
 
-# Matmul Algorithms Settings. By default, it is ZENDNN_MATMUL_ALGO=FP32:4,BF16:4.
-echo "By default, ZENDNN_MATMUL_ALGO=FP32:4,BF16:4"
-# We recommend to override the default settings for NLPs & LLMs models by
-# uncommenting the following 'export' and 'echo' commands.
-# Note: Do not uncomment for AMP (Auto-Mixed Precision) mode runs of any models.
-# export ZENDNN_MATMUL_ALGO=FP32:2,BF16:0
+# Matmul Algorithms Settings. By default, it is ZENDNN_MATMUL_ALGO=FP32:0,BF16:0.
+echo "By default, ZENDNN_MATMUL_ALGO=FP32:0,BF16:0"
+# Note: AMP means Auto-Mixed Precision.
+# For NLPs & LLMs models:
+#   - FP32 and BF16 models
+#           export ZENDNN_MATMUL_ALGO=FP32:2,BF16:0
+#   - For AMP models
+#           export ZENDNN_MATMUL_ALGO=BF16:4
+# For RecSys models:
+#   - FP32, BF16, and AMP models
+#           export ZENDNN_MATMUL_ALGO=FP32:4,BF16:4
 # echo "Overriding with ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
+
+# Matmul Direct Algorithm Settings. By default, it is USE_ZENDNN_MATMUL_DIRECT=0.
+echo "By default, USE_ZENDNN_MATMUL_DIRECT=0."
+# To optimize for single core workloads, uncomment the following lines:
+# export USE_ZENDNN_MATMUL_DIRECT=1
+# echo "Overriding with USE_ZENDNN_MATMUL_DIRECT=$USE_ZENDNN_MATMUL_DIRECT"
 
 # Enable/Disable primitive reuse.
 export TF_ZEN_PRIMITIVE_REUSE_DISABLE=FALSE

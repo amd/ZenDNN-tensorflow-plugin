@@ -8,7 +8,7 @@ This document provides examples for running inference on CNN models using zentf 
 
 ## Set-up zentf for C++ user interface
 
-Please follow the instructions in the [README.md](https://github.com/amd/ZenDNN-tensorflow-plugin/blob/main/scripts/c%2B%2B/README.md) file for setting up zentf.
+Please follow the instructions in the [README.md](../../scripts/c%2B%2B/README.md) file for setting up zentf.
 
 ## Build C++ inference application
 
