@@ -79,7 +79,7 @@ echo "By default, ZENDNN_MATMUL_ALGO=FP32:0,BF16:0"
 # echo "Overriding with ZENDNN_MATMUL_ALGO=$ZENDNN_MATMUL_ALGO"
 
 # Matmul Direct Algorithm Settings. By default, it is USE_ZENDNN_MATMUL_DIRECT=0.
-echo "By default, USE_ZENDNN_MATMUL_DIRECT=0."
+echo "By default, USE_ZENDNN_MATMUL_DIRECT=0"
 # To optimize for single core workloads, uncomment the following lines:
 # export USE_ZENDNN_MATMUL_DIRECT=1
 # echo "Overriding with USE_ZENDNN_MATMUL_DIRECT=$USE_ZENDNN_MATMUL_DIRECT"
