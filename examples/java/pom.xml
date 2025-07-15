@@ -28,7 +28,7 @@
     <!-- The maven compiler plugin defaults to a lower version -->
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <tensorflow.version>1.0.0-SNAPSHOT</tensorflow.version>
+    <tensorflow.version>1.0.0</tensorflow.version>
   </properties>
 
   <dependencies>
