@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -264,6 +264,7 @@ void RegisterZenQuantizedConv2DWithBiasAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: quint8");
   TF_OpDefinitionBuilderAddOutput(op_builder, "min_output: float");
   TF_OpDefinitionBuilderAddOutput(op_builder, "max_output: float");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "data_format: string = 'NHWC'");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tinput: quantizedtype");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tfilter: quantizedtype");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tbias: {float, qint32}");
@@ -319,6 +320,7 @@ void RegisterZenQuantizedConv2DWithBiasSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "min_output: float");
   TF_OpDefinitionBuilderAddOutput(op_builder, "max_output: float");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tinput: quantizedtype");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "data_format: string = 'NHWC'");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tfilter: quantizedtype");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tbias: {float, qint32}");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tsummand: quantizedtype");
@@ -373,6 +375,7 @@ void RegisterZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddOutput(op_builder, "output: quint8");
   TF_OpDefinitionBuilderAddOutput(op_builder, "min_output: float");
   TF_OpDefinitionBuilderAddOutput(op_builder, "max_output: float");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "data_format: string = 'NHWC'");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tinput: quantizedtype");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tfilter: quantizedtype");
   TF_OpDefinitionBuilderAddAttr(op_builder, "Tbias: {float, qint32}");
