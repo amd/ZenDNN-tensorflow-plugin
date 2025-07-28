@@ -98,9 +98,9 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "amd_blis",
         build_file = "//third_party/amd_blis:blis.BUILD",
-        sha256 = "ac69d0fc1420498747e934201f84690b4e825d393fad77f9d2b3181ba31964f9",
-        strip_prefix = "blis-AOCL-Jul2025-b1",
-        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/AOCL-Jul2025-b1.tar.gz"),
+        sha256 = "5497782f8e5e79fd6493aaa3e698d8c0afca0ec3adc39d18fe0fe061b2c5ff17",
+        strip_prefix = "blis-AOCL-Weekly-250725",
+        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/AOCL-Weekly-250725.tar.gz"),
     )
 
     tf_http_archive(
