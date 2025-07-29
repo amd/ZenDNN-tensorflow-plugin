@@ -179,14 +179,6 @@ class ZenPoolOp : public OpKernel {
     }
 
     if (!is_input_float) {
-      // Check for the BF16 support on the machine.
-      bool result = tensorflow::port::TestCPUFeature(
-          tensorflow::port::CPUFeature::AVX512F);
-      OP_REQUIRES(
-          context, result,
-          errors::Internal(
-              "BF16 AVX512 instruction set is not supported in the machine."));
-
       using tag = memory::format_tag;
       using dt = memory::data_type;
       ZenExecutor *ex = ex->getInstance();

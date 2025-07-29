@@ -213,15 +213,6 @@ class ZenMatMulOp : public OpKernel {
     }
 
     bool is_float = std::is_same<T, float>::value;
-    // Check for the BF16 support on the machine.
-    if (!is_float) {
-      bool result = tensorflow::port::TestCPUFeature(
-          tensorflow::port::CPUFeature::AVX512F);
-      OP_REQUIRES(
-          context, result,
-          errors::Internal(
-              "BF16 AVX512 instruction set is not supported in the machine."));
-    }
     // Update the output type.
     ZenTensorType out_type =
         (is_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;

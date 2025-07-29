@@ -135,16 +135,6 @@ class ZenBatchMatMulOp : public OpKernel {
           errors::InvalidArgument("In[1] ndims must be >= 2: ", rhs.dims()));
     }
 
-    if (!is_float) {
-      // Check for the BF16 support on the machine.
-      bool result = tensorflow::port::TestCPUFeature(
-          tensorflow::port::CPUFeature::AVX512F);
-      OP_REQUIRES(
-          context, result,
-          errors::Internal(
-              "BF16 AVX512 instruction set is not supported in the machine."));
-    }
-
     ZenExecutor *ex = ex->getInstance();
     engine eng = ex->getEngine();
     stream s = ex->getStream();

@@ -387,14 +387,8 @@ void ZenBlockedConv2DBiasEltSum(
   zendnnEnv zen_env_obj = readEnv();
   bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
-  // Check for the BF16 support on the machine.
+  // Use blocked NHWC for BF16.
   if (!is_input_float) {
-    bool result =
-        tensorflow::port::TestCPUFeature(tensorflow::port::CPUFeature::AVX512F);
-    OP_REQUIRES(
-        static_cast<OpKernelContext *>(context), result,
-        errors::Internal(
-            "BF16 AVX512 instruction set is not supported in the machine."));
     blocked_nhwc = 1;
   }
   auto dtype = is_input_float ? dt::f32 : dt::bf16;
