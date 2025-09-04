@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -21,7 +21,7 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_KERNEL_DEF_UTIL_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_UTIL_KERNEL_DEF_UTIL_H_
 
-#include "protos/kernel_def.pb.h"
+#include "tensorflow/core/framework/kernel_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/node_def_util.h"
 
 namespace amd_cpu_plugin {

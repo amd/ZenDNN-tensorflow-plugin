@@ -28,6 +28,7 @@ import errno
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 
@@ -130,14 +131,16 @@ def write_action_env_to_bazelrc(var_name, var):
   write_to_bazelrc('build --action_env %s="%s"' % (var_name, str(var)))
 
 
-def run_shell(cmd, allow_non_zero=False):
+def run_shell(cmd, allow_non_zero=False, stderr=None):
+  if stderr is None:
+    stderr = sys.stdout
   if allow_non_zero:
     try:
-      output = subprocess.check_output(cmd)
+      output = subprocess.check_output(cmd, stderr=stderr)
     except subprocess.CalledProcessError as e:
       output = e.output
   else:
-    output = subprocess.check_output(cmd)
+    output = subprocess.check_output(cmd, stderr=stderr)
   return output.decode('UTF-8').strip()
 
 
@@ -486,50 +489,41 @@ def convert_version_to_int(version):
   return int(version_str)
 
 
-def check_bazel_version(min_version, max_version):
-  """Check installed bazel version is between min_version and max_version.
-
-  Args:
-    min_version: string for minimum bazel version (must exist!).
-    max_version: string for maximum bazel version (must exist!).
+def retrieve_bazel_version():
+  """Retrieve installed bazel version (or bazelisk).
 
   Returns:
     The bazel version detected.
   """
-  if which('bazel') is None:
-    print('Cannot find bazel. Please install bazel.')
-    sys.exit(0)
-  curr_version = run_shell(
-      ['bazel', '--batch', '--bazelrc=/dev/null', 'version'])
+  bazel_executable = shutil.which('bazel')
+  if bazel_executable is None:
+    bazel_executable = shutil.which('bazelisk')
+    if bazel_executable is None:
+      print('Cannot find bazel. Please install bazel/bazelisk.')
+      sys.exit(1)
 
-  for line in curr_version.split('\n'):
-    if 'Build label: ' in line:
-      curr_version = line.split('Build label: ')[1]
-      break
+  stderr = open(os.devnull, 'wb')
+  curr_version = run_shell([bazel_executable, '--version'],
+                           allow_non_zero=True,
+                           stderr=stderr)
+  if curr_version.startswith('bazel '):
+    curr_version = curr_version.split('bazel ')[1]
 
-  min_version_int = convert_version_to_int(min_version)
   curr_version_int = convert_version_to_int(curr_version)
-  max_version_int = convert_version_to_int(max_version)
 
   # Check if current bazel version can be detected properly.
   if not curr_version_int:
     print('WARNING: current bazel installation is not a release version.')
-    print('Make sure you are running at least bazel %s' % min_version)
     return curr_version
 
   print('You have bazel %s installed.' % curr_version)
 
-  if curr_version_int < min_version_int:
-    print('Please upgrade your bazel installation to version %s or higher to '
-          'build TensorFlow!' % min_version)
-    sys.exit(1)
-  if (curr_version_int > max_version_int and
-      'TF_IGNORE_MAX_BAZEL_VERSION' not in os.environ):
-    print('Please downgrade your bazel installation to version %s or lower to '
-          'build TensorFlow! To downgrade: download the installer for the old '
-          'version (from https://github.com/bazelbuild/bazel/releases) then '
-          'run the installer.' % max_version)
-    sys.exit(1)
+  supported_version = '7.4.1'
+  supported_version_int = convert_version_to_int(supported_version)
+  if curr_version_int != supported_version_int:
+    print('WARNING: current bazel installation is not a supported version.')
+    print('Supported version is %s' % supported_version)
+
   return curr_version
 
 
@@ -1113,9 +1107,12 @@ def main():
   # environment variables.
   environ_cp = dict(os.environ)
 
-  # Using 6.5.0 as the max version of bazel as TF v2.17 is supported for
-  # this specific version.
-  current_bazel_version = check_bazel_version('5.3.0', '6.5.0')
+  try:
+    current_bazel_version = retrieve_bazel_version()
+  except subprocess.CalledProcessError as e:
+    print('Error retrieving bazel version: ', e.output.decode('UTF-8').strip())
+    raise e
+
   _TF_CURRENT_BAZEL_VERSION = convert_version_to_int(current_bazel_version)
 
   reset_tf_configure_bazelrc()

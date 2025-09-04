@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -20,8 +20,8 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/node_type_attr_map.h"
 
-#include "protos/graph.pb.h"
-#include "protos/op_def.pb.h"
+#include "tensorflow/core/framework/graph.pb.h"
+#include "tensorflow/core/framework/op_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_def_util.h"
 

@@ -23,8 +23,8 @@ limitations under the License.
 #include <algorithm>
 #include <string>
 
-#include "protos/attr_value.pb.h"
 #include "tensorflow/c/c_api_experimental.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/flatset.h"
 #include "tensorflow_plugin/src/amd_cpu/util/logging.h"
 #include "tensorflow_plugin/src/amd_cpu/util/str_util.h"

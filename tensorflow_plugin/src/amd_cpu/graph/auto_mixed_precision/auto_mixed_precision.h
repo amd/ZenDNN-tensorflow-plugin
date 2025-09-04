@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -21,7 +21,7 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_AUTO_MIXED_PRECISION_AUTO_MIXED_PRECISION_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_AUTO_MIXED_PRECISION_AUTO_MIXED_PRECISION_H_
 
-#include "protos/graph.pb.h"
+#include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/grappler_item.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tf_buffer.h"

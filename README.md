@@ -38,23 +38,23 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 
 | Tools/Frameworks | Version |
 | :--------------: | :-----: |
-| [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | >=5.3.0 and <=6.5.0 |
+| [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | 7.4.1 |
 | Git | >=1.8 |
-| Python | >=3.9 and <=3.12 |
-| [TensorFlow](https://www.tensorflow.org/) | >=2.16 and <=2.19 |
+| Python | >=3.9 and <=3.13 |
+| [TensorFlow](https://www.tensorflow.org/) | 2.20.0 |
 
 # Installation Guide
 This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder.
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.19-zendnn-v5.1.0-rel-env python=3.10 -y
-  $ conda activate tf-v2.19-zendnn-v5.1.0-rel-env
+  $ conda create -n tf-v2.20.0-zendnn-v5.2.0-rel-env python=3.10 -y
+  $ conda activate tf-v2.20.0-zendnn-v5.2.0-rel-env
   ```
   Note: Python 3.10 used here for example.
-* Install TensorFlow v2.19.0
+* Install TensorFlow v2.20.0
   ```
-  $ pip install tensorflow==2.19.0
+  $ pip install tensorflow==2.20.0
   ```
 ## Install zentf wheel.
 
@@ -103,7 +103,7 @@ ZenDNN-tensorflow-plugin$ source scripts/zentf_setup.sh
 ### 3. Configure the build options:
 ```
 ZenDNN-tensorflow-plugin$ ./configure
-You have bazel 6.5.0 installed.
+You have bazel 7.4.1 installed.
 Please specify the location of python. [Default is /home/user/anaconda3/envs/zentf-env/bin/python]:
 
 Found possible Python library paths:

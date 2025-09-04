@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -197,7 +197,7 @@ BCastList<N>::BCastList(const BCastList::Vec (&x)[N],
     prev_is_one[i] = false;
     current_is_one[i] = false;
   }
-  Vec output;
+
   bool output_dim_set = false;
   int output_dim = -1;
   bool none_is_one = true;

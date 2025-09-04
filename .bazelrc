@@ -1,6 +1,8 @@
 build --define=use_fast_cpp_protos=true
 build --define=allow_oversize_protos=true
 
+# bzlmod is default for bazel v7.4.1 so, disabling it.
+build --noenable_bzlmod
 build --spawn_strategy=standalone
 # build --strategy=Genrule=standalone
 build -c opt
@@ -9,9 +11,6 @@ build -c opt
 build --define=PREFIX=/usr
 build --define=LIBDIR=$(PREFIX)/lib
 build --define=INCLUDEDIR=$(PREFIX)/include
-
-# host build is useless
-build --distinct_host_configuration=false
 
 try-import %workspace%/.tf_plugin_configure.bazelrc
 build --define=build_with_zendnn=true

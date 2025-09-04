@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -34,8 +34,8 @@ limitations under the License.
 #include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "protos/graph.pb.h"
-#include "protos/node_def.pb.h"
+#include "tensorflow/core/framework/graph.pb.h"
+#include "tensorflow/core/framework/node_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/flatmap.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/flatset.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/inlined_vector.h"

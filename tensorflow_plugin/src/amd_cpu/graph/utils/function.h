@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -24,9 +24,9 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "protos/graph.pb.h"
 #include "tensorflow/c/c_api.h"
 #include "tensorflow/c/experimental/grappler/grappler.h"
+#include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/flatmap.h"
 #include "tensorflow_plugin/src/amd_cpu/util/mutex.h"

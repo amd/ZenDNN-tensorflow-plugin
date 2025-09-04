@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -24,7 +24,8 @@ limitations under the License.
 #include <limits>
 #include <string>
 
-#include "protos/types.pb.h"
+#include "tensorflow/core/framework/tensor_shape.pb.h"
+#include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/array_slice.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/inlined_vector.h"
@@ -35,7 +36,7 @@ limitations under the License.
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
 namespace amd_cpu_plugin {
-class TensorShapeProto;
+using TensorShapeProto = ::tensorflow::TensorShapeProto;
 }  // namespace amd_cpu_plugin
 
 namespace amd_cpu_plugin {

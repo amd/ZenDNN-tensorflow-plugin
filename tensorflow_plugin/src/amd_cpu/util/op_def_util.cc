@@ -25,8 +25,8 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "protos/attr_value.pb.h"
-#include "protos/op_def.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
+#include "tensorflow/core/framework/op_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/attr_value_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/map_util.h"

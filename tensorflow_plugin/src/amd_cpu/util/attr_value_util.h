@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -25,7 +25,9 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "protos/tensor.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
+#include "tensorflow/core/framework/tensor.pb.h"
+#include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/array_slice.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 #include "tensorflow_plugin/src/amd_cpu/util/stringpiece.h"
@@ -35,8 +37,8 @@ limitations under the License.
 namespace amd_cpu_plugin {
 
 // Forward declare protos so their symbols can be removed from .so exports
-class AttrValue;
-class NameAttrList;
+using AttrValue = ::tensorflow::AttrValue;
+using NameAttrList = ::tensorflow::NameAttrList;
 
 // A human-readable rendering of attr_value, that is more concise than a
 // text-format proto.

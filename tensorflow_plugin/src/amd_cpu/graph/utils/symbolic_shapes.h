@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -21,8 +21,8 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_UTILS_SYMBOLIC_SHAPES_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_UTILS_SYMBOLIC_SHAPES_H_
 
-#include "protos/op_performance_data.pb.h"
-#include "protos/tensor_shape.pb.h"
+#include "tensorflow/core/framework/tensor_shape.pb.h"
+#include "tensorflow/core/grappler/costs/op_performance_data.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/bcast.h"
 
 namespace amd_cpu_plugin {

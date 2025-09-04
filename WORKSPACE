@@ -13,6 +13,13 @@ load("//tensorflow_plugin:workspace.bzl", "amd_cpu_plugin_workspace", "clean_dep
 
 amd_cpu_plugin_workspace()
 
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+protobuf_deps()
+load("@rules_python//python:repositories.bzl", "py_repositories")
+py_repositories()
+load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies")
+rules_cc_dependencies()
+
 load(
     "@bazel_toolchains//repositories:repositories.bzl",
     bazel_toolchains_repositories = "repositories",

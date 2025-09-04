@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -30,9 +30,9 @@ limitations under the License.
 #include "absl/container/flat_hash_set.h"
 #include "absl/hash/hash.h"
 #include "absl/strings/string_view.h"
-#include "protos/attr_value.pb.h"
-#include "protos/graph.pb.h"
-#include "protos/node_def.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
+#include "tensorflow/core/framework/graph.pb.h"
+#include "tensorflow/core/framework/node_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"

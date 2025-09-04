@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -24,7 +24,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "protos/op_performance_data.pb.h"
+#include "tensorflow/core/grappler/costs/op_performance_data.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/grappler_item.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 

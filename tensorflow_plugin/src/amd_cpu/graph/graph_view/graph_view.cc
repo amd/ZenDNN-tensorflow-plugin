@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -20,7 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/graph_view/graph_view.h"
 
-#include "protos/attr_value.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 
 namespace amd_cpu_plugin {

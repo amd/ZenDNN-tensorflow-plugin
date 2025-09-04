@@ -2,7 +2,6 @@ load("//third_party:repo.bzl", "tf_http_archive", "tf_mirror_urls", "third_party
 load("//third_party/build_option:gcc_configure.bzl", "gcc_configure")
 load("//third_party/systemlibs:syslibs_configure.bzl", "syslibs_configure")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//third_party/absl:workspace.bzl", absl = "repo")
 
 def clean_dep(dep):
     return str(Label(dep))
@@ -11,7 +10,6 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     """All external dependencies for TF builds"""
     gcc_configure(name = "local_config_gcc")
     syslibs_configure(name = "local_config_syslibs")
-    absl()
 
     http_archive(
         name = "bazel_toolchains",
@@ -24,13 +22,64 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     http_archive(
         name = "bazel_skylib",
         sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
-        urls = tf_mirror_urls("https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz"),
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        ],
     )
 
     http_archive(
         name = "rules_pkg",
-        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_pkg/releases/download/0.7.1/rules_pkg-0.7.1.tar.gz"),
+        urls = [
+            "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.7.1/rules_pkg-0.7.1.tar.gz",
+            "https://github.com/bazelbuild/rules_pkg/releases/download/0.7.1/rules_pkg-0.7.1.tar.gz",
+        ],
         sha256 = "451e08a4d78988c06fa3f9306ec813b836b1d076d0f055595444ba4ff22b867f",
+    )
+
+    http_archive(
+        name = "rules_proto",
+        sha256 = "20b240eba17a36be4b0b22635aca63053913d5c1ee36e16be36499d167a2f533",
+        strip_prefix = "rules_proto-11bf7c25e666dd7ddacbcd4d4c4a9de7a25175f8",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/rules_proto/archive/11bf7c25e666dd7ddacbcd4d4c4a9de7a25175f8.tar.gz",
+            "https://github.com/bazelbuild/rules_proto/archive/11bf7c25e666dd7ddacbcd4d4c4a9de7a25175f8.tar.gz",
+        ],
+    )
+
+    tf_http_archive(
+        name = "rules_cc",
+        sha256 = "abc605dd850f813bb37004b77db20106a19311a96b2da1c92b789da529d28fe1",
+        strip_prefix = "rules_cc-0.0.17",
+        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_cc/releases/download/0.0.17/rules_cc-0.0.17.tar.gz"),
+    )
+
+    # rules_java must come before com_google_protobuf for compatibility proxy resolution.
+    tf_http_archive(
+        name = "rules_java",
+        sha256 = "7eb8f5cc499d14a57a33f445deb17615905554a5e5a4d4cfbe8d86e019f26ee1",
+        strip_prefix = "rules_java-5.3.5",
+        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_java/archive/5.3.5.tar.gz"),
+    )
+
+    http_archive(
+        name = "com_google_absl",
+        sha256 = "16242f394245627e508ec6bb296b433c90f8d914f73b9c026fddb905e27276e8",
+        strip_prefix = "abseil-cpp-20250127.0",
+        urls = [
+            "https://mirror.bazel.build/github.com/abseil/abseil-cpp/archive/refs/tags/20250127.0.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250127.0.tar.gz",
+        ],
+    )
+
+    http_archive(
+        name = "bazel_features",
+        sha256 = "4fd9922d464686820ffd8fcefa28ccffa147f7cdc6b6ac0d8b07fde565c65d66",
+        strip_prefix = "bazel_features-1.25.0",
+        urls = [
+            "https://mirror.bazel.build/github.com/bazel-contrib/bazel_features/releases/download/v1.25.0/bazel_features-v1.25.0.tar.gz",
+            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.25.0/bazel_features-v1.25.0.tar.gz",
+        ],
     )
 
     tf_http_archive(
@@ -53,29 +102,29 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "zlib",
         build_file = clean_dep("//third_party:zlib.BUILD"),
-        sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
-        strip_prefix = "zlib-1.2.11",
+        sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
+        strip_prefix = "zlib-1.3.1",
         system_build_file = clean_dep("//third_party/systemlibs:zlib.BUILD"),
-        urls = tf_mirror_urls("https://zlib.net/zlib-1.2.11.tar.gz"),
+        urls = tf_mirror_urls("https://zlib.net/zlib-1.3.1.tar.gz"),
     )
 
     tf_http_archive(
         name = "com_google_protobuf",
-        patch_file = clean_dep("//third_party/protobuf:protobuf.patch"),
-        sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
-        strip_prefix = "protobuf-3.21.9",
+        sha256 = "f645e6e42745ce922ca5388b1883ca583bafe4366cc74cf35c3c9299005136e2",
+        strip_prefix = "protobuf-5.28.3",
         system_build_file = clean_dep("//third_party/systemlibs:protobuf.BUILD"),
         system_link_files = {
             "//third_party/systemlibs:protobuf.bzl": "protobuf.bzl",
             "//third_party/systemlibs:protobuf_deps.bzl": "protobuf_deps.bzl",
         },
-        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v3.21.9.zip"),
+        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v5.28.3.zip"),
     )
 
     tf_http_archive(
         name = "rules_python",
-        sha256 = "aa96a691d3a8177f3215b14b0edc9641787abaaa30363a080165d06ab65e1161",
-        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_python/releases/download/0.0.1/rules_python-0.0.1.tar.gz"),
+        sha256 = "d70cd72a7a4880f0000a6346253414825c19cdd40a28289bdf67b8e6480edff8",
+        strip_prefix = "rules_python-0.28.0",
+        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_python/releases/download/0.28.0/rules_python-0.28.0.tar.gz"),
     )
 
     tf_http_archive(

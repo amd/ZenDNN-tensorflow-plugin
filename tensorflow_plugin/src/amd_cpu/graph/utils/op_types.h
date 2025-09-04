@@ -21,7 +21,7 @@ limitations under the License.
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_UTILS_OP_TYPES_H_
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_UTILS_OP_TYPES_H_
 
-#include "protos/node_def.pb.h"
+#include "tensorflow/core/framework/node_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 
 namespace amd_cpu_plugin {

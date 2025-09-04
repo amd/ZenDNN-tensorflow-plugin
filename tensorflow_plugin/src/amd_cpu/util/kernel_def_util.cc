@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -20,8 +20,8 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/util/kernel_def_util.h"
 
-#include "protos/attr_value.pb.h"
-#include "protos/kernel_def.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
+#include "tensorflow/core/framework/kernel_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/attr_value_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/node_def_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"

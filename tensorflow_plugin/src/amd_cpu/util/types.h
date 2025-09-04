@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -26,7 +26,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "protos/types.pb.h"
+#include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/array_slice.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/inlined_vector.h"
 #include "tensorflow_plugin/src/amd_cpu/util/integral_types.h"
@@ -37,6 +37,7 @@ limitations under the License.
 
 namespace amd_cpu_plugin {
 
+using namespace tensorflow;
 // class Variant;
 //
 // MemoryType is used to describe whether input or output Tensors of

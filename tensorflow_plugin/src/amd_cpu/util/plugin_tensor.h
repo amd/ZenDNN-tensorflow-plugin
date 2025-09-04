@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -24,9 +24,9 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "protos/tensor.pb.h"
 #include "tensorflow/c/c_api.h"
 #include "tensorflow/c/tf_tensor.h"
+#include "tensorflow/core/framework/tensor.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/logging.h"
 #include "tensorflow_plugin/src/amd_cpu/util/refcount.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
@@ -37,7 +37,7 @@ limitations under the License.
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
 namespace amd_cpu_plugin {
-class TensorProto;
+using TensorProto = ::tensorflow::TensorProto;
 class TensorBuffer;
 
 /// Interface to access the raw ref-counted data buffer.

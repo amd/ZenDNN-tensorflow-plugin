@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -26,8 +26,8 @@ limitations under the License.
 
 #include <string>
 
-#include "protos/api_def.pb.h"
-#include "protos/op_def.pb.h"
+#include "tensorflow/core/framework/api_def.pb.h"
+#include "tensorflow/core/framework/op_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/protobuf.h"
 #include "tensorflow_plugin/src/amd_cpu/util/status.h"
 

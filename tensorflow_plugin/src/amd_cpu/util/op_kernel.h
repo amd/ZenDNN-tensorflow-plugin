@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -27,10 +27,10 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "protos/node_def.pb.h"
 #include "tensorflow/c/kernels.h"
 #include "tensorflow/c/kernels_experimental.h"
 #include "tensorflow/c/ops.h"
+#include "tensorflow/core/framework/node_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/allocator.h"
 #include "tensorflow_plugin/src/amd_cpu/util/cpu_info.h"
 #include "tensorflow_plugin/src/amd_cpu/util/kernel_def_util.h"

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -30,8 +30,8 @@ limitations under the License.
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "google/protobuf/text_format.h"
-#include "protos/attr_value.pb.h"
-#include "protos/node_def.pb.h"
+#include "tensorflow/core/framework/attr_value.pb.h"
+#include "tensorflow/core/framework/node_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/device_name_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/mutex.h"
 #include "tensorflow_plugin/src/amd_cpu/util/node_def_util.h"

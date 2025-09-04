@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-23 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -26,8 +26,9 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "protos/node_def.pb.h"
-#include "protos/types.pb.h"
+#include "tensorflow/core/framework/node_def.pb.h"
+#include "tensorflow/core/framework/op_def.pb.h"
+#include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/util/attr_value_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/array_slice.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/flatmap.h"
@@ -43,11 +44,11 @@ namespace amd_cpu_plugin {
 
 class AttrSlice;
 // We forward declare protos so that kernels don't need to depend on them
-class OpDef;
-class AttrValue;
-class NameAttrList;
-class TensorProto;
-class TensorShapeProto;
+using OpDef = ::tensorflow::OpDef;
+using AttrValue = ::tensorflow::AttrValue;
+using NameAttrList = ::tensorflow::NameAttrList;
+using TensorProto = ::tensorflow::TensorProto;
+using TensorShapeProto = ::tensorflow::TensorShapeProto;
 
 // Name of the attribute used to encode node colocation constraints.
 //

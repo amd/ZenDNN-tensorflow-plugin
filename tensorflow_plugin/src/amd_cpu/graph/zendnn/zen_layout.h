@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -26,7 +26,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "protos/graph.pb.h"
+#include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_view.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/grappler_item.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/layout_utils.h"
