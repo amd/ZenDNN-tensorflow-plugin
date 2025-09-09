@@ -46,6 +46,18 @@ echo "The following settings gave us the best results. However, these details sh
 export ZENDNN_ENABLE_MEMPOOL=2
 if [ "$interface" = "java" ]; then
     export ZENDNN_ENABLE_MEMPOOL=0
+    export KMP_BLOCKTIME=1
+    export KMP_TPAUSE=0
+    export KMP_FORKJOIN_BARRIER_PATTERN=dist,dist
+    export KMP_PLAIN_BARRIER_PATTERN=dist,dist
+    export KMP_REDUCTION_BARRIER_PATTERN=dist,dist
+    export KMP_AFFINITY=granularity=fine,compact,1,0
+    echo "KMP_BLOCKTIME=$KMP_BLOCKTIME"
+    echo "KMP_TPAUSE=$KMP_TPAUSE"
+    echo "KMP_FORKJOIN_BARRIER_PATTERN=$KMP_FORKJOIN_BARRIER_PATTERN"
+    echo "KMP_PLAIN_BARRIER_PATTERN=$KMP_PLAIN_BARRIER_PATTERN"
+    echo "KMP_REDUCTION_BARRIER_PATTERN=$KMP_REDUCTION_BARRIER_PATTERN"
+    echo "KMP_AFFINITY=$KMP_AFFINITY"
 fi
 echo "ZENDNN_ENABLE_MEMPOOL=$ZENDNN_ENABLE_MEMPOOL"
 # Variable to set the max no. of tensors that can be used inside zen memory pool.

@@ -33,21 +33,10 @@ Note: Above we are assuming that the user has Java-v11 installed.
 It could be possible that java version might be different in your machine, so please check what version is present at `/usr/lib/jvm` location and set it accordingly.
 
 ## Set-up zentf plugin for TensorFlow-Java
-As of now (i.e. v1.0.0 of TensorFlow-Java), there is no support for plugins. So, TensorFlow-Java builds available publicly cannot be used.
+Plugin support is now available in TensorFlow Java as of version 1.1.0.
 
-The following steps are required to enable zentf plugin for TensorFlow-Java,
-- Build TensorFlow-Java from source with changes for plugin
-- Set-up zentf plugin
+Note: TensorFlow-Java v1.1.0 supports TensorFlow v2.18.0.
 
-Note: TensorFlow-Java v1.0.0 supports TensorFlow v2.16.2.
-
-### Build TensorFlow-Java from source with changes for plugin
-
-Run the script 'build_tf_java.sh' to get the source code of TensorFlow-Java, apply the source code changes to support plugin, build and install TensorFlow-Java from source.
-```bash
-cd <Path to zentf plugin parent folder>/ZenDNN_TensorFlow_Plugin/scripts/java
-bash build_tf_java.sh
-```
 ### Set-up zentf plugin
 Download zentf C++ plugin package of 5.1.0 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
 
@@ -61,6 +50,29 @@ Set ZenDNN specific environment variables as shown below,
 ```bash
 cd <Path to zentf C++ parent folder>/ZENTF_v5.1.0_C++_API
 source zentf_env_setup.sh java
+```
+
+Load zentf plugin native library in the application code.
+```bash
+# Load the TF_LoadPluggableDeviceLibrary package
+import static org.tensorflow.internal.c_api.global.tensorflow.TF_LoadPluggableDeviceLibrary;
+import org.tensorflow.internal.c_api.TF_Library;
+```
+```bash
+  public static void main(String[] params) {
+    // The libamdcpu_plugin_cc.so file should be present in LD_LIBRARY_PATH.
+    String zentf_path = "libamdcpu_plugin_cc.so";
+    load_zentf(zentf_path);
+    System.out.println("Using zendnn.");
+
+    // Rest of the code
+}
+
+private static void load_zentf(String filename) {
+    TF_Status status = TF_Status.newStatus();
+    TF_Library h = TF_LoadPluggableDeviceLibrary(filename, status);
+    status.throwExceptionIfNotOK();
+}
 ```
 
 ## Examples

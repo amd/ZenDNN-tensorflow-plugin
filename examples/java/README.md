@@ -3,12 +3,12 @@
 This document provides examples for running inference on various models using the ZenDNN TensorFlow plugin using Java interface.
 
 ## Table of Contents
-- [Building TF For Java](#building-tf-for-java)
+- [Set-up zentf plugin for TF-Java](#set-up-zentf-plugin-for-tf-java)
 - [Run Wide Deep large model](#run-wide-deep-large-model)
 
-## Building TF For Java
+## Set-up zentf plugin for TF-Java
 
-Please follow the instructions in the [README.md](../../scripts/java/README.md) file.
+Please follow the instructions in the [README.md](../../scripts/java/README.md) file to set up the zentf plugin for TF-Java.
 
 ## Run Wide Deep large model
 
