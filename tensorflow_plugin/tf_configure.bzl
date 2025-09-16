@@ -195,23 +195,20 @@ def _tf_pip_impl(repository_ctx):
         tf_pip_dir_rename_pair = ["tensorflow_core", "tensorflow"],
     )
     tf_shared_library_dir = repository_ctx.os.environ[_TF_SHARED_LIBRARY_DIR]
-    tf_shared_library_name = "_pywrap_tensorflow_internal.so"
-    tf_shared_library_path = "%s/python/%s" % (
+    tf_shared_library_name = "libtensorflow_framework.so.2"
+    tf_shared_library_path = "%s%s%s" % (
         tf_shared_library_dir,
+        "" if tf_shared_library_dir.endswith("/") else "/",
         tf_shared_library_name,
     )
 
-    """A symbol rename of `_pywrap_tensorflow_internal.so` to link it with
-       bazel's rule. It will be replaced to `libtensorflow_framework.so`
-       in future after Google moving C API.
-    """
     tf_shared_library_rule = _symlink_genrule_for_dir(
         repository_ctx,
         None,
         "",
         tf_shared_library_name,
         [tf_shared_library_path],
-        ["lib_tensorflow_internal.so"],
+        ["libtensorflow_framework.so"],
     )
     _tpl(repository_ctx, "BUILD", {
         "%{TF_HEADER_GENRULE}": tf_header_rule,

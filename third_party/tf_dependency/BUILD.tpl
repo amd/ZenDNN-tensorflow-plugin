@@ -339,11 +339,5 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "_pywrap_tensorflow_internal",
-    srcs = ["%{TF_SHARED_LIBRARY_NAME}"],
-    visibility = ["//visibility:public"],
-)
-
 %{TF_HEADER_GENRULE}
 %{TF_SHARED_LIBRARY_GENRULE}

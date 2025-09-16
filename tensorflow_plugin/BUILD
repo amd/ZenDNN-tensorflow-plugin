@@ -5,7 +5,6 @@ cc_binary(
     deps = [
         ":zen_libs_linux",
         "//tensorflow_plugin/src/amd_cpu:amd_cpu_opkernels",
-        "@local_config_tf//:_pywrap_tensorflow_internal",
     ],
 )
 

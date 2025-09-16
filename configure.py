@@ -248,7 +248,8 @@ def setup_python(environ_cp):
   tensorflow_list = []
   package_list.splitlines()
   for line in package_list.splitlines():
-    if line.startswith(("tensorflow ")):
+    if line.startswith(("tensorflow ", "tensorflow-cpu ", "tensorflow_cpu ",
+    "tf_nightly ")):
       tensorflow_list.append(line)
   if not tensorflow_list:
     print('Please install tensorflow version >= 2.16.0')
@@ -280,27 +281,6 @@ def setup_python(environ_cp):
                    'python_bin_path.sh'), 'w') as f:
     f.write('export PYTHON_BIN_PATH="%s"' % python_bin_path)
 
-def get_python_lib_name(environ_cp):
-  python_bin_path = environ_cp['PYTHON_BIN_PATH']
-  path_list = python_bin_path.split(os.sep)[:-2]
-  path_list.append('lib')
-  py_lib_path = os.sep.join(path_list)
-  for _, _, files in os.walk(py_lib_path):
-    for name in files:
-      if str(name).startswith('libpython') and str(name).endswith('.so'):
-        # strip libxxx.so to get xxx
-        return str(name).strip()[3:-3]
-
-
-def get_python_link_path(environ_cp):
-  # TODO(plugin): we need to link libpythonx.y.so for _pywrap_tensorflow_internal.so
-  # once google change CAPI symbols into libtensorflow.so, we don't need this
-  python_bin_path = environ_cp['PYTHON_BIN_PATH']
-  path_list = python_bin_path.split(os.sep)[:-2]
-  path_list.append('lib')
-  py_lib_path = os.sep.join(path_list)
-  return py_lib_path
-
 
 def create_build_configuration(environ_cp):
 
@@ -310,10 +290,6 @@ def create_build_configuration(environ_cp):
   write_action_env_to_bazelrc("TF_HEADER_DIR", tf_header_dir)
   write_action_env_to_bazelrc("TF_SHARED_LIBRARY_DIR", tf_shared_lib_dir)
   write_action_env_to_bazelrc("TF_CXX11_ABI_FLAG", 1)
-  write_action_env_to_bazelrc("PYTHON_LINK_LIB_NAME",
-                              get_python_lib_name(environ_cp))
-  write_action_env_to_bazelrc("PYTHON_LINK_PATH",
-                              get_python_link_path(environ_cp))
 
 
 def reset_tf_configure_bazelrc():
