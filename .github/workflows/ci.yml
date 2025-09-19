@@ -1,4 +1,4 @@
-name: ZenDNN TensorFlow Plugin CI
+name: ZenDNN_TF_Plugin_SA_Keyword_Check_tests
 
 on:
   push:
@@ -7,65 +7,67 @@ on:
     branches: [ main ]
 
 env:
-  # Jenkins String Parameters mapped as env
   NFS_LOC: ~/datasets/
-  NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
   CHECK_TYPE: keyword_check
   KEYWORD_CHECK_PATHS: "$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/*,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/scripts/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tests/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/**"
   IGN_KWD_CHK_PATHS: "BUILD,.bzl,.patch,.build,third_party"
   UNWANTED_KEYWORDS: "stackoverflow,MSDN,wiki,microsoft"
+  NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
 
 jobs:
-  build:
-    runs-on: precheck_runner
-
+  precheck:
+    runs-on: precheck_runner   
     steps:
-      - name: Verify user account
-        run: |
-          echo "Running as user: $(whoami)"
-
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Conda environment
-        run: |
-          source ~/.miniforge_profile
-          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-          echo "CONDA_ENV_NAME=tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB}" >> $GITHUB_ENV
-          
-          conda create -n $CONDA_ENV_NAME python=3.10 -y
-          conda activate $CONDA_ENV_NAME
-          
-          # Print versions for debugging
-          python --version
-        shell: bash
+        uses: actions/checkout@v4
 
       - name: Prepare environment
         run: |
-          sudo chmod -R 777 $HOME/.conda/ || true
-          sudo chmod -R 777 $HOME/.cache/ || true
-          rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          # Expand NFS_LOC
+          eval NFS_LOC=$NFS_LOC
 
-      - name: Install NFS tools and mount
+          # Prepend Anaconda3 to PATH (as in Jenkins)
+          export PATH="$HOME/anaconda3/bin:$PATH"
+
+          # Initialize conda shell
+          eval "$(conda shell.bash hook)"
+
+          # Set workspace variable
+          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+          # Debug info
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "PATH: $PATH"
+        shell: bash
+
+      - name: Fix permissions and clean caches
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nfs-common
+          sudo chmod -R 777 $HOME/anaconda3/
+          sudo chmod -R 777 $HOME/.conda/
+          sudo chmod -R 777 $HOME/.cache/
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          conda init bash
+          source ~/.bashrc
+        shell: bash
+
+      - name: Install NFS utilities and mount
+        run: |
+          echo "${{ secrets.JENKINS_PASSWD }}" | sudo -S apt-get install -y nfs-common
           mkdir -p $NFS_LOC
           sudo mount $NFS_MOUNT_POINT $NFS_LOC
+        shell: bash
 
-      - name: Link cloned jobs
+      - name: Setup workspace symlinks
         run: |
           rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin
           rm -rf $GITHUB_WORKSPACE/ZenDNN_tools
           ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_TensorFlow_Plugin $GITHUB_WORKSPACE
           ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_tools $GITHUB_WORKSPACE
+        shell: bash
 
-      - name: Run CI script
+      - name: Run Precheck Script
+        working-directory: ${{ github.workspace }}/ZenDNN_tools/scripts/ci
         run: |
-          source ~/.miniforge_profile
-          conda activate $CONDA_ENV_NAME
-          
-          cd $GITHUB_WORKSPACE/ZenDNN_tools/scripts/ci
           chmod 755 zendnn_ci_tf_plugin_presub_check.sh
           source zendnn_ci_tf_plugin_presub_check.sh
         shell: bash
@@ -73,15 +75,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ci-artifacts
+          name: precheck-results
           path: |
             *.txt
             *.properties
-
-      - name: Cleanup Conda environment
-        if: always()
-        run: |
-          source ~/.miniforge_profile
-          conda deactivate
-          conda env remove -n $CONDA_ENV_NAME -y
-        shell: bash
