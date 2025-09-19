@@ -1,4 +1,4 @@
-name: ZenDNN_TF_Plugin_SA_Keyword_Check_tests
+name: ZenDNN TensorFlow Plugin Precheck
 
 on:
   push:
@@ -16,26 +16,17 @@ env:
 
 jobs:
   precheck:
-    runs-on: precheck_runner   
+    runs-on: precheck_runner  # must be self-hosted to allow NFS mount
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Prepare environment
         run: |
-          # Expand NFS_LOC
           eval NFS_LOC=$NFS_LOC
-
-          # Prepend Anaconda3 to PATH (as in Jenkins)
           export PATH="$HOME/anaconda3/bin:$PATH"
-
-          # Initialize conda shell
           eval "$(conda shell.bash hook)"
-
-          # Set workspace variable
           echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-
-          # Debug info
           echo "Workspace: $GITHUB_WORKSPACE"
           echo "PATH: $PATH"
         shell: bash
@@ -79,3 +70,26 @@ jobs:
           path: |
             *.txt
             *.properties
+
+      - name: Cleanup workspace and caches
+        if: always()
+        run: |
+          echo "Cleaning up workspace and caches..."
+          
+          # Unmount NFS if mounted
+          if mountpoint -q "$NFS_LOC"; then
+            sudo umount $NFS_LOC || echo "NFS unmount failed"
+          fi
+
+          # Remove workspace symlinks
+          rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin
+          rm -rf $GITHUB_WORKSPACE/ZenDNN_tools
+
+          # Reset conda caches and permissions
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          sudo chmod -R 777 $HOME/anaconda3/
+          sudo chmod -R 777 $HOME/.conda/
+          sudo chmod -R 777 $HOME/.cache/
+          
+          echo "Cleanup completed"
+        shell: bash
