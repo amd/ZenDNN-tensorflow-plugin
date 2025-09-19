@@ -75,3 +75,21 @@ jobs:
           path: |
             *.txt
             *.properties
+      - name: Cleanup workspace and environment
+        if: always()  
+        run: |
+          echo "Cleaning up caches and temporary files..."
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          sudo chmod -R 777 $HOME/anaconda3/
+          sudo chmod -R 777 $HOME/.conda/
+          
+          echo "Removing symlinks..."
+          rm -rf $GITHUB_WORKSPACE/ZenDNN_tools
+          rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin
+          
+          echo "Unmounting NFS..."
+          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
+          
+          echo "Workspace cleanup completed."
+        shell: bash
+
