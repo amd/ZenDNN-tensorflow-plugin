@@ -1,4 +1,4 @@
-name: ZenDNN_TF_Plugin_SA_Keyword_Check_tests
+name: ZenDNN TensorFlow Plugin CI
 
 on:
   push:
@@ -17,26 +17,34 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: precheck_runner
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Verify user account
+        run: |
+          echo "Running as user: $(whoami)"
 
-      - name: Set up Miniforge
-        uses: conda-incubator/setup-miniforge@v2
-        with:
-          auto-activate-base: false
-          python-version: "3.10"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Conda environment
+        run: |
+          source ~/.miniforge_profile
+          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "CONDA_ENV_NAME=tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB}" >> $GITHUB_ENV
+          
+          conda create -n $CONDA_ENV_NAME python=3.10 -y
+          conda activate $CONDA_ENV_NAME
+          
+          # Print versions for debugging
+          python --version
+        shell: bash
 
       - name: Prepare environment
         run: |
           sudo chmod -R 777 $HOME/.conda/ || true
           sudo chmod -R 777 $HOME/.cache/ || true
           rm -rf ~/.cache/* ~/.local/* ~/.conda/*
-          conda init bash
-          conda config --set auto_activate_base false
-          source ~/.bashrc
 
       - name: Install NFS tools and mount
         run: |
@@ -54,9 +62,13 @@ jobs:
 
       - name: Run CI script
         run: |
+          source ~/.miniforge_profile
+          conda activate $CONDA_ENV_NAME
+          
           cd $GITHUB_WORKSPACE/ZenDNN_tools/scripts/ci
           chmod 755 zendnn_ci_tf_plugin_presub_check.sh
           source zendnn_ci_tf_plugin_presub_check.sh
+        shell: bash
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -65,3 +77,11 @@ jobs:
           path: |
             *.txt
             *.properties
+
+      - name: Cleanup Conda environment
+        if: always()
+        run: |
+          source ~/.miniforge_profile
+          conda deactivate
+          conda env remove -n $CONDA_ENV_NAME -y
+        shell: bash
