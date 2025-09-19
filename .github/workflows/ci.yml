@@ -1,4 +1,4 @@
-name: ZenDNN_TF_Plugin_SA_Keyword_Check_tests
+name: ZenDNN_TF_Plugin_SA_Keyword_Check
 
 on:
   push:
