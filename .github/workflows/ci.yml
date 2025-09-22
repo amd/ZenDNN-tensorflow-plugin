@@ -51,8 +51,6 @@ jobs:
           mkdir -p $NFS_LOC
           sudo mount $NFS_MOUNT_POINT $NFS_LOC
         shell: bash
-
-    
       
       - name: Clone ZenDNN_tools
         run: |
