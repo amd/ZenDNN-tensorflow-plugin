@@ -58,22 +58,25 @@ jobs:
           sudo mount $NFS_MOUNT_POINT $NFS_LOC
         shell: bash
 
-      - name: Setup workspace symlinks
-        run: |
-          rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin
-          rm -rf $GITHUB_WORKSPACE/ZenDNN_tools
-          ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_TensorFlow_Plugin $GITHUB_WORKSPACE
-          ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_tools $GITHUB_WORKSPACE
-        shell: bash
+    
+      
       - name: Clone ZenDNN_tools
         run: |
           git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
-
+      - name: Setup Conda environment
+        run: |
+          export PATH="$HOME/anaconda3/bin:$PATH"
+          eval "$(conda shell.bash hook)"
+          echo "CONDA_ENV_NAME=tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB}" >> $GITHUB_ENV
+          conda create -n tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB} python=3.10 -y
+          conda run -n tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB} python --version
+        shell: bash
+ 
       - name: Run Precheck Script
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
           chmod 755 zendnn_ci_tf_plugin_presub_check.sh
-          source zendnn_ci_tf_plugin_presub_check.sh
+          conda run -n $CONDA_ENV_NAME bash zendnn_ci_tf_plugin_presub_check.sh
         shell: bash
 
       - name: Upload Artifacts
