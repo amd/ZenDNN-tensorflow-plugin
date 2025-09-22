@@ -20,6 +20,12 @@ jobs:
   KeywordCheck:
     runs-on:  [self-hosted, precheck_runner]
     steps:
+      - name: Clean previous repo clone
+        run: |
+         echo "Deleting old ZenDNN_TensorFlow_Plugin clone if exists..."
+         rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin || true
+         echo "Old clone removed, fresh checkout will happen."
+        shell: bash
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
@@ -55,13 +61,7 @@ jobs:
       - name: Clone ZenDNN_tools
         run: |
           git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
-      - name: Cleanup previous precheck artifacts
-        run: |
-         echo "Removing old precheck result files..."
-         # Only clean repo root artifacts, skip datasets and read-only areas
-         find $WORKSPACE/ZenDNN_TensorFlow_Plugin/ -maxdepth 1 -type f \( -name "*.txt" -o -name "*.properties" \) -delete
-         echo "Old precheck artifacts removed."
-        shell: bash
+    
       - name: Setup Conda environment and Run Precheck
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
@@ -94,9 +94,6 @@ jobs:
     
          echo "Removing ZenDNN_tools..."
          rm -rf $PARENT_DIR/ZenDNN_tools
-    
-         echo "Removing ZenDNN_TensorFlow_Plugin repo..."
-         rm -rf $WORKSPACE/ZenDNN_TensorFlow_Plugin
     
          echo "Unmounting NFS..."
          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
