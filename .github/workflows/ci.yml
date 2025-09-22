@@ -84,6 +84,14 @@ jobs:
           path: |
            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+      - name: Delete uploaded artifacts from workspace
+        if: always()
+        run: |
+         echo "Deleting precheck artifacts created in this run..."
+         rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt
+         rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+         echo "Artifacts deleted, workspace is clean for next run."
+        shell: bash
       - name: Cleanup workspace and environment
         if: always()  
         run: |
