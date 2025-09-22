@@ -60,11 +60,11 @@ jobs:
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
           echo "Initializing Conda..."
-          eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
-          
+          source $HOME/anaconda3/etc/profile.d/conda.sh
+
           # Create env if it does not exist
           if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
-            conda create -n $CONDA_ENV_NAME python=3.10 -y
+           conda create -n $CONDA_ENV_NAME python=3.10 -y
           fi
 
           # Activate environment
@@ -75,7 +75,7 @@ jobs:
           # Make the script executable
           chmod +x zendnn_ci_tf_plugin_presub_check.sh
 
-          # Run the precheck script with the argument
+          # Run the precheck script with argument
           ./zendnn_ci_tf_plugin_presub_check.sh -et only_tests
         shell: bash
 
