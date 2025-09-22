@@ -20,16 +20,11 @@ jobs:
   KeywordCheck:
     runs-on:  [self-hosted, precheck_runner]
     steps:
-      - name: Clean previous repo clone
-        run: |
-         echo "Deleting old ZenDNN_TensorFlow_Plugin clone if exists..."
-         rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin || true
-         echo "Old clone removed, fresh checkout will happen."
-        shell: bash
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set WORKSPACE and PARENT_DIR
         run: |
           echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
@@ -64,7 +59,7 @@ jobs:
       - name: Setup Conda environment and Run Precheck
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
-         echo "Initializing Conda..."
+         echo "Initializing Conda"
          source $HOME/anaconda3/etc/profile.d/conda.sh
          if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
            conda create -n $CONDA_ENV_NAME python=3.10 -y
@@ -83,6 +78,7 @@ jobs:
           path: |
            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+
       - name: Delete uploaded artifacts from workspace
         if: always()
         run: |
@@ -91,20 +87,19 @@ jobs:
          rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
          echo "Artifacts deleted, workspace is clean for next run."
         shell: bash
+
       - name: Cleanup workspace and environment
         if: always()  
         run: |
-         echo "Cleaning up caches and temporary files..."
+         echo "Cleaning up caches and temporary files"
          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
          sudo chmod -R 777 $HOME/anaconda3/ || true
          sudo chmod -R 777 $HOME/.conda/ || true
-    
-         echo "Removing ZenDNN_tools..."
+
          rm -rf $PARENT_DIR/ZenDNN_tools
     
          echo "Unmounting NFS..."
          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
-    
          echo "Workspace cleanup completed."
         shell: bash
 
