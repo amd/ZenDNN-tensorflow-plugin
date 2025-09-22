@@ -77,8 +77,8 @@ jobs:
         with:
           name: precheck-results
           path: |
-            *.txt
-            *.properties
+           /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt
+           /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
       - name: Cleanup workspace and environment
         if: always()  
         run: |
