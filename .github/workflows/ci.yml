@@ -16,7 +16,7 @@ env:
 
 jobs:
   KeywordCheck:
-    runs-on: [self-hosted, precheck_runner, ZenDNN-Threadripper16]
+    runs-on:  [self-hosted, precheck_runner]
     steps:
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
