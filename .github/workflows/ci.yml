@@ -48,7 +48,6 @@ jobs:
           sudo chmod -R 777 $HOME/.conda/ || true
           sudo chmod -R 777 $HOME/.cache/ || true
           sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
-          
         shell: bash
 
       - name: Install NFS utilities and mount
