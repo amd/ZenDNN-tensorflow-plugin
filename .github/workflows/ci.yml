@@ -15,11 +15,17 @@ env:
   NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
 
 jobs:
-  precheck:
+  KeywordCheck:
     runs-on: precheck_runner   
     steps:
-      - name: Checkout repository
+      - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set WORKSPACE and PARENT_DIR
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
 
       - name: Prepare environment
         run: |
@@ -29,18 +35,17 @@ jobs:
           export PATH="$HOME/anaconda3/bin:$PATH"
           # Initialize conda shell
           eval "$(conda shell.bash hook)"
-          # Set workspace variable
-          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
           # Debug info
           echo "Workspace: $GITHUB_WORKSPACE"
+          echo "Parent Dir: $PARENT_DIR"
           echo "PATH: $PATH"
         shell: bash
 
       - name: Fix permissions and clean caches
         run: |
-          sudo chmod -R 777 $HOME/anaconda3/
-          sudo chmod -R 777 $HOME/.conda/
-          sudo chmod -R 777 $HOME/.cache/
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          sudo chmod -R 777 $HOME/.cache/ || true
           sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
           conda init bash
           source ~/.bashrc
@@ -60,9 +65,12 @@ jobs:
           ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_TensorFlow_Plugin $GITHUB_WORKSPACE
           ln -sf $GITHUB_WORKSPACE/../$CLONED_JENKINS_JOB/ZenDNN_tools $GITHUB_WORKSPACE
         shell: bash
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
 
       - name: Run Precheck Script
-        working-directory: ${{ github.workspace }}/ZenDNN_tools/scripts/ci
+        working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
           chmod 755 zendnn_ci_tf_plugin_presub_check.sh
           source zendnn_ci_tf_plugin_presub_check.sh
@@ -80,12 +88,11 @@ jobs:
         run: |
           echo "Cleaning up caches and temporary files..."
           sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
-          sudo chmod -R 777 $HOME/anaconda3/
-          sudo chmod -R 777 $HOME/.conda/
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
           
-          echo "Removing symlinks..."
-          rm -rf $GITHUB_WORKSPACE/ZenDNN_tools
-          rm -rf $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin
+          echo "Removing ZenDNN_tools..."
+          rm -rf $PARENT_DIR/ZenDNN_tools
           
           echo "Unmounting NFS..."
           sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
