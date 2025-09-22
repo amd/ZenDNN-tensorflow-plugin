@@ -13,6 +13,7 @@ env:
   IGN_KWD_CHK_PATHS: "BUILD,.bzl,.patch,.build,third_party"
   UNWANTED_KEYWORDS: "stackoverflow,MSDN,wiki,microsoft"
   NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
+  CONDA_ENV_NAME: tf-plugin-source-adherence-check-env
 
 jobs:
   KeywordCheck:
@@ -29,8 +30,6 @@ jobs:
 
       - name: Prepare environment
         run: |
-          export PATH="$HOME/anaconda3/bin:$PATH"
-          source $HOME/anaconda3/etc/profile.d/conda.sh
           echo "Workspace: $GITHUB_WORKSPACE"
           echo "Parent Dir: $PARENT_DIR"
           echo "PATH: $PATH"
@@ -59,19 +58,28 @@ jobs:
           git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
       - name: Setup Conda environment
         run: |
-          source $HOME/anaconda3/etc/profile.d/conda.sh
-          export CONDA_ENV_NAME=tfplugin_build_${GITHUB_RUN_ID}_${GITHUB_JOB}
-          echo "CONDA_ENV_NAME=$CONDA_ENV_NAME" >> $GITHUB_ENV
-          conda create -n $CONDA_ENV_NAME python=3.10 -y
+          # Initialize conda for non-login shells
+          eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
+          
+          # Create env if not exists
+          if ! conda info --envs | grep -q "$CONDA_ENV_NAME"; then
+            conda create -n $CONDA_ENV_NAME python=3.10 -y
+          fi
+          
+          # Activate env
           conda activate $CONDA_ENV_NAME
+          
           python --version
+          pip install --upgrade pip
         shell: bash
  
       - name: Run Precheck Script
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
-          source $HOME/anaconda3/etc/profile.d/conda.sh
+          # Initialize conda
+          eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
           conda activate $CONDA_ENV_NAME
+          
           chmod 755 zendnn_ci_tf_plugin_presub_check.sh
           bash zendnn_ci_tf_plugin_presub_check.sh -et only_tests
         shell: bash
