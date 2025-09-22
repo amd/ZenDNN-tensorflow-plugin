@@ -23,7 +23,12 @@ jobs:
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0c
+      - name: Fix broken packages
+        run: |
+         sudo dpkg --configure -a || true
+         sudo apt-get install -f -y
+         sudo apt-get update
       - name: Set WORKSPACE and PARENT_DIR
         run: |
           echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
