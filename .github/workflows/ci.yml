@@ -58,8 +58,8 @@ jobs:
       - name: Cleanup previous precheck artifacts
         run: |
          echo "Removing old precheck result files..."
-         # Remove only files in ZenDNN_TensorFlow_Plugin workspace, skip NFS mount points
-         find $WORKSPACE/ZenDNN_TensorFlow_Plugin/ -type f \( -name "*.txt" -o -name "*.properties" \) ! -path "$NFS_LOC/*" -exec rm -f {} +
+         # Only clean repo root artifacts, skip datasets and read-only areas
+         find $WORKSPACE/ZenDNN_TensorFlow_Plugin/ -maxdepth 1 -type f \( -name "*.txt" -o -name "*.properties" \) -delete
          echo "Old precheck artifacts removed."
         shell: bash
       - name: Setup Conda environment and Run Precheck
