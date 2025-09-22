@@ -57,6 +57,12 @@ jobs:
       - name: Clone ZenDNN_tools
         run: |
           git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+      - name: Cleanup previous precheck artifacts
+        run: |
+          echo "Removing old precheck result files..."
+          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.txt
+          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.properties
+        shell: bash
       - name: Setup Conda environment and Run Precheck
         working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
         run: |
