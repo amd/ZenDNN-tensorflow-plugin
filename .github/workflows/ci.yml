@@ -29,7 +29,7 @@ jobs:
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0c
+          fetch-depth: 0
       - name: Set WORKSPACE and PARENT_DIR
         run: |
           echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
@@ -82,8 +82,8 @@ jobs:
         with:
           name: precheck-results
           path: |
-           $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/*.txt
-           $GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/*.properties
+           /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
+           /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
       - name: Cleanup workspace and environment
         if: always()  
         run: |
