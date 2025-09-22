@@ -87,17 +87,20 @@ jobs:
       - name: Cleanup workspace and environment
         if: always()  
         run: |
-          echo "Cleaning up caches and temporary files..."
-          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
-          sudo chmod -R 777 $HOME/anaconda3/ || true
-          sudo chmod -R 777 $HOME/.conda/ || true
-          
-          echo "Removing ZenDNN_tools..."
-          rm -rf $PARENT_DIR/ZenDNN_tools
-          
-          echo "Unmounting NFS..."
-          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
-          
-          echo "Workspace cleanup completed."
+         echo "Cleaning up caches and temporary files..."
+         sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+         sudo chmod -R 777 $HOME/anaconda3/ || true
+         sudo chmod -R 777 $HOME/.conda/ || true
+    
+         echo "Removing ZenDNN_tools..."
+         rm -rf $PARENT_DIR/ZenDNN_tools
+    
+         echo "Removing ZenDNN_TensorFlow_Plugin repo..."
+         rm -rf $WORKSPACE/ZenDNN_TensorFlow_Plugin
+    
+         echo "Unmounting NFS..."
+         sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
+    
+         echo "Workspace cleanup completed."
         shell: bash
 
