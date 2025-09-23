@@ -8,7 +8,7 @@ on:
    workflow_dispatch:
 
 env:
-  # Jenkins parameters mapped here
+ 
   TRAILING_SPACE_TAB_CHECK_PATHS: "*,scripts/**,tests/**,tensorflow_plugin/**"
   IGN_TST_CHK_PATHS: "BUILD,.bzl,.patch,.build,third_party,SECURITY.md,requirements.txt,WORKSPACE,README.md,configure,THIRD-PARTY-NOTICES,tools,python,.png,.jpeg"
   CHECK_TYPE: trailing_spaces_tabs
