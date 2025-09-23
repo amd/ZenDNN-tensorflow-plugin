@@ -78,8 +78,8 @@ jobs:
         if: always()
         run: |
           echo "Deleting trailing check artifacts..."
-          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.txt
-          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.properties
+          rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt
+          rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
         shell: bash
 
       - name: Cleanup workspace and environment
