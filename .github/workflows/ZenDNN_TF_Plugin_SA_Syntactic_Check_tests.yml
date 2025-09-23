@@ -66,8 +66,7 @@ jobs:
           conda activate $CONDA_ENV_NAME
           python --version
           pip install --upgrade pip
-          # Update script if needed
-          sed -i "295s/--disable=E0015/--disable=E0015,E0633/" zendnn_tf_plugin_source_adher_check.py
+         
           chmod +x zendnn_ci_tf_plugin_presub_check.sh
           ./zendnn_ci_tf_plugin_presub_check.sh -et $EXECUTION_TYPE
         shell: bash
