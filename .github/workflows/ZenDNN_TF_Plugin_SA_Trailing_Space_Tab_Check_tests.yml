@@ -1,10 +1,11 @@
 name: ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  #push:
+    #branches: [ main ]
+ # pull_request:
+   # branches: [ main ]
+   workflow_dispatch:
 
 env:
   # Jenkins parameters mapped here
@@ -70,8 +71,8 @@ jobs:
         with:
           name: trailing-check-results
           path: |
-            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/*.txt
-            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/*.properties
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
 
       - name: Delete uploaded artifacts from workspace
         if: always()
