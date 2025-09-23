@@ -1,0 +1,99 @@
+name: ZenDNN_TF_Plugin_SA_Syntactic_Check_tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  EXECUTION_TYPE: only_tests
+  NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
+  NFS_LOC: ~/datasets/
+  CHECK_TYPE: syntactic_check
+  PYLINT_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
+  IGN_PYLT_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,third_party,llvm_project,$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt,bazel_build_output.txt,./tests/__init__.py,./scripts/__init__.py"
+  CLANG_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
+  IGN_CLG_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
+  SHELL_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
+  IGN_SHL_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
+  LINT_RC_PATH: "$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt"
+  CONDA_ENV_NAME: tf-plugin-syntactic-check-env
+
+jobs:
+  ZenDNN_Checks:
+    runs-on: [self-hosted, precheck_runner]
+
+    steps:
+      - name: Checkout ZenDNN_TensorFlow_Plugin
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set WORKSPACE and PARENT_DIR
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+
+      - name: Fix permissions and clean caches
+        run: |
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          sudo chmod -R 777 $HOME/.cache/ || true
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+        shell: bash
+
+      - name: Install NFS utilities and mount
+        run: |
+          echo "${{ secrets.JENKINS_PASSWD }}" | sudo -S apt-get install -y nfs-common
+          mkdir -p $NFS_LOC
+          sudo mount $NFS_MOUNT_POINT $NFS_LOC
+        shell: bash
+
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+
+      - name: Setup Conda environment and run checks
+        working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
+        run: |
+          echo "Initializing Conda..."
+          source $HOME/anaconda3/etc/profile.d/conda.sh
+          if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
+            conda create -n $CONDA_ENV_NAME python=3.10 -y
+          fi
+          conda activate $CONDA_ENV_NAME
+          python --version
+          pip install --upgrade pip
+          # Update script if needed
+          sed -i "295s/--disable=E0015/--disable=E0015,E0633/" zendnn_tf_plugin_source_adher_check.py
+          chmod +x zendnn_ci_tf_plugin_presub_check.sh
+          ./zendnn_ci_tf_plugin_presub_check.sh -et $EXECUTION_TYPE
+        shell: bash
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zen-dnn-check-results
+          path: |
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+      - name: Delete uploaded artifacts from workspace
+        if: always()
+        run: |
+          echo "Deleting trailing check artifacts..."
+          rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt
+          rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+        shell: bash
+
+      - name: Cleanup workspace and environment
+        if: always()
+        run: |
+          echo "Cleaning up caches and temporary files..."
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          rm -rf $PARENT_DIR/ZenDNN_tools
+          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
+        shell: bash
