@@ -1,0 +1,93 @@
+name: ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # Jenkins parameters mapped here
+  TRAILING_SPACE_TAB_CHECK_PATHS: "*,scripts/**,tests/**,tensorflow_plugin/**"
+  IGN_TST_CHK_PATHS: "BUILD,.bzl,.patch,.build,third_party,SECURITY.md,requirements.txt,WORKSPACE,README.md,configure,THIRD-PARTY-NOTICES,tools,python,.png,.jpeg"
+  CHECK_TYPE: trailing_spaces_tabs
+  EXECUTION_TYPE: only_tests
+  NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
+  NFS_LOC: ~/datasets/
+  CONDA_ENV_NAME: tf-plugin-trailing-check-env
+
+jobs:
+  TrailingCheck:
+    runs-on: [self-hosted, precheck_runner]
+
+    steps:
+      - name: Checkout ZenDNN_TensorFlow_Plugin
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set WORKSPACE and PARENT_DIR
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+
+      - name: Fix permissions and clean caches
+        run: |
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          sudo chmod -R 777 $HOME/.cache/ || true
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+        shell: bash
+
+      - name: Install NFS utilities and mount
+        run: |
+          echo "${{ secrets.JENKINS_PASSWD }}" | sudo -S apt-get install -y nfs-common
+          mkdir -p $NFS_LOC
+          sudo mount $NFS_MOUNT_POINT $NFS_LOC
+        shell: bash
+
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+
+      - name: Setup Conda environment and Run Trailing Check
+        working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
+        run: |
+          echo "Initializing Conda..."
+          source $HOME/anaconda3/etc/profile.d/conda.sh
+          if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
+            conda create -n $CONDA_ENV_NAME python=3.10 -y
+          fi
+          conda activate $CONDA_ENV_NAME
+          python --version
+          pip install --upgrade pip
+          chmod +x zendnn_ci_tf_plugin_presub_check.sh
+          ./zendnn_ci_tf_plugin_presub_check.sh -et $EXECUTION_TYPE
+        shell: bash
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trailing-check-results
+          path: |
+            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/*.txt
+            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/*.properties
+
+      - name: Delete uploaded artifacts from workspace
+        if: always()
+        run: |
+          echo "Deleting trailing check artifacts..."
+          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.txt
+          rm -f $WORKSPACE/ZenDNN_TensorFlow_Plugin/*.properties
+        shell: bash
+
+      - name: Cleanup workspace and environment
+        if: always()
+        run: |
+          echo "Cleaning up caches and temporary files..."
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          rm -rf $PARENT_DIR/ZenDNN_tools
+          sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
+        shell: bash
