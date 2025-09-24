@@ -10,7 +10,6 @@ on:
 env:
   EXECUTION_TYPE: only_tests
   NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
-  NFS_LOC: $HOME/datasets
   CHECK_TYPE: syntactic_check
   PYLINT_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
   IGN_PYLT_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,third_party,llvm_project,$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt,bazel_build_output.txt,./tests/__init__.py,./scripts/__init__.py"
@@ -29,6 +28,7 @@ jobs:
       - name: Install NFS utilities and mount
         run: |
           sudo apt-get install -y nfs-common
+          echo "NFS_LOC=$(eval echo ~$USER)/datasets" >> $GITHUB_ENV
           mkdir -p $NFS_LOC
           sudo mount $NFS_MOUNT_POINT $NFS_LOC
         shell: bash
