@@ -23,7 +23,7 @@ env:
 
 jobs:
   Syntactic_checks:
-    runs-on: [self-hosted, precheck_runner]
+    runs-on: [precheck_runner]
 
     steps:
       - name: Checkout ZenDNN_TensorFlow_Plugin
