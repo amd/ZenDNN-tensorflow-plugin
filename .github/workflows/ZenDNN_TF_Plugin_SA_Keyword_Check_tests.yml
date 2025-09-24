@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 env:
-  NFS_LOC: ~/datasets/
   CHECK_TYPE: keyword_check
   EXECUTION_TYPE: only_tests
   KEYWORD_CHECK_PATHS: "$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/*,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/scripts/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tests/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/**"
@@ -21,6 +20,19 @@ jobs:
   KeywordCheck:
     runs-on:  [self-hosted, precheck_runner]
     steps:
+
+      - name: Set NFS_LOC to actual home
+        run: |
+          echo "NFS_LOC=$(getent passwd $USER | cut -d: -f6)/datasets" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Install NFS utilities and mount
+        run: |
+          sudo apt-get install -y nfs-common
+          mkdir -p $NFS_LOC
+          sudo mount $NFS_MOUNT_POINT $NFS_LOC
+        shell: bash
+        
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
@@ -44,13 +56,6 @@ jobs:
           sudo chmod -R 777 $HOME/.conda/ || true
           sudo chmod -R 777 $HOME/.cache/ || true
           sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
-        shell: bash
-
-      - name: Install NFS utilities and mount
-        run: |
-          echo "${{ secrets.JENKINS_PASSWD }}" | sudo apt-get install -y nfs-common
-          mkdir -p $NFS_LOC
-          sudo mount $NFS_MOUNT_POINT $NFS_LOC
         shell: bash
       
       - name: Clone ZenDNN_tools
