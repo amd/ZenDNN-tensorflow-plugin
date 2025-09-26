@@ -1,0 +1,128 @@
+name: ZenDNN TensorFlow Plugin CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      zendnn_ref:
+        description: 'ZenDNN branch or PR ref (optional, e.g. refs/pull/123/head)'
+        required: false
+        default: ''
+      zentf_use_local_zendnn:
+        description: 'Set to 1 to use local ZenDNN'
+        required: false
+        default: '1'
+      zentf_use_local_blis:
+        description: 'Set to 1 to use local BLIS'
+        required: false
+        default: '1'
+  repository_dispatch:
+    types: [zendnn-pr]
+
+jobs:
+  build:
+    runs-on: [zentf_presub]
+    env:
+      PYTHON_VERSION: '3.10'
+      ZENDNN_VERSION: '5.2.0'
+      ZENDNN_TF_VERSION: '2.19.0'
+      NATIVE_TF_VERSION: '2.19.0'
+      TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
+      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
+      BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
+      ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+    steps:
+      - name: Checkout ZenDNN_TensorFlow_Plugin
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set WORKSPACE and PARENT_DIR to parent of repo
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+
+      - name: Clone ZenDNN if needed
+        if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          if [ "${ZENDNN_REF}" != "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git fetch origin "${ZENDNN_REF}"
+            git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+
+      - name: Copy and extract BLIS tarball if needed
+        if: env.TF_PLUGIN_USE_LOCAL_BLIS == '1'
+        run: |
+          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$PARENT_DIR"
+          tar -xzf "$PARENT_DIR/$BLIS_TAR_BALL" -C "$PARENT_DIR"
+
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+
+      - name: Run CI script
+        run: |
+          sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i 's|tf-\$ZENDNN_TF_VERSION|tf-\$ZENDNN_TF_VERSION-xco|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_pt_plugin_presub_build.sh"
+          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/sed -i/ s/^/# /' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "Using local zendnn"/i\
+          zendnn_hash=$(sha256sum host_zendnn/zendnn_latest.tar.gz | awk '\''{print $1}'\'')\
+          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
+          /name = "zen_dnn"/,/\)/c\
+          tf_http_archive(\
+          name = "zen_dnn",\
+          build_file = "//third_party/zen_dnn:zen.BUILD",\
+          sha256 = "'"'"'$zendnn_hash'"'"'",\
+          strip_prefix = "ZenDNN",\
+          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/zendnn_latest.tar.gz","http://127.0.0.11:8088/zendnn_latest.tar.gz"],\
+          )\
+          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
+          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "Using local blis"/a\
+          blis_hash=$(sha256sum host_zendnn/blis_latest.tar.gz | awk '\''{print $1}'\'')\
+          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
+          /name = "amd_blis"/,/\)/c\
+          tf_http_archive(\
+          name = "amd_blis",\
+          build_file = "//third_party/amd_blis:blis.BUILD",\
+          sha256 = "'"'"'$blis_hash'"'"'",\
+          strip_prefix = "blis",\
+          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/blis_latest.tar.gz","http://127.0.0.11:8088/blis_latest.tar.gz"],\
+          )\
+          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
+          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
+          export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
+          export ZENDNN_TF_VERSION=${{ env.ZENDNN_TF_VERSION }}
+          export WORKSPACE=${{ env.WORKSPACE }}
+          export ZENTF_USE_LOCAL_ZENDNN=${{ env.ZENTF_USE_LOCAL_ZENDNN }}
+          export ZENTF_USE_LOCAL_BLIS=${{ env.ZENTF_USE_LOCAL_BLIS }}
+          export NATIVE_TF_VERSION=${{ env.NATIVE_TF_VERSION }}
+          export UNWANTED_KEYWORDS=${{ env.UNWANTED_KEYWORDS }}
+          export BLIS_TAR_BALL=${{ env.BLIS_TAR_BALL }}
+          export PARENT_DIR=${PARENT_DIR}
+          bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+        shell: bash
+
+      - name: Fail if script failed
+        if: failure()
+        run: exit 1
+
+      - name: Cleanup workspace (delete everything from parent dir)
+        if: always()
+        run: |
+          echo "Cleaning up $PARENT_DIR"
+          rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" $PARENT_DIR/blis"
+          # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
+          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
