@@ -83,7 +83,7 @@ jobs:
           sed -i 's|/usr/local/bin/bazel|"$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '/if type -P/i cd $WORKSPACE/ZenDNN_TensorFlow_Plugin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's|^bazel clean.*|$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^bazel build|$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|^[[:space:]]*bazel build|$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\$WORKSPACE\/ZenDNN_TensorFlow_Plugin\/bazelisk_bin',/" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "/import os/a bazel_cache = os.environ.get('WORKSPACE', '/default/path') + '/ZenDNN_TensorFlow_Plugin/bazelisk_bin'" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "s|'--output_user_root=\$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
