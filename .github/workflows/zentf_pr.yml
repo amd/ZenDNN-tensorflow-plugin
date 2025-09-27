@@ -74,8 +74,32 @@ jobs:
           sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '/sed -i/ s/^/# /' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "hash_val" $hash_val/i zendnn_hash=$(sha256sum host_zendnn/zendnn_latest.tar.gz | awk '"'"'{print $1}'"'"')\nsed -i '"'"'/tf_http_archive( *$/,/^ *\)/{\n    /name = "zen_dnn"/,/)\/c\\\ntf_http_archive(\\\n    name = "zen_dnn",\\\n    build_file = "//third_party/zen_dnn:zen.BUILD",\\\n    sha256 = "'"'"'$zendnn_hash'"'"'",\\\n    strip_prefix = "ZenDNN",\\\n    urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/zendnn_latest.tar.gz","http://127.0.0.11:8088/zendnn_latest.tar.gz"],\\\n)\\\n}'"'"' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "blis hash_val" $blis_hash_val/a blis_hash=$(sha256sum host_zendnn/blis_latest.tar.gz | awk '"'"'{print $1}'"'"')\nsed -i '"'"'/tf_http_archive( *$/,/^ *\)/{\n    /name = "amd_blis"/,/)\/c\\\ntf_http_archive(\\\n    name = "amd_blis",\\\n    build_file = "//third_party/amd_blis:blis.BUILD",\\\n    sha256 = "'"'"'$blis_hash'"'"'",\\\n    strip_prefix = "blis",\\\n    urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/blis_latest.tar.gz","http://127.0.0.11:8088/blis_latest.tar.gz"],\\\n)\\\n}'"'"' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "hash_val" \$hash_val/i \
+          zendnn_hash=$(sha256sum host_zendnn/zendnn_latest.tar.gz | awk '\''{print $1}'\'')\
+          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
+          /name = "zen_dnn"/,/\)/c\
+          tf_http_archive(\
+          name = "zen_dnn",\
+          build_file = "//third_party/zen_dnn:zen.BUILD",\
+          sha256 = "'"'"'$zendnn_hash'"'"'",\
+          strip_prefix = "ZenDNN",\
+          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/zendnn_latest.tar.gz","http://127.0.0.11:8088/zendnn_latest.tar.gz"],\
+          )\
+          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
+          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "blis hash_val" \$blis_hash_val/a \
+          blis_hash=$(sha256sum host_zendnn/blis_latest.tar.gz | awk '\''{print $1}'\'')\
+          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
+          /name = "amd_blis"/,/\)/c\
+          tf_http_archive(\
+          name = "amd_blis",\
+          build_file = "//third_party/amd_blis:blis.BUILD",\
+          sha256 = "'"'"'$blis_hash'"'"'",\
+          strip_prefix = "blis",\
+          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/blis_latest.tar.gz","http://127.0.0.11:8088/blis_latest.tar.gz"],\
+          )\
+          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
+          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
