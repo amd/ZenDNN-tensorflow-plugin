@@ -77,7 +77,7 @@ jobs:
           sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
           sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "host_pid" \$host_pid/a mkdir -p $WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin\nexport XDG_CACHE_HOME=$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin\nalias bazel="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "host_pid" \$host_pid/a mkdir -p $WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin\nexport XDG_CACHE_HOME=$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin\nalias bazel="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk" --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk-bin:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's|/usr/local/bin/bazel|"$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
