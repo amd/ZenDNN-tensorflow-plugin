@@ -110,12 +110,20 @@ jobs:
       - name: Fail if script failed
         if: failure()
         run: exit 1
-
+        
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zentf-artifacts
+          path: |
+            ${{ env.WORKSPACE }}/*.whl
+            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt
+            
       - name: Cleanup workspace (delete everything from parent dir)
         if: always()
         run: |
           echo "Cleaning up $PARENT_DIR"
-          #rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis"
+          rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis"
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
-          #rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
-          #rm -rf "$PARENT_DIR/*"
+          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
+          rm -rf "$PARENT_DIR/*"
