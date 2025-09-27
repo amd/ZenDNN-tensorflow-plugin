@@ -91,7 +91,7 @@ jobs:
           sed -i '0,/bazel_build_output.txt/s//bazel_build_output_1.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '0,/bazel_build_output.txt/s//bazel_build_output_2.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '0,/bazel_build_output.txt/s//bazel_build_output_3.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
@@ -130,7 +130,6 @@ jobs:
           rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis"
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
-          rm -rf "$PARENT_DIR/*.*"
-          rm -rf "$PARENT_DIR/*"
+          rm -rf "$PARENT_DIR/*.whl"
           
           
