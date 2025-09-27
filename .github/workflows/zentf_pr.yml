@@ -30,6 +30,10 @@ jobs:
       ZENDNN_VERSION: '5.2.0'
       ZENDNN_TF_VERSION: '2.19.0'
       NATIVE_TF_VERSION: '2.19.0'
+      blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
+      blis_release_version: 'AOCL-Sep2025-b1'
+      zendnn_release_hash: '622f0da3e5f1af153d5aba7e81e98e6a45898d85127231bfc48848128cbf3c15'
+      zendnn_release_version: 'zendnn-2025-WW38'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
@@ -73,33 +77,8 @@ jobs:
           sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
           sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/sed -i/ s/^/# /' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "hash_val" \$hash_val/i \
-          zendnn_hash=$(sha256sum host_zendnn/zendnn_latest.tar.gz | awk '\''{print $1}'\'')\
-          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
-          /name = "zen_dnn"/,/\)/c\
-          tf_http_archive(\
-          name = "zen_dnn",\
-          build_file = "//third_party/zen_dnn:zen.BUILD",\
-          sha256 = "'"'"'$zendnn_hash'"'"'",\
-          strip_prefix = "ZenDNN",\
-          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/zendnn_latest.tar.gz","http://127.0.0.11:8088/zendnn_latest.tar.gz"],\
-          )\
-          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
-          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "blis hash_val" \$blis_hash_val/a \
-          blis_hash=$(sha256sum host_zendnn/blis_latest.tar.gz | awk '\''{print $1}'\'')\
-          sed -i '\''/tf_http_archive( *$/,/^ *\)/{\
-          /name = "amd_blis"/,/\)/c\
-          tf_http_archive(\
-          name = "amd_blis",\
-          build_file = "//third_party/amd_blis:blis.BUILD",\
-          sha256 = "'"'"'$blis_hash'"'"'",\
-          strip_prefix = "blis",\
-          urls = ["https://storage.googleapis.com/mirror.tensorflow.org/127.0.0.11:8088/blis_latest.tar.gz","http://127.0.0.11:8088/blis_latest.tar.gz"],\
-          )\
-          }'\'' "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/workspace.bzl"
-          ' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$PARENT_DIR:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|/usr/local/bin/bazel|"$WORKSPACE_DIR/bazelisk"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
@@ -110,6 +89,10 @@ jobs:
           export NATIVE_TF_VERSION=${{ env.NATIVE_TF_VERSION }}
           export UNWANTED_KEYWORDS=${{ env.UNWANTED_KEYWORDS }}
           export BLIS_TAR_BALL=${{ env.BLIS_TAR_BALL }}
+          export zendnn_release_version=${{ env.zendnn_release_version }}
+          export zendnn_release_hash=${{ env.zendnn_release_hash }}
+          export blis_release_hash=${{ env.blis_release_hash }}
+          export blis_release_version=${{ env.blis_release_version }}
           export PARENT_DIR=${PARENT_DIR}
           bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
         shell: bash
