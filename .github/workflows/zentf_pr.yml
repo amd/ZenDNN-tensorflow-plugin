@@ -44,6 +44,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cleanup workspace at start
+        run: |
+          echo "Cleaning up workspace at start"
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
       - name: Set WORKSPACE and PARENT_DIR to parent of repo
         run: |
           echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
@@ -128,7 +133,8 @@ jobs:
           echo "Cleaning up $PARENT_DIR"
           $WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" shutdown || true
           cd "$PARENT_DIR"
-          rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis rm -rf "${{ env.WORKSPACE }}/zentf*.whl""
+          rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis" 
+          #rm -rf "${{ env.WORKSPACE }}/zentf*.whl""
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           #rm -rf "${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin"
           
