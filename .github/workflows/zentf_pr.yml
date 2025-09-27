@@ -79,6 +79,7 @@ jobs:
           sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$PARENT_DIR:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's|/usr/local/bin/bazel|"$WORKSPACE_DIR/bazelisk"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
