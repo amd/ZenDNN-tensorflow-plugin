@@ -127,6 +127,7 @@ jobs:
         run: |
           echo "Cleaning up $PARENT_DIR"
           $WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" shutdown || true
+          cd "$PARENT_DIR"
           rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis rm -rf "${{ env.WORKSPACE }}/zentf*.whl""
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           rm -rf "${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin"
