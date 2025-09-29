@@ -39,18 +39,33 @@ jobs:
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
     steps:
-      - name: Clear workspace
+      - name: Set parent directory
         run: |
-          # Clean up any previous runs
-          rm -rf $GITHUB_WORKSPACE/*
+          # Get the parent directory of the GitHub workspace
+          PARENT_DIR=$(dirname "$GITHUB_WORKSPACE")
+          echo "PARENT_DIR=$PARENT_DIR" >> $GITHUB_ENV
+          echo "WORKSPACE=$PARENT_DIR" >> $GITHUB_ENV
         shell: bash
 
-      - name: Setup base workspace directory
+      - name: Initial workspace cleanup
         run: |
-          # Define a clean workspace structure
-          mkdir -p $GITHUB_WORKSPACE
-          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-          echo "PARENT_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          # Clean up the parent directory if needed
+          if [ -d "$PARENT_DIR/ZenDNN_TensorFlow_Plugin" ]; then
+            echo "Removing existing ZenDNN_TensorFlow_Plugin directory"
+            rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
+          fi
+          if [ -d "$PARENT_DIR/ZenDNN" ]; then
+            echo "Removing existing ZenDNN directory"
+            rm -rf "$PARENT_DIR/ZenDNN"
+          fi
+          if [ -d "$PARENT_DIR/ZenDNN_tools" ]; then
+            echo "Removing existing ZenDNN_tools directory"
+            rm -rf "$PARENT_DIR/ZenDNN_tools"
+          fi
+          if [ -d "$PARENT_DIR/blis" ]; then
+            echo "Removing existing blis directory"
+            rm -rf "$PARENT_DIR/blis"
+          fi
         shell: bash
 
       - name: Checkout ZenDNN_TensorFlow_Plugin
@@ -58,13 +73,13 @@ jobs:
         with:
           fetch-depth: 0
           path: ZenDNN_TensorFlow_Plugin
-
+          
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$WORKSPACE/ZenDNN"
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
-            cd "$WORKSPACE/ZenDNN"
+            cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
             git checkout FETCH_HEAD
           fi
@@ -73,40 +88,38 @@ jobs:
       - name: Copy and extract BLIS tarball if needed
         if: env.TF_PLUGIN_USE_LOCAL_BLIS == '1'
         run: |
-          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$WORKSPACE/"
-          tar -xzf "$WORKSPACE/$BLIS_TAR_BALL" -C "$WORKSPACE/"
+          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$PARENT_DIR"
+          tar -xzf "$PARENT_DIR/$BLIS_TAR_BALL" -C "$PARENT_DIR"
         shell: bash
 
       - name: Clone ZenDNN_tools
         run: |
-          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$WORKSPACE/ZenDNN_tools"
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
         shell: bash
 
       - name: Directory structure check
         run: |
           echo "Current directory structure:"
-          find $WORKSPACE -maxdepth 2 -type d | sort
+          find $PARENT_DIR -maxdepth 1 -type d | sort
+          echo "-----"
+          ls -la $PARENT_DIR
         shell: bash
 
       - name: Run CI script
         run: |
-          sed -i 's/sudo//g' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai mkmhub/' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\/tmp\/bazelisk_bin',/" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
-          sed -i "/import os/a bazel_cache = '/tmp/bazelisk_bin'" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
-          sed -i "s|'--output_user_root=\/tmp/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
-          
-          # Print updated files for debugging
-          cat "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          cat "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\/tmp\/bazelisk_bin',/" "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/configure.py"
+          sed -i "/import os/a bazel_cache = '/tmp/bazelisk_bin'" "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/configure.py"
+          sed -i "s|'--output_user_root=\/tmp/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/configure.py"
           
           # Set environment variables for the CI script
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
@@ -123,10 +136,10 @@ jobs:
           export zendnn_release_hash=${{ env.zendnn_release_hash }}
           export blis_release_hash=${{ env.blis_release_hash }}
           export blis_release_version=${{ env.blis_release_version }}
-          export PARENT_DIR=${{ env.WORKSPACE }}
+          export PARENT_DIR=${{ env.PARENT_DIR }}
           
           # Run the CI script
-          bash "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
         shell: bash
 
       - name: Fail if script failed
@@ -138,8 +151,8 @@ jobs:
         with:
           name: zentf-artifacts
           path: |
-            ${{ env.WORKSPACE }}/*.whl
-            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt
+            ${{ env.PARENT_DIR }}/*.whl
+            ${{ env.PARENT_DIR }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt
             
       - name: Cleanup workspace
         if: always()
@@ -148,18 +161,18 @@ jobs:
           
           # Archive the artifacts to a temporary location before deletion (as backup)
           mkdir -p /tmp/zentf_artifacts
-          cp -f ${{ env.WORKSPACE }}/*.whl /tmp/zentf_artifacts/ 2>/dev/null || true
-          cp -f ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt /tmp/zentf_artifacts/ 2>/dev/null || true
+          cp -f ${{ env.PARENT_DIR }}/*.whl /tmp/zentf_artifacts/ 2>/dev/null || true
+          cp -f ${{ env.PARENT_DIR }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt /tmp/zentf_artifacts/ 2>/dev/null || true
           
-          # List what we'll be deleting
+          # List what we'll be cleaning up
           echo "Contents before cleanup:"
-          find $WORKSPACE -maxdepth 2 -type d | sort
+          find $PARENT_DIR -maxdepth 1 | sort
           
-          # Remove everything from the workspace
-          rm -rf $WORKSPACE/* $WORKSPACE/.[!.]* $WORKSPACE/..?* 2>/dev/null || true
+          # Remove all components
+          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin" "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/blis" "$PARENT_DIR/$BLIS_TAR_BALL"
           
-          # Final check
+          # Verify the cleanup
           echo "Contents after cleanup:"
-          ls -la $WORKSPACE
+          find $PARENT_DIR -maxdepth 1 | sort
           echo "Workspace cleaned up successfully"
         shell: bash
