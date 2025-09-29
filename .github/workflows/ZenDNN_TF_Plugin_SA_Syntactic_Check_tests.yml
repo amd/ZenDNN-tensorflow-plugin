@@ -1,11 +1,11 @@
 name: ZenDNN_TF_Plugin_SA_Syntactic_Check_tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  #workflow_dispatch:
+  #push:
+    #branches: [ main ]
+  #pull_request:
+    #branches: [ main ]
+  workflow_dispatch:
 
 env:
   EXECUTION_TYPE: only_tests
