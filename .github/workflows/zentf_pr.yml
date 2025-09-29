@@ -171,6 +171,7 @@ jobs:
         run: exit 1
         
       - name: Archive build artifacts
+        if: always()  # Always run this step regardless of job outcome
         uses: actions/upload-artifact@v4
         with:
           name: zentf-artifacts
@@ -193,7 +194,7 @@ jobs:
           find $BASE_DIR -maxdepth 1 | sort
           
           # Remove all components (but be careful not to delete parent workspace)
-          rm -rf "$BASE_DIR/ZenDNN" "$BASE_DIR/ZenDNN_tools" "$BASE_DIR/blis" "$BASE_DIR/$BLIS_TAR_BALL" 
+          rm -rf "$BASE_DIR/ZenDNN" "$BASE_DIR/ZenDNN_tools" "$BASE_DIR/blis" "$BASE_DIR/$BLIS_TAR_BALL" "$BASE_DIR"/*.whl
           
           # Clean the main repo files but don't delete the directory itself
           find $GITHUB_WORKSPACE -mindepth 1 -delete 2>/dev/null || true
