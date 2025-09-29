@@ -39,23 +39,26 @@ jobs:
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
     steps:
-      # First, set up a consistent workspace structure
-      - name: Setup workspace directory
+      - name: Clear workspace
         run: |
-          # Create workspace directory
-          mkdir -p "$GITHUB_WORKSPACE/workspace"
-          echo "WORKSPACE=$GITHUB_WORKSPACE/workspace" >> $GITHUB_ENV
-          echo "PARENT_DIR=$GITHUB_WORKSPACE/workspace" >> $GITHUB_ENV
+          # Clean up any previous runs
+          rm -rf $GITHUB_WORKSPACE/*
         shell: bash
 
-      # Checkout main repo directly to workspace directory
+      - name: Setup base workspace directory
+        run: |
+          # Define a clean workspace structure
+          mkdir -p $GITHUB_WORKSPACE
+          echo "WORKSPACE=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "PARENT_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        shell: bash
+
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          path: workspace/ZenDNN_TensorFlow_Plugin
+          path: ZenDNN_TensorFlow_Plugin
 
-      # Clone ZenDNN at the same level as the other components
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
@@ -67,21 +70,24 @@ jobs:
           fi
         shell: bash
 
-      # Extract BLIS at the same level
       - name: Copy and extract BLIS tarball if needed
         if: env.TF_PLUGIN_USE_LOCAL_BLIS == '1'
         run: |
-          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$WORKSPACE"
-          tar -xzf "$WORKSPACE/$BLIS_TAR_BALL" -C "$WORKSPACE"
+          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$WORKSPACE/"
+          tar -xzf "$WORKSPACE/$BLIS_TAR_BALL" -C "$WORKSPACE/"
         shell: bash
 
-      # Clone tools at the same level
       - name: Clone ZenDNN_tools
         run: |
           git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$WORKSPACE/ZenDNN_tools"
         shell: bash
 
-      # Run CI script
+      - name: Directory structure check
+        run: |
+          echo "Current directory structure:"
+          find $WORKSPACE -maxdepth 2 -type d | sort
+        shell: bash
+
       - name: Run CI script
         run: |
           sed -i 's/sudo//g' "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
@@ -123,12 +129,10 @@ jobs:
           bash "$WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
         shell: bash
 
-      # Handle failures
       - name: Fail if script failed
         if: failure()
         run: exit 1
         
-      # Archive artifacts before cleanup
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -137,21 +141,25 @@ jobs:
             ${{ env.WORKSPACE }}/*.whl
             ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt
             
-      # Complete cleanup of workspace
-      - name: Cleanup workspace (delete everything)
+      - name: Cleanup workspace
         if: always()
         run: |
           echo "Cleaning up workspace"
           
-          # Archive the artifacts we want to keep before deletion (as a backup)
+          # Archive the artifacts to a temporary location before deletion (as backup)
           mkdir -p /tmp/zentf_artifacts
-          cp -f ${{ env.WORKSPACE }}/*.whl /tmp/zentf_artifacts/ || true
-          cp -f ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt /tmp/zentf_artifacts/ || true
+          cp -f ${{ env.WORKSPACE }}/*.whl /tmp/zentf_artifacts/ 2>/dev/null || true
+          cp -f ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt /tmp/zentf_artifacts/ 2>/dev/null || true
           
-          # Clean up all directories and files in the workspace
-          rm -rf "$GITHUB_WORKSPACE/workspace"
+          # List what we'll be deleting
+          echo "Contents before cleanup:"
+          find $WORKSPACE -maxdepth 2 -type d | sort
           
-          # Verify the cleanup
-          ls -la "$GITHUB_WORKSPACE"
+          # Remove everything from the workspace
+          rm -rf $WORKSPACE/* $WORKSPACE/.[!.]* $WORKSPACE/..?* 2>/dev/null || true
+          
+          # Final check
+          echo "Contents after cleanup:"
+          ls -la $WORKSPACE
           echo "Workspace cleaned up successfully"
         shell: bash
