@@ -43,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: .
 
       - name: Set WORKSPACE and PARENT_DIR to parent of repo
         run: |
@@ -133,7 +134,7 @@ jobs:
           rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis" 
           rm -rf "$PARENT_DIR/zentf*.whl"
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
-          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/*"
+          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
           
           
           
