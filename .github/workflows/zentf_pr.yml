@@ -47,8 +47,8 @@ jobs:
 
       - name: Set WORKSPACE and PARENT_DIR to parent of repo
         run: |
-          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
-          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "PARENT_DIR=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+          echo "WORKSPACE=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
@@ -129,10 +129,9 @@ jobs:
         if: always()
         run: |
           echo "Cleaning up $PARENT_DIR"
-          bazel --output_user_root="/tmp/bazelisk_bin" shutdown || true
           cd "$PARENT_DIR"
           rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis" 
-          rm -rf "$PARENT_DIR/zentf*.whl"
+          rm -rf ${{ env.WORKSPACE }}/*.whl
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin"
           
