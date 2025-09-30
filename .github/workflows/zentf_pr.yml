@@ -125,7 +125,8 @@ jobs:
          cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
 
           # Replace datasets path
-          sed -i 's|\$HOME/datasets/ci_predownloaded_wheels/|/proj/zendai/datasets/ci_predownloaded_wheels/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
 
           # Replace PATH for conda
           sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$PATH:/proj/zendai/miniforge3/bin|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
