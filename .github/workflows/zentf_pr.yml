@@ -119,11 +119,20 @@ jobs:
       - name: Install TF-ZenDNN wheel (post-build)
         if: success()   # <-- only run if build passed
         run: |
-          cd "$PARENT_DIR"
-          # Clone ZenDNN_tools repo
-          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git
+         cd "$PARENT_DIR"
 
-          cd ZenDNN_tools/scripts/ci
+         # Clone or update ZenDNN_tools
+         if [ -d "$PARENT_DIR/ZenDNN_tools" ]; then
+           echo "ZenDNN_tools exists, updating..."
+           cd "$PARENT_DIR/ZenDNN_tools"
+           git fetch origin main
+           git reset --hard origin/main
+         else
+            echo "Cloning ZenDNN_tools..."
+            git clone --depth 1 --branch main https://***@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+         fi
+
+         cd ZenDNN_tools/scripts/ci
 
           # Replace datasets path
           sed -i 's|\$HOME/datasets/ci_predownloaded_wheels/|/proj/zendai/datasets/ci_predownloaded_wheels/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
