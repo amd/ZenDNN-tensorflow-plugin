@@ -144,7 +144,8 @@ jobs:
           echo "=========== Modified install script ==========="
           cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
           echo "=============================================="
-
+          echo "Looking for built wheel in $WORKSPACE"
+          ls -l $WORKSPACE/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl
           # Run install script
           bash zendnn_ci_nightly_tf_plugin_install_wheel.sh
         shell: bash
