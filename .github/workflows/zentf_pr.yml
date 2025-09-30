@@ -138,7 +138,8 @@ jobs:
             sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
             sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
             # Replace wheel path in install script with the found wheel
-            sed -i "s|/proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/zentf-*-cp310-cp310*.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            sed -i "s|zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
 
             echo "=========== Modified install script ==========="
             cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
