@@ -119,6 +119,16 @@ jobs:
       - name: Install TF-ZenDNN wheel (post-build)
         if: success()   # <-- only run if build passed
         run: |
+         echo "Looking for any built ZenDNN-TF wheels..."
+
+         #1. Search in the current workspace
+         find "$WORKSPACE" -name "zentf*.whl"
+
+         # 2. Search in the predownloaded datasets directory (if any)
+          find /proj/zendai/datasets/ci_predownloaded_wheels/ -name "zentf*.whl"
+
+         # 3. Search in the conda env directory (optional, only if installed before)
+         find /proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/ -name "zentf*.whl"
          echo "Running post-build install step..."
 
          # Go to ZenDNN_tools scripts directory
