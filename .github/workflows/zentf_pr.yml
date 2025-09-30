@@ -115,53 +115,38 @@ jobs:
       - name: Fail if script failed
         if: failure()
         run: exit 1
-
+      
       - name: Install TF-ZenDNN wheel (post-build)
-        if: success()   # <-- only run if build passed
+        if: success()   
         run: |
-         echo "Looking for any built ZenDNN-TF wheels..."
+            echo "Looking for any built ZenDNN-TF wheels in workspace..."
+             # Search only in the current workspace
+             WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+             if [ -z "$WHEEL_FILE" ]; then
+                echo "Error: No built wheel found in workspace!"
+                 exit 1
+             fi
 
-         #1. Search in the current workspace
-         find "$WORKSPACE" -name "zentf*.whl"
+             echo "Found wheel: $WHEEL_FILE"
+             # Go to ZenDNN_tools scripts directory
+             cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
+             # Prepare install script modifications
+            sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$PATH:/proj/zendai/miniforge3/bin|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource ~/miniforge_profile|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            # Replace wheel path in install script with the found wheel
+            sed -i "s|/proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/zentf-*-cp310-cp310*.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
-         # 2. Search in the predownloaded datasets directory (if any)
-          find /proj/zendai/datasets/ci_predownloaded_wheels/ -name "zentf*.whl"
+            echo "=========== Modified install script ==========="
+            cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            echo "=============================================="
 
-         # 3. Search in the conda env directory (optional, only if installed before)
-         find /proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/ -name "zentf*.whl"
-         echo "Running post-build install step..."
-
-         # Go to ZenDNN_tools scripts directory
-         cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
-
-          # Replace datasets path
-          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
-
-          # Replace PATH for conda
-          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$PATH:/proj/zendai/miniforge3/bin|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
-          # Comment out conda init/config/sourcing blocks (first occurrence)
-          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource ~/miniforge_profile|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
-          # Comment out full conda installation check block
-          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
-          # Comment out the second conda init block
-          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          PY_VERSION=$(echo ${{ env.PYTHON_VERSION }} | sed -e "s/\.//g")
-          sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|/proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          #sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
-          echo "=========== Modified install script ==========="
-          cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          echo "=============================================="
-          #echo "Looking for built wheel in $WORKSPACE"
-          #ls -l $WORKSPACE/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl
-          # Run install script
-          bash zendnn_ci_nightly_tf_plugin_install_wheel.sh
+            # Run install script
+            bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
         shell: bash
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
