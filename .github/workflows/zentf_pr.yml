@@ -141,8 +141,7 @@ jobs:
           # Comment out the second conda init block
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           PY_VERSION=$(echo ${{ env.PYTHON_VERSION }} | sed -e "s/\.//g")
-          sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|\$PARENT_DIR/zentf-*-cp\$PY_VERSION-cp\$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
-
+          sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|/proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
           echo "=========== Modified install script ==========="
           cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
           echo "=============================================="
