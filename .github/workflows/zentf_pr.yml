@@ -126,7 +126,6 @@ jobs:
                 echo "Error: No built wheel found in workspace!"
                  exit 1
              fi
-
              echo "Found wheel: $WHEEL_FILE"
              # Go to ZenDNN_tools scripts directory
              cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
