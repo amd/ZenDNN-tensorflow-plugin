@@ -151,8 +151,12 @@ jobs:
       - name: Run Kernel Tests
         if: success()
         run: |
-          echo "Running ZenDNN kernel tests..."
-
+          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+             if [ -z "$WHEEL_FILE" ]; then
+                echo "Error: No built wheel found in workspace!"
+                 exit 1
+             fi
+             echo "Found wheel: $WHEEL_FILE"
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
 
           # Adjust paths like in install step
@@ -164,12 +168,7 @@ jobs:
           sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
 
-          # Replace wheel path in script with built wheel
-          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
-          if [ -z "$WHEEL_FILE" ]; then
-            echo "Error: No wheel found in workspace for kernel tests!"
-            exit 1
-          fi
+         
           sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
 
           echo "=========== Modified kernel test script ==========="
