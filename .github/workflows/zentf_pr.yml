@@ -2,9 +2,9 @@ name: ZenDNN TensorFlow Plugin CI
 
 on:
   push:
-    branches: [main]
+    branches: [nedomako_test]
   pull_request:
-    branches: [main]
+    branches: [nedomako_test]
   workflow_dispatch:
     inputs:
       zendnn_ref:
