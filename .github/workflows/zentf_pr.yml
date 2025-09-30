@@ -115,7 +115,40 @@ jobs:
       - name: Fail if script failed
         if: failure()
         run: exit 1
-        
+
+      - name: Install TF-ZenDNN wheel (post-build)
+        if: success()   # <-- only run if build passed
+        run: |
+          cd "$PARENT_DIR"
+          # Clone ZenDNN_tools repo
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git
+
+          cd ZenDNN_tools/scripts/ci
+
+          # Replace datasets path
+          sed -i 's|\$HOME/datasets/ci_predownloaded_wheels/|/proj/zendai/datasets/ci_predownloaded_wheels/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          # Replace PATH for conda
+          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$PATH:/proj/zendai/miniforge3/bin|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          # Comment out conda init/config/sourcing blocks (first occurrence)
+          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource ~/miniforge_profile|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          # Comment out full conda installation check block
+          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          # Comment out the second conda init block
+          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          echo "=========== Modified install script ==========="
+          cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          echo "=============================================="
+
+          # Run install script
+          bash zendnn_ci_nightly_tf_plugin_install_wheel.sh
+        shell: bash
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
