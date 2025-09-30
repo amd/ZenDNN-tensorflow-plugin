@@ -142,25 +142,16 @@ jobs:
           # Comment out the second conda init block
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           PY_VERSION=$(echo ${{ env.PYTHON_VERSION }} | sed -e "s/\.//g")
-           # Find the actual predownloaded wheel file
-           WHEEL_FILE=$(ls /proj/zendai/datasets/ci_predownloaded_wheels/zentf-*-cp${PY_VERSION}-cp${PY_VERSION}*.whl | head -n 1)
+          sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|/proj/zendai_conda/miniforge3/envs/zentf-5.2.0-tf-2.19.0-py-3.10/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i "s|\$WORKSPACE/zentf-\\*-cp\$PY_VERSION-cp\$PY_VERSION\\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
-           if [ -z "$WHEEL_FILE" ]; then
-             echo "ERROR: No wheel file found for Python ${{ env.PYTHON_VERSION }}"
-             exit 1
-           fi
-
-           echo "Installing TensorFlow-ZenDNN Plugin Wheel file - $WHEEL_FILE"
-
-           # Install the wheel
-           pip install --user "$WHEEL_FILE"
-
-           echo "=========== Modified install script ==========="
-           cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
-           echo "=============================================="
-
-           # Run any remaining commands in the original install script if needed
-           bash zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          echo "=========== Modified install script ==========="
+          cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          echo "=============================================="
+          #echo "Looking for built wheel in $WORKSPACE"
+          #ls -l $WORKSPACE/zentf-*-cp$PY_VERSION-cp$PY_VERSION*.whl
+          # Run install script
+          bash zendnn_ci_nightly_tf_plugin_install_wheel.sh
         shell: bash
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
