@@ -140,10 +140,12 @@ jobs:
              sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              WHEEL_PY=$(echo $BUILD_PYTHON_VERSIONS | tr -d '.')
-             sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|unset PIP_INDEX_URL unset PIP_EXTRA_INDEX_URL /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              # Replace wheel path in install script with the found wheel
              sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
              echo "=========== Modified install script ==========="
              cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -173,9 +175,11 @@ jobs:
           sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource ~/.miniforge_profile|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|unset PIP_INDEX_URL unset PIP_EXTRA_INDEX_URL /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list' zendnn_ci_tf_plugin_kernel_tests.sh
           
           
           echo "=========== Modified kernel test script ==========="
