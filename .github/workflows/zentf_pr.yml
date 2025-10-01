@@ -150,7 +150,7 @@ jobs:
              echo "=========== Modified install script ==========="
              cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
              echo "=============================================="
-
+             export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
              # Run install script
              bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
         shell: bash
@@ -185,7 +185,7 @@ jobs:
           echo "=========== Modified kernel test script ==========="
           cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
-
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run kernel tests
           bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
