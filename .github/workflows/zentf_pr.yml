@@ -183,7 +183,7 @@ jobs:
           
 
            
-          sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i "s|/proj/zendai/datasets/conda/Miniforge3-.*-Linux-x86_64.sh|$MINIFORGE_INSTALLER|g" zendnn_ci_tf_plugin_kernel_tests.sh
 
