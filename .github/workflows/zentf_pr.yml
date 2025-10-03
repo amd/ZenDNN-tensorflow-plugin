@@ -151,10 +151,17 @@ jobs:
              cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
              # Prepare install script modifications
              # Create conda config directory if it doesn't exist
-             mkdir -p ~/.conda
+             export CONDARC="/tmp/temp_condarc"
+             echo 'channel_priority: strict' > $CONDARC
+             echo 'channels:' >> $CONDARC
+             echo '  - conda-forge' >> $CONDARC
+             echo '  - defaults' >> $CONDARC
+             echo 'default_channels: []' >> $CONDARC
+             echo 'ssl_verify: true' >> $CONDARC
+             echo 'changeps1: true' >> $CONDARC
     
              # Write proper conda config with correct YAML indentation
-             echo 'channel_priority: strict channels: [conda-forge, defaults] default_channels: [] ssl_verify: true changeps1: true' > ~/.condarc
+             
              export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
              export PATH="$MINIFORGE_PATH/bin:$PATH"
              if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
@@ -201,9 +208,17 @@ jobs:
              fi
              echo "Found wheel: $WHEEL_FILE"
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
-          mkdir -p ~/.conda
           # Adjust paths like in install step
-          echo 'channel_priority: strict channels: [conda-forge, defaults] default_channels: [] ssl_verify: true changeps1: true' > ~/.condarc
+
+          export CONDARC="/tmp/temp_condarc"
+          echo 'channel_priority: strict' > $CONDARC
+          echo 'channels:' >> $CONDARC
+          echo '  - conda-forge' >> $CONDARC
+          echo '  - defaults' >> $CONDARC
+          echo 'default_channels: []' >> $CONDARC
+          echo 'ssl_verify: true' >> $CONDARC
+          echo 'changeps1: true' >> $CONDARC
+          
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
           if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
