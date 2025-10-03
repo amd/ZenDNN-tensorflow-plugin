@@ -150,7 +150,7 @@ jobs:
              # Go to ZenDNN_tools scripts directory
              cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
              # Prepare install script modifications
-             conda deactivate || true
+             
              export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
              export PATH="$MINIFORGE_PATH/bin:$PATH"
              if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
@@ -158,6 +158,7 @@ jobs:
              else
               export PATH="$MINIFORGE_PATH/bin:$PATH"
              fi
+             conda deactivate || true
              conda config --set changeps1 true
              export PATH="$MINIFORGE_PATH/bin:$PATH"
              sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -198,7 +199,7 @@ jobs:
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           
           # Adjust paths like in install step
-          conda deactivate || true
+          
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
           if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
@@ -206,6 +207,7 @@ jobs:
           else
               export PATH="$MINIFORGE_PATH/bin:$PATH"
           fi
+          conda deactivate || true
           conda config --set changeps1 true
           export PATH="$MINIFORGE_PATH/bin:$PATH"
           sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
