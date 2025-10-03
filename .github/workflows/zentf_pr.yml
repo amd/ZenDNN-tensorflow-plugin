@@ -43,7 +43,7 @@ jobs:
     secrets: inherit
   build:
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
-    runs-on: [zentf_presub]
+    runs-on: [amd-zenai-arc-medium-dind]
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
@@ -93,7 +93,7 @@ jobs:
       - name: Run CI script
         run: |
           sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
           sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
           sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
@@ -168,7 +168,7 @@ jobs:
              sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
              echo "=========== Modified install script ==========="
-             cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             #cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
              echo "=============================================="
              export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
              # Run install script
@@ -205,7 +205,7 @@ jobs:
           
           
           echo "=========== Modified kernel test script ==========="
-          cat zendnn_ci_tf_plugin_kernel_tests.sh
+          #cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run kernel tests
