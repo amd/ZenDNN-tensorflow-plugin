@@ -24,7 +24,7 @@ on:
 
 jobs:
   keyword_check:
-    uses: AMD-Zenai/ZenDNN/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@main
+    uses: AMD-Zenai/ZenDNN/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@nedomako_test
   build:
     needs: keyword_check
     runs-on: [zentf_presub]
