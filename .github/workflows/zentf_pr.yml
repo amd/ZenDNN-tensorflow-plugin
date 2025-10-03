@@ -202,6 +202,7 @@ jobs:
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           echo "=========== Modified install script ==========="
+          cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
           echo "=============================================="
        
           # Export the temporary condarc for the script execution too
@@ -260,7 +261,7 @@ jobs:
           
           
           echo "=========== Modified kernel test script ==========="
-          #cat zendnn_ci_tf_plugin_kernel_tests.sh
+          cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run kernel tests
