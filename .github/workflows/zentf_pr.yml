@@ -141,6 +141,7 @@ jobs:
              sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
              WHEEL_PY=$(echo $BUILD_PYTHON_VERSIONS | tr -d '.')
+             export WHEEL_PY=${{ env.WHEEL_PY }}
              sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              # Replace wheel path in install script with the found wheel
@@ -168,16 +169,17 @@ jobs:
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
 
           # Adjust paths like in install step
+          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource ~/.miniforge_profile|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           WHEEL_PY=$(echo $BUILD_PYTHON_VERSIONS | tr -d '.')
+          export WHEEL_PY=${{ env.WHEEL_PY }}
           sed -i 's|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-\*.whl|/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-cp\$WHEEL_PY\*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
