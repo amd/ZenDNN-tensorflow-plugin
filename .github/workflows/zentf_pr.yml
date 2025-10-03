@@ -93,8 +93,8 @@ jobs:
           #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_1.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_2.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_3.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          cat "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          #cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #cat "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
           export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
@@ -141,7 +141,7 @@ jobs:
              sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')"  # cp310
              WHEEL_PY="${WHEEL_PY}-${WHEEL_PY}"                # cp310-cp310
-             sed -i 's|[[:space:]]*pip install[[:space:]]\+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-*.whl|        pip install /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-$ZENDNN_TF_VERSION-$WHEEL_PY*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+             sed -E -i "s|^[[:space:]]*pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-${ZENDNN_TF_VERSION}-\*.whl|        pip install /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-${ZENDNN_TF_VERSION}-${WHEEL_PY}*.whl|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
              #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
              # Replace wheel path in install script with the found wheel
              sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -178,7 +178,7 @@ jobs:
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')"  # cp310
           WHEEL_PY="${WHEEL_PY}-${WHEEL_PY}"                # cp310-cp310
-          sed -i 's|[[:space:]]*pip install[[:space:]]\+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-*.whl|        pip install /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-$ZENDNN_TF_VERSION-$WHEEL_PY*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -E -i "s|^[[:space:]]*pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-${ZENDNN_TF_VERSION}-\*.whl|        pip install /proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-${ZENDNN_TF_VERSION}-${WHEEL_PY}*.whl|g" zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
