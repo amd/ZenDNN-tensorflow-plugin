@@ -23,7 +23,10 @@ on:
     types: [zendnn-pr]
 
 jobs:
+  keyword_check:
+    uses: AMD-Zenai/ZenDNN/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@main
   build:
+    needs: keyword_check
     runs-on: [zentf_presub]
     env:
       PYTHON_VERSION: '3.10'
