@@ -42,7 +42,7 @@ jobs:
     uses: AMD-Zenai/ZenDNN/.github/workflows/header_check.yml@main
     secrets: inherit
   build:
-    needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check]
+    needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
     runs-on: [zentf_presub]
     env:
       PYTHON_VERSION: '3.10'
