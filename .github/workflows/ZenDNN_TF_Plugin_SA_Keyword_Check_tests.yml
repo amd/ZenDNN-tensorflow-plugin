@@ -1,11 +1,7 @@
 name: ZenDNN_TF_Plugin_SA_Keyword_Check
 
 on:
-  #push:
-   #branches: [ main ]
-  #pull_request:
-   #branches: [ main ]
-  workflow_dispatch:
+ workflow_call:
 
 env:
   CHECK_TYPE: keyword_check
