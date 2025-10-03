@@ -43,7 +43,7 @@ jobs:
     secrets: inherit
   build_install_tests:
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
-    runs-on: [amd-zenai-arc-medium-dind]
+    runs-on: [amd-zenai-arc-large-dind]
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
