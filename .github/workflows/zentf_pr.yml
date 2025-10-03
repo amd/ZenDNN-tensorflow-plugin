@@ -43,7 +43,7 @@ jobs:
     secrets: inherit
   build_install_tests:
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
-    runs-on: [amd-zenai-arc-large-dind]
+    runs-on: [amd-zenai-arc-xlarge-dind]
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
@@ -150,7 +150,14 @@ jobs:
              # Go to ZenDNN_tools scripts directory
              cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
              # Prepare install script modifications
-             
+             export CONDARC="$PWD/.condarc"
+             echo "channel_priority: strict
+             channels:
+             - conda-forge
+             - defaults
+             default_channels: []
+             ssl_verify: true
+             changeps1: true" > "$CONDARC"
              export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
              export PATH="$MINIFORGE_PATH/bin:$PATH"
              if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
