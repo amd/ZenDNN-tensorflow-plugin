@@ -25,12 +25,16 @@ on:
 jobs:
   keyword_check:
     uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@nedomako_test
+    secrets: inherit
   syntactic_check:
     uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml@nedomako_test
+    secrets: inherit
   trailing_check:
     uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests.yml@nedomako_test
+    secrets: inherit
   unnecessary_check:
     uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Unnecessary_Lines_Check_tests.yml@nedomako_test
+    secrets: inherit
   build:
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check]
     runs-on: [zentf_presub]
