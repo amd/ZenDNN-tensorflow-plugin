@@ -32,7 +32,7 @@ jobs:
   unnecessary_check:
     uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Unnecessary_Lines_Check_tests.yml@nedomako_test
   build:
-    needs: [keyword_check ,syntactic_check,trailing_check,unnecessary_check]
+    needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check]
     runs-on: [zentf_presub]
     env:
       PYTHON_VERSION: '3.10'
