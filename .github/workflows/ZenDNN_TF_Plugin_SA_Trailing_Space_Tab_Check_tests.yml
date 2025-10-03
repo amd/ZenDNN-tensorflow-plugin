@@ -1,11 +1,7 @@
 name: ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests
 
 on:
-   #push:
-    #branches: [ main ]
-   #pull_request:
-    #branches: [ main ]
-   workflow_dispatch:
+    workflow_call:
 
 env:
  
