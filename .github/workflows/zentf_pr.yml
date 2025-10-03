@@ -169,6 +169,7 @@ jobs:
              else
               export PATH="$MINIFORGE_PATH/bin:$PATH"
              fi
+             which conda
              conda deactivate || true
              conda config --set changeps1 true
              export PATH="$MINIFORGE_PATH/bin:$PATH"
