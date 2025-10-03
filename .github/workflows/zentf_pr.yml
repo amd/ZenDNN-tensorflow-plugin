@@ -264,8 +264,9 @@ jobs:
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run kernel tests
-          bash zendnn_ci_tf_plugin_kernel_tests.sh
+          CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
+        
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
