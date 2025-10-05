@@ -259,7 +259,26 @@ jobs:
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+          # Try to find libgomp and add its location to LD_LIBRARY_PATH
+          for lib_path in /usr/lib/x86_64-linux-gnu /usr/lib64 /lib64 /proj/zendai/lib; do
+          if [ -f "$lib_path/libgomp.so.1" ]; then
+           export LD_LIBRARY_PATH="$lib_path:$LD_LIBRARY_PATH"
+           echo "Added $lib_path to LD_LIBRARY_PATH for libgomp.so.1"
+           break
+          fi
+          done
+
+          # If we couldn't find it, try to install it
+          if ! ldconfig -p | grep -q libgomp.so.1; then
+          echo "libgomp.so.1 not found, attempting to install..."
+          if command -v apt-get &> /dev/null; then
+           apt-get update && apt-get install -y libgomp1 || echo "Failed to install libgomp1. Please install manually."
+          elif command -v yum &> /dev/null; then
+           yum install -y libgomp || echo "Failed to install libgomp. Please install manually."
+          else
+              echo "Could not detect package manager. Please install libgomp manually."
+          fi
+          fi
           
           echo "=========== Modified kernel test script ==========="
           cat zendnn_ci_tf_plugin_kernel_tests.sh
