@@ -258,7 +258,7 @@ jobs:
           sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
-          
+          sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
           
           echo "=========== Modified kernel test script ==========="
           cat zendnn_ci_tf_plugin_kernel_tests.sh
