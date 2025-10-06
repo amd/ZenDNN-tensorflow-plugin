@@ -2,9 +2,9 @@ name: ZenDNN TensorFlow plugin CI
 
 on:
   push:
-    branches: [nedomako_test]
+    branches: [main]
   pull_request:
-    branches: [nedomako_test]
+    branches: [main]
   workflow_dispatch:
     inputs:
       zendnn_ref:
@@ -24,26 +24,33 @@ on:
 
 jobs:
   keyword_check:
-    uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@nedomako_test
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@main
     secrets: inherit
   syntactic_check:
-    uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml@nedomako_test
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}} 
+    uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml@main
     secrets: inherit
   trailing_check:
-    uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests.yml@nedomako_test
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests.yml@main
     secrets: inherit
   unnecessary_check:
-    uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Unnecessary_Lines_Check_tests.yml@nedomako_test
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Unnecessary_Lines_Check_tests.yml@main
     secrets: inherit
   jira-id-check:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
     uses: AMD-Zenai/ZenDNN/.github/workflows/jira_check.yml@main
     secrets: inherit
   license-header-check:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
     uses: AMD-Zenai/ZenDNN/.github/workflows/header_check.yml@main
     secrets: inherit
-  build_install_tests:
-    needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
+  ZenDNN_TensorFlow_PR:
     runs-on: [amd-zenai-arc-xlarge-dind]
+    needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }} 
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
@@ -299,3 +306,263 @@ jobs:
           rm -rf "$PARENT_DIR/zentf*.whl"
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/*"
+       
+  ZenDNN_TensorFlow_Push:
+    runs-on: [amd-zenai-arc-xlarge-dind]
+    if: ${{ github.event_name == 'push' }}
+    env:
+      PYTHON_VERSION: '3.10'
+      ZENDNN_VERSION: '5.2.0'
+      ZENDNN_TF_VERSION: '2.19.0'
+      NATIVE_TF_VERSION: '2.19.0'
+      KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
+      blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
+      blis_release_version: 'AOCL-Sep2025-b1'
+      zendnn_release_hash: '622f0da3e5f1af153d5aba7e81e98e6a45898d85127231bfc48848128cbf3c15'
+      zendnn_release_version: 'zendnn-2025-WW38'
+      TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
+      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
+      BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
+      ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+    steps:
+      - name: Checkout ZenDNN_TensorFlow_Plugin
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set WORKSPACE and PARENT_DIR to parent of repo
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+
+      - name: Clone ZenDNN if needed
+        if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          if [ "${ZENDNN_REF}" != "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git fetch origin "${ZENDNN_REF}"
+            git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+
+      - name: Copy and extract BLIS tarball if needed
+        if: env.TF_PLUGIN_USE_LOCAL_BLIS == '1'
+        run: |
+          cp /proj/zendai/datasets/ci_zendnn_presub_dependencies/$BLIS_TAR_BALL "$PARENT_DIR"
+          tar -xzf "$PARENT_DIR/$BLIS_TAR_BALL" -C "$PARENT_DIR"
+
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+
+      - name: Run CI script
+        run: |
+          sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$WORKSPACE/ZenDNN_TensorFlow_Plugin:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|/usr/local/bin/bazel|"$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/if type -P/i cd $WORKSPACE/ZenDNN_TensorFlow_Plugin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\/tmp\/bazelisk_bin',/" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          sed -i "/import os/a bazel_cache = '/tmp/bazelisk_bin'" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          sed -i "s|'--output_user_root=\/tmp/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          #sed -i "s|which('bazel')|which(os.path.join(os.environ.get('WORKSPACE', '/default/path'), 'ZenDNN_TensorFlow_Plugin', 'bazel'))|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_1.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_2.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '0,/bazel_build_output.txt/s//bazel_build_output_3.txt/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #cat "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
+          export ZENDNN_VERSION=${{ env.ZENDNN_VERSION }}
+          export ZENDNN_TF_VERSION=${{ env.ZENDNN_TF_VERSION }}
+          export WORKSPACE=${{ env.WORKSPACE }}
+          export ZENTF_USE_LOCAL_ZENDNN=${{ env.ZENTF_USE_LOCAL_ZENDNN }}
+          export ZENTF_USE_LOCAL_BLIS=${{ env.ZENTF_USE_LOCAL_BLIS }}
+          export NATIVE_TF_VERSION=${{ env.NATIVE_TF_VERSION }}
+          export UNWANTED_KEYWORDS=${{ env.UNWANTED_KEYWORDS }}
+          export BLIS_TAR_BALL=${{ env.BLIS_TAR_BALL }}
+          export zendnn_release_version=${{ env.zendnn_release_version }}
+          export zendnn_release_hash=${{ env.zendnn_release_hash }}
+          export blis_release_hash=${{ env.blis_release_hash }}
+          export blis_release_version=${{ env.blis_release_version }}
+          export PARENT_DIR=${PARENT_DIR}
+          bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+        shell: bash
+
+      - name: Fail if script failed
+        if: failure()
+        run: exit 1
+      
+      - name: Install TF-ZenDNN wheel (post-build)
+        if: success()   
+        run: |
+          echo "Looking for any built ZenDNN-TF wheels in workspace..."
+          # Search only in the current workspace
+          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+          if [ -z "$WHEEL_FILE" ]; then
+           echo "Error: No built wheel found in workspace!"
+           exit 1
+          fi
+          echo "Found wheel: $WHEEL_FILE"
+          # Go to ZenDNN_tools scripts directory
+          cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
+       
+          # Create temporary conda config to prevent permission issues
+          export CONDARC="/tmp/temp_condarc"
+          echo 'channel_priority: strict' > $CONDARC
+          echo 'channels:' >> $CONDARC
+          echo '  - conda-forge' >> $CONDARC
+          echo '  - defaults' >> $CONDARC
+          echo 'default_channels: []' >> $CONDARC
+          echo 'ssl_verify: true' >> $CONDARC
+          echo 'changeps1: true' >> $CONDARC
+       
+          # Print the condarc file for debugging
+          echo "Created temporary condarc at $CONDARC:"
+          cat $CONDARC
+       
+          export MINIFORGE_PATH="/proj/zendai/miniforge3"
+          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
+           . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
+          else
+           export PATH="$MINIFORGE_PATH/bin:$PATH"
+          fi
+       
+          echo "Using conda at: $(which conda)"
+          conda deactivate || true
+       
+          # Don't run any conda config commands that write to disk
+          # Instead of: conda config --set changeps1 true
+       
+          # Modify install script
+          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+       
+          # Also comment out any conda config commands in the script
+          sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+       
+          PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
+          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+       
+          # Replace wheel path in install script with the found wheel
+          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+
+          echo "=========== Modified install script ==========="
+          #cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          echo "=============================================="
+       
+          # Export the temporary condarc for the script execution too
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+       
+          # Run install script with the temporary condarc
+          CONDARC=$CONDARC bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
+        shell: bash
+        
+      - name: Run Kernel Tests
+        if: success()
+        run: |
+          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+             if [ -z "$WHEEL_FILE" ]; then
+                echo "Error: No built wheel found in workspace!"
+                 exit 1
+             fi
+             echo "Found wheel: $WHEEL_FILE"
+
+          # Run kernel tests
+          # Create a local lib directory
+          mkdir -p $WORKSPACE/local
+          export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
+
+          # Create a temporary container and extract libgomp.so.1
+          cd $WORKSPACE/local
+          USER_ID=$(id -u)
+          GROUP_ID=$(id -g)
+          docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
+          ls -la libgomp.so.1
+          
+          cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
+          # Adjust paths like in install step
+
+          export CONDARC="/tmp/temp_condarc"
+          echo 'channel_priority: strict' > $CONDARC
+          echo 'channels:' >> $CONDARC
+          echo '  - conda-forge' >> $CONDARC
+          echo '  - defaults' >> $CONDARC
+          echo 'default_channels: []' >> $CONDARC
+          echo 'ssl_verify: true' >> $CONDARC
+          echo 'changeps1: true' >> $CONDARC
+          
+          export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
+          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
+              . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
+          else
+              export PATH="$MINIFORGE_PATH/bin:$PATH"
+          fi
+          conda deactivate || true
+          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
+          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          
+          
+          echo "=========== Modified kernel test script ==========="
+          #cat zendnn_ci_tf_plugin_kernel_tests.sh
+          echo "==================================================="
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
+        shell: bash
+        
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zentf-artifacts
+          path: |
+            ${{ env.WORKSPACE }}/*.whl
+            ${{ env.WORKSPACE }}/ZenDNN_TensorFlow_Plugin/bazel_build_output.txt
+            
+      - name: Cleanup workspace (delete everything from parent dir)
+        if: always()
+        run: |
+          echo "Cleaning up $PARENT_DIR"
+          $WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel --output_user_root="$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin" shutdown || true
+          cd "$PARENT_DIR"
+          rm -rf "$PARENT_DIR/ZenDNN" "$PARENT_DIR/ZenDNN_tools" "$PARENT_DIR/$BLIS_TAR_BALL" "$PARENT_DIR/blis" 
+          rm -rf "$PARENT_DIR/zentf*.whl"
+          # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
+          rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/*"
+     
