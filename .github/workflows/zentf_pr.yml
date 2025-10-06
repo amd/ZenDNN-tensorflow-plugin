@@ -272,8 +272,10 @@ jobs:
 
           # Create a temporary container and extract libgomp.so.1
           cd $WORKSPACE/local
-          docker run --rm -v $(pwd):/output ubuntu:20.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/"
-          chmod +x libgomp.so.1
+          USER_ID=$(id -u)
+          GROUP_ID=$(id -g)
+          docker run --rm -v $(pwd):/output ubuntu:20.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
+          ls -la libgomp.so.1
           CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
         
