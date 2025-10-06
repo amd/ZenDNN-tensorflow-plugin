@@ -221,6 +221,19 @@ jobs:
                  exit 1
              fi
              echo "Found wheel: $WHEEL_FILE"
+
+          # Run kernel tests
+          # Create a local lib directory
+          mkdir -p $WORKSPACE/local
+          export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
+
+          # Create a temporary container and extract libgomp.so.1
+          cd $WORKSPACE/local
+          USER_ID=$(id -u)
+          GROUP_ID=$(id -g)
+          docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
+          ls -la libgomp.so.1
+          
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
 
@@ -265,17 +278,6 @@ jobs:
           #cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          # Run kernel tests
-          # Create a local lib directory
-          mkdir -p $WORKSPACE/local
-          export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
-
-          # Create a temporary container and extract libgomp.so.1
-          cd $WORKSPACE/local
-          USER_ID=$(id -u)
-          GROUP_ID=$(id -g)
-          docker run --rm -v $(pwd):/output ubuntu:20.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
-          ls -la libgomp.so.1
           CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
         
