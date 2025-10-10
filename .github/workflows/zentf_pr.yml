@@ -432,7 +432,7 @@ jobs:
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
@@ -448,7 +448,7 @@ jobs:
 
       - name: Clone ZenDNN_tools
         run: |
-          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
 
       - name: PR INFO
         shell: bash
@@ -496,8 +496,8 @@ jobs:
           echo "=============================="
          echo "   ZENDNN INFO"
          echo "=============================="
-         if [ -d "$GITHUB_WORKSPACE/ZenDNN_tools" ]; then
-          cd "$GITHUB_WORKSPACE/ZenDNN_tools"
+         if [ -d "$PARENT_DIR/ZenDNN" ]; then
+          cd "$PARENT_DIR/ZenDNN"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/AMD-Zenai/ZenDNN.git
           git fetch --all --no-tags || true
 
@@ -521,8 +521,8 @@ jobs:
          echo "=============================="
          echo "   ZENDNN_TOOLS INFO"
          echo "=============================="
-         if [ -d "$GITHUB_WORKSPACE/ZenDNN_tools" ]; then
-          cd "$GITHUB_WORKSPACE/ZenDNN_tools"
+         if [ -d "$PARENT_DIR/ZenDNN_tools" ]; then
+          cd "$PARENT_DIR/ZenDNN_tools"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/AMD-Zenai/ZenDNN_tools.git
           git fetch --all --no-tags || true
 
