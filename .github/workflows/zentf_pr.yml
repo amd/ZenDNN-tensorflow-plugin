@@ -79,7 +79,7 @@ jobs:
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
@@ -95,7 +95,7 @@ jobs:
 
       - name: Clone ZenDNN_tools
         run: |
-          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
         
       - name: PR INFO
         shell: bash
@@ -432,7 +432,7 @@ jobs:
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
@@ -448,7 +448,7 @@ jobs:
 
       - name: Clone ZenDNN_tools
         run: |
-          git clone --depth 0 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
 
       - name: PR INFO
         shell: bash
