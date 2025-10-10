@@ -132,10 +132,7 @@ jobs:
          echo "PR HEAD SHA      : $HEAD_SHA"
          echo ""
 
-         echo "Fetching branches..."
-         git fetch --no-tags origin +refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH || true
-         git fetch --no-tags origin +refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH || true
-         echo ""
+         git fetch --all --no-tags || true
 
          echo "COMMITS BETWEEN BASE AND HEAD"
          git log --oneline -20 || echo "No commits found"
