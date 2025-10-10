@@ -24,33 +24,33 @@ on:
 
 jobs:
   keyword_check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch' }}
     uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Keyword_Check_tests.yml@main
     secrets: inherit
   syntactic_check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}} 
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}} 
     uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml@main
     secrets: inherit
   trailing_check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
     uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests.yml@main
     secrets: inherit
   unnecessary_check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
     uses:  AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Unnecessary_Lines_Check_tests.yml@main
     secrets: inherit
   jira-id-check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
     uses: AMD-Zenai/ZenDNN/.github/workflows/jira_check.yml@main
     secrets: inherit
   license-header-check:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'}}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
     uses: AMD-Zenai/ZenDNN/.github/workflows/header_check.yml@main
     secrets: inherit
   ZenDNN_TensorFlow_PR:
     runs-on: [amd-zenai-arc-xlarge-dind]
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }} 
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}} 
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
