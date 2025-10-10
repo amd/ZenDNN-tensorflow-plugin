@@ -132,10 +132,13 @@ jobs:
          echo "PR HEAD SHA      : $HEAD_SHA"
          echo ""
 
-         git fetch --all --no-tags || true
+         echo "Fetching branches..."
+         git fetch --no-tags origin +refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH || true
+         git fetch --no-tags origin +refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH || true
+         echo ""
 
          echo "COMMITS BETWEEN BASE AND HEAD"
-         git log --oneline -20 || echo "No commits found"
+          git log --oneline -20 || echo "No commits found"
          echo ""
           echo "=============================="
          echo "   ZENDNN INFO"
@@ -159,7 +162,7 @@ jobs:
           echo "LAST 20 COMMITS (ZenDNN_tools)"
           git log --oneline -20 || echo "No commits found"
          else
-         echo "ZenDNN directory not found — skipping."
+         echo "ZenDNN_tools directory not found — skipping."
          fi
 
          echo "=============================="
@@ -186,7 +189,6 @@ jobs:
          else
          echo "ZenDNN_tools directory not found — skipping."
          fi
-
 
       - name: Run CI script
         run: |
