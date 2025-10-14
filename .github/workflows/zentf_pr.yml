@@ -275,6 +275,12 @@ jobs:
           export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
           export CONDA_NOTICES_ENABLED=false
           mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+
+          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          mkdir -p $CONDA_ROOT_PREFIX
+          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          touch $CONDA_ENVIRONMENTS_TXT_FILE
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -366,6 +372,12 @@ jobs:
           export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
           export CONDA_NOTICES_ENABLED=false
           mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+
+          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          mkdir -p $CONDA_ROOT_PREFIX
+          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          touch $CONDA_ENVIRONMENTS_TXT_FILE
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -661,6 +673,12 @@ jobs:
           export CONDA_NOTICES_ENABLED=false
           mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
 
+          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          mkdir -p $CONDA_ROOT_PREFIX
+          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          touch $CONDA_ENVIRONMENTS_TXT_FILE
+
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -754,6 +772,12 @@ jobs:
           export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
           export CONDA_NOTICES_ENABLED=false
           mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+
+          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          mkdir -p $CONDA_ROOT_PREFIX
+          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          touch $CONDA_ENVIRONMENTS_TXT_FILE
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
