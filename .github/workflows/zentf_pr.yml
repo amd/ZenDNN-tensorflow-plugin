@@ -250,6 +250,7 @@ jobs:
           # Go to ZenDNN_tools scripts directory
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Create temporary conda config to prevent permission issues
+          mkdir -p /tmp/zenai/zentf
           export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
           echo 'channels:' >> $CONDARC
@@ -336,7 +337,7 @@ jobs:
           
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
-
+          mkdir -p /tmp/zenai/zentf
           export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
           echo 'channels:' >> $CONDARC
@@ -619,7 +620,7 @@ jobs:
           echo "Found wheel: $WHEEL_FILE"
           # Go to ZenDNN_tools scripts directory
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
-
+          mkdir -p /tmp/zenai/zentf
           # Create temporary conda config to prevent permission issues
           export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
@@ -710,7 +711,7 @@ jobs:
           
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
-
+          mkdir -p /tmp/zenai/zentf
           export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
           echo 'channels:' >> $CONDARC
