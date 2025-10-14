@@ -1,0 +1,107 @@
+name: ZenDNN_TF_Plugin_SA_Keyword_Check
+
+on:
+ workflow_call:
+
+env:
+  CHECK_TYPE: keyword_check
+  EXECUTION_TYPE: only_tests
+  KEYWORD_CHECK_PATHS: "$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/*,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/scripts/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tests/**,$GITHUB_WORKSPACE/ZenDNN_TensorFlow_Plugin/tensorflow_plugin/**"
+  IGN_KWD_CHK_PATHS: "BUILD,.bzl,.patch,.build,third_party"
+  UNWANTED_KEYWORDS: "stackoverflow,MSDN,wiki,microsoft"
+  NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
+  CONDA_ENV_NAME: tf-plugin-source-adherence-check-env
+
+jobs:
+  KeywordCheck:
+    runs-on:  [precheck_runner]
+    steps:
+
+      - name: Set NFS_LOC to actual home
+        run: |
+          echo "NFS_LOC=$(getent passwd $USER | cut -d: -f6)/datasets" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Install NFS utilities and mount
+        run: |
+          sudo apt-get install -y nfs-common
+          mkdir -p $NFS_LOC
+          sudo mount $NFS_MOUNT_POINT $NFS_LOC
+        shell: bash
+        
+      - name: Checkout ZenDNN_TensorFlow_Plugin
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set WORKSPACE and PARENT_DIR
+        run: |
+          echo "PARENT_DIR=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+          echo "WORKSPACE=$(dirname "${GITHUB_WORKSPACE}")" >> $GITHUB_ENV
+
+      - name: Prepare environment
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "Parent Dir: $PARENT_DIR"
+          echo "PATH: $PATH"
+        shell: bash
+
+      - name: Fix permissions and clean caches
+        run: |
+          sudo chmod -R 777 $HOME/anaconda3/ || true
+          sudo chmod -R 777 $HOME/.conda/ || true
+          sudo chmod -R 777 $HOME/.cache/ || true
+          sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+        shell: bash
+      
+      - name: Clone ZenDNN_tools
+        run: |
+          git clone --depth 1 --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN_tools.git "$PARENT_DIR/ZenDNN_tools"
+    
+      - name: Setup Conda environment and Run Precheck
+        working-directory: ${{ env.PARENT_DIR }}/ZenDNN_tools/scripts/ci
+        run: |
+         echo "Initializing Conda"
+         source $HOME/anaconda3/etc/profile.d/conda.sh
+         if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
+           conda create -n $CONDA_ENV_NAME python=3.10 -y
+         fi
+         conda activate $CONDA_ENV_NAME
+          python --version
+          pip install --upgrade pip
+          chmod +x zendnn_ci_tf_plugin_presub_check.sh
+         ./zendnn_ci_tf_plugin_presub_check.sh -et $EXECUTION_TYPE
+        shell: bash
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: precheck-results
+          path: |
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt 
+            /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+
+      - name: Delete uploaded artifacts from workspace
+        if: always()
+        run: |
+         echo "Deleting precheck artifacts created in this run..."
+         rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.txt
+         rm -f /home/amd/actions-runner-precheck-2/workspace/ZenDNN_TensorFlow_Plugin/*.properties
+         echo "Artifacts deleted, workspace is clean for next run."
+        shell: bash
+
+      - name: Cleanup workspace and environment
+        if: always()  
+        run: |
+         echo "Cleaning up caches and temporary files"
+         sudo rm -rf ~/.cache/* ~/.local/* ~/.conda/*
+         sudo chmod -R 777 $HOME/anaconda3/ || true
+         sudo chmod -R 777 $HOME/.conda/ || true
+
+         rm -rf $PARENT_DIR/ZenDNN_tools
+    
+         echo "Unmounting NFS..."
+         sudo umount $NFS_LOC || echo "NFS already unmounted or not mounted"
+         echo "Workspace cleanup completed."
+        shell: bash
+
