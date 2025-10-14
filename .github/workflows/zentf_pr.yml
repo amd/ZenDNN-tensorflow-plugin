@@ -250,7 +250,7 @@ jobs:
           # Go to ZenDNN_tools scripts directory
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Create temporary conda config to prevent permission issues
-          export CONDARC="/tmp/temp_condarc"
+          export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
           echo 'channels:' >> $CONDARC
           echo '  - conda-forge' >> $CONDARC
@@ -261,6 +261,13 @@ jobs:
           # Print the condarc file for debugging
           echo "Created temporary condarc at $CONDARC:"
           cat $CONDARC
+          
+          export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
+          export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
+          mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
+          export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
+          mkdir -p $PIP_CACHE_DIR
+          
           export MINIFORGE_PATH="/proj/zendai/miniforge3"
           export PATH="$MINIFORGE_PATH/bin:$PATH"
           if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
@@ -282,7 +289,7 @@ jobs:
           sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           # Also comment out any conda config commands in the script
           sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -330,7 +337,7 @@ jobs:
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
 
-          export CONDARC="/tmp/temp_condarc"
+          export CONDARC="/tmp/zenai/zentf/temp_condarc"
           echo 'channel_priority: strict' > $CONDARC
           echo 'channels:' >> $CONDARC
           echo '  - conda-forge' >> $CONDARC
@@ -338,6 +345,12 @@ jobs:
           echo 'default_channels: []' >> $CONDARC
           echo 'ssl_verify: true' >> $CONDARC
           echo 'changeps1: true' >> $CONDARC
+
+          export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
+          export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
+          mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
+          export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
+          mkdir -p $PIP_CACHE_DIR
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
