@@ -323,6 +323,11 @@ jobs:
           # Export the temporary condarc for the script execution too
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run install script with the temporary condarc
+          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
+          echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
+          echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           CONDARC=$CONDARC bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
         shell: bash
         
@@ -411,6 +416,11 @@ jobs:
           #cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
+          echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
+          echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
         
@@ -721,7 +731,11 @@ jobs:
 
           # Export the temporary condarc for the script execution too
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-
+          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
+          echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
+          echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           # Run install script with the temporary condarc
           CONDARC=$CONDARC bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
         shell: bash
@@ -811,6 +825,11 @@ jobs:
           #cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
+          echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
+          echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
         
