@@ -300,7 +300,7 @@ jobs:
           sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_envs/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -395,7 +395,7 @@ jobs:
           sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_envs/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
@@ -699,7 +699,7 @@ jobs:
           sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_envs/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -795,7 +795,7 @@ jobs:
           sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_envs/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
