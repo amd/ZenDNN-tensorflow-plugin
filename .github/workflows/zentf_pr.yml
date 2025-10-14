@@ -268,6 +268,13 @@ jobs:
           mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
           export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
           mkdir -p $PIP_CACHE_DIR
+
+          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          export CONDA_NOTICES_ENABLED=false
+          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -352,6 +359,13 @@ jobs:
           mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
           export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
           mkdir -p $PIP_CACHE_DIR
+
+          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          export CONDA_NOTICES_ENABLED=false
+          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -640,6 +654,13 @@ jobs:
           export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
           mkdir -p $PIP_CACHE_DIR
 
+          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          export CONDA_NOTICES_ENABLED=false
+          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"
           export PATH="$MINIFORGE_PATH/bin:$PATH"
@@ -726,6 +747,13 @@ jobs:
           mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
           export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
           mkdir -p $PIP_CACHE_DIR
+
+          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          export CONDA_NOTICES_ENABLED=false
+          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
           
           export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
           export PATH="$MINIFORGE_PATH/bin:$PATH"
