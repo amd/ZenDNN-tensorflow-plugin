@@ -229,6 +229,13 @@ jobs:
           export blis_release_hash=${{ env.blis_release_hash }}
           export blis_release_version=${{ env.blis_release_version }}
           export PARENT_DIR=${PARENT_DIR}
+          echo "========= FILE: zendnn_ci_tf_plugin_presub_build.sh ========="
+          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          echo "============================================================="
+
+          echo "========= FILE: zendnn_ci_tf_plugin_build.sh ========="
+          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          echo "======================================================"
           bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
         shell: bash
 
@@ -638,6 +645,13 @@ jobs:
           export blis_release_hash=${{ env.blis_release_hash }}
           export blis_release_version=${{ env.blis_release_version }}
           export PARENT_DIR=${PARENT_DIR}
+          echo "========= FILE: zendnn_ci_tf_plugin_presub_build.sh ========="
+          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          echo "============================================================="
+
+          echo "========= FILE: zendnn_ci_tf_plugin_build.sh ========="
+          cat "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          echo "======================================================"
           bash "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
         shell: bash
 
