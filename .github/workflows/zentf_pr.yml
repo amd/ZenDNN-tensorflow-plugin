@@ -47,6 +47,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
     uses: AMD-Zenai/ZenDNN/.github/workflows/header_check.yml@main
     secrets: inherit
+    
   ZenDNN_TensorFlow_PR:
     runs-on: [amd-zenai-arc-xlarge-dind]
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
@@ -462,6 +463,18 @@ jobs:
          -H "Accept: application/vnd.github.v3+json" \
          -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
           "https://api.github.com/repos/AMD-Zenai/ZenDNN/statuses/${{ github.event.client_payload.zendnn_ref_sha }}" \
+          -d "{\"state\":\"${state}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}" 
+      - name: Report status back to ZenDNNTOOLS repo
+        if: always()
+        run: |
+         state="success"
+         if [ "${{ job.status }}" != "success" ]; then
+          state="failure"
+         fi
+         curl -s -X POST \
+         -H "Accept: application/vnd.github.v3+json" \
+         -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+          "https://api.github.com/repos/AMD-Zenai/ZenDNN_tools/statuses/${{ github.event.client_payload.zendnntools_ref_sha }}" \
           -d "{\"state\":\"${state}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}"
 
        
