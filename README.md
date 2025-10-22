@@ -48,8 +48,8 @@ This section explains how to use the Python interface. For Java and C++ interfac
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.20.0-zendnn-v5.2.0-rel-env python=3.10 -y
-  $ conda activate tf-v2.20.0-zendnn-v5.2.0-rel-env
+  $ conda create -n tf-v2.20.0-zendnn-v5.1.0-rel-env python=3.10 -y
+  $ conda activate tf-v2.20.0-zendnn-v5.1.0-rel-env
   ```
   Note: Python 3.10 used here for example.
 * Install TensorFlow v2.20.0
