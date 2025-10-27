@@ -11,6 +11,10 @@ on:
         description: 'ZenDNN branch or PR ref (optional, e.g. refs/pull/123/head)'
         required: false
         default: ''
+      zendnnTF_ref:
+        description: 'ZenDTF branch or PR ref (optional, e.g. refs/pull/123/head)'
+        required: false
+        default: ''
       zentf_use_local_zendnn:
         description: 'Set to 1 to use local ZenDNN'
         required: false
@@ -66,6 +70,7 @@ jobs:
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+      ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref || github.event.client_payload.zendnnTF_ref || '' }}
     steps:
       - name: Clean workspace before checkout
         run: |
@@ -485,6 +490,42 @@ jobs:
          -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
           "https://api.github.com/repos/AMD-Zenai/ZenDNN_tools/statuses/${{ github.event.client_payload.zendnntools_ref_sha }}" \
           -d "{\"state\":\"${state}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}"
+      - name: Report status back for workflow_dispatch commits
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          state="success"
+          if [ "${{ job.status }}" != "success" ]; then
+            state="failure"
+          fi
+
+          echo "Final job state: $state"
+          echo "ZenDNN_REF: ${{ github.event.inputs.zendnn_ref }}"
+          echo "ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref }}"
+
+          # Report to ZenDNN repo if zendnn_ref commit SHA was provided
+          if [ -n "${{ github.event.inputs.zendnn_ref }}" ]; then
+            echo "Reporting $state to ZenDNN commit ${{ github.event.inputs.zendnn_ref }}"
+            curl -s -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+              "https://api.github.com/repos/AMD-Zenai/ZenDNN/statuses/${{ github.event.inputs.zendnn_ref }}" \
+              -d "{\"state\":\"${state}\",\"context\":\"ZenDNN_TensorFlow_Plugin CI\",\"description\":\"ZenDNN_TensorFlow_Plugin run ${state}\"}"
+          else
+            echo "Skipping ZenDNN status update (no commit SHA provided)"
+          fi
+
+          # Report to ZenDNN_TensorFlow_Plugin repo if zendnnTF_ref commit SHA was provided
+          if [ -n "${{ github.event.inputs.zendnnTF_ref }}" ]; then
+            echo "Reporting $state to ZenDNN_PyTorch_Plugin commit ${{ github.event.inputs.zendnnTF_ref}}"
+            curl -s -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+              "https://api.github.com/repos/AMD-Zenai/ZenDNN_TensorFlow_Plugin/statuses/${{ github.event.inputs.zendnnTF_ref }}" \
+              -d "{\"state\":\"${state}\",\"context\":\"ZenDNN_TensorFlow_Plugin CI\",\"description\":\"ZenDNN_TensorFlow_Plugin run ${state}\"}"
+          else
+            echo "Skipping ZenDNN_TensorFlow_Plugin status update (no commit SHA provided)"
+          fi
+
 
        
   ZenDNN_TensorFlow_Push:
@@ -504,6 +545,8 @@ jobs:
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+      ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref || github.event.client_payload.zendnnTF_ref || '' }}
+
     steps:
       - name: Clean workspace before checkout
         run: |
@@ -925,3 +968,39 @@ jobs:
          -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
           "https://api.github.com/repos/AMD-Zenai/ZenDNN_tools/statuses/${{ github.event.client_payload.zendnntools_ref_sha }}" \
           -d "{\"state\":\"${state}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}"
+      - name: Report status back for workflow_dispatch commits
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          state="success"
+          if [ "${{ job.status }}" != "success" ]; then
+            state="failure"
+          fi
+
+          echo "Final job state: $state"
+          echo "ZenDNN_REF: ${{ github.event.inputs.zendnn_ref }}"
+          echo "ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref }}"
+
+          # Report to ZenDNN repo if zendnn_ref commit SHA was provided
+          if [ -n "${{ github.event.inputs.zendnn_ref }}" ]; then
+            echo "Reporting $state to ZenDNN commit ${{ github.event.inputs.zendnn_ref }}"
+            curl -s -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+              "https://api.github.com/repos/AMD-Zenai/ZenDNN/statuses/${{ github.event.inputs.zendnn_ref }}" \
+              -d "{\"state\":\"${state}\",\"context\":\"ZenDNN_TensorFlow_Plugin CI\",\"description\":\"ZenDNN_TensorFlow_Plugin run ${state}\"}"
+          else
+            echo "Skipping ZenDNN status update (no commit SHA provided)"
+          fi
+
+          # Report to ZenDNN_TensorFlow_Plugin repo if zendnnTF_ref commit SHA was provided
+          if [ -n "${{ github.event.inputs.zendnnTF_ref }}" ]; then
+            echo "Reporting $state to ZenDNN_PyTorch_Plugin commit ${{ github.event.inputs.zendnnTF_ref}}"
+            curl -s -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+              "https://api.github.com/repos/AMD-Zenai/ZenDNN_TensorFlow_Plugin/statuses/${{ github.event.inputs.zendnnTF_ref }}" \
+              -d "{\"state\":\"${state}\",\"context\":\"ZenDNN_TensorFlow_Plugin CI\",\"description\":\"ZenDNN_TensorFlow_Plugin run ${state}\"}"
+          else
+            echo "Skipping ZenDNN_TensorFlow_Plugin status update (no commit SHA provided)"
+          fi
+
