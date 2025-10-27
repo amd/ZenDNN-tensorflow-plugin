@@ -815,9 +815,6 @@ jobs:
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
-          echo "=========== Modified install script ==========="
-          #cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          echo "=============================================="
 
           # Export the temporary condarc for the script execution too
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
@@ -827,6 +824,9 @@ jobs:
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
           echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
+          echo "=========== FILE: zendnn_ci_nightly_tf_plugin_install_wheel.sh ==========="
+          cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          echo "=========================================================="
           # Run install script with the temporary condarc
           CONDARC=$CONDARC bash zendnn_ci_nightly_tf_plugin_install_wheel.sh                               
         shell: bash
@@ -910,11 +910,7 @@ jobs:
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
           sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          
-          
-          echo "=========== Modified kernel test script ==========="
-          #cat zendnn_ci_tf_plugin_kernel_tests.sh
-          echo "==================================================="
+
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
@@ -922,6 +918,9 @@ jobs:
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
           echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
+          echo "=========== FILE: zendnn_ci_tf_plugin_kernel_tests.sh ==========="
+          cat zendnn_ci_tf_plugin_kernel_tests.sh
+          echo "==================================================="
           CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
         shell: bash
         
