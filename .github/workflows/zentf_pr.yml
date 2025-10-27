@@ -207,19 +207,19 @@ jobs:
 
       - name: Run CI script
         run: |
-          sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$WORKSPACE/ZenDNN_TensorFlow_Plugin:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i 's|/usr/local/bin/bazel|"$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '/if type -P/i cd $WORKSPACE/ZenDNN_TensorFlow_Plugin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\/tmp\/bazelisk_bin',/" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "/import os/a bazel_cache = '/tmp/bazelisk_bin'" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "s|'--output_user_root=\/tmp/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
@@ -317,27 +317,27 @@ jobs:
           # Instead of: conda config --set changeps1 true
           # Modify install script
           export PATH="$MINIFORGE_PATH/bin:$PATH"
-          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           # Also comment out any conda config commands in the script
-          sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
-          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           # Replace wheel path in install script with the found wheel
-          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           echo "=========== Modified install script ==========="
           #cat zendnn_ci_nightly_tf_plugin_install_wheel.sh
@@ -345,7 +345,7 @@ jobs:
           # Export the temporary condarc for the script execution too
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           # Run install script with the temporary condarc
-          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
@@ -416,30 +416,30 @@ jobs:
           fi
           conda deactivate || true
           export PATH="$MINIFORGE_PATH/bin:$PATH"
-          sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
-          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
           
           
           echo "=========== Modified kernel test script ==========="
           #cat zendnn_ci_tf_plugin_kernel_tests.sh
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
@@ -682,19 +682,19 @@ jobs:
          fi
       - name: Run CI script
         run: |
-          sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
-          sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's/sudo//g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i '/mkmhub/ s/mkmhub/-v \/proj\/zendai:\/proj\/zendai -v \/home\/runner:\/home\/runner mkmhub/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i "s|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION|zentf-\$ZENDNN_VERSION-tf-\$ZENDNN_TF_VERSION-xco|g" "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_presub_build.sh"
+          #sed -i 's|/root/anaconda3/|/proj/zendai_conda/miniforge3/|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's/^\(conda init bash\|conda config --set auto_activate_base false\|source ~\/.bashrc\)/# \1/' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/echo "host_pid" \$host_pid/a mkdir -p /tmp/bazelisk_bin\nexport XDG_CACHE_HOME=/tmp/bazelisk_bin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '/\/usr\/local\/bin\/bazel version/i export PATH="$WORKSPACE/ZenDNN_TensorFlow_Plugin:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel:$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazelisk_bin:$PATH"' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i '/\/usr\/local\/bin\/bazel version/ s|version|--output_user_root="/tmp/bazelisk_bin" version|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|echo `bazel version`|echo `bazel --output_user_root="/tmp/bazelisk_bin" version`|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i 's|/usr/local/bin/bazel|"$WORKSPACE/ZenDNN_TensorFlow_Plugin/bazel"|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           #sed -i '/if type -P/i cd $WORKSPACE/ZenDNN_TensorFlow_Plugin' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
-          sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|^[[:space:]]*bazel clean.*|bazel --output_user_root="/tmp/bazelisk_bin" clean --expunge|' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
+          #sed -i 's|^[[:space:]]*bazel build|bazel --output_user_root="/tmp/bazelisk_bin" build|g' "$PARENT_DIR/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_build.sh"
           sed -i "s/\(\['bazel',\)/\1 '--output_user_root=\/tmp\/bazelisk_bin',/" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "/import os/a bazel_cache = '/tmp/bazelisk_bin'" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
           sed -i "s|'--output_user_root=\/tmp/bazelisk_bin'|f'--output_user_root={bazel_cache}'|g" "$WORKSPACE/ZenDNN_TensorFlow_Plugin/configure.py"
@@ -794,31 +794,31 @@ jobs:
           # Instead of: conda config --set changeps1 true
           # Modify install script
           export PATH="$MINIFORGE_PATH/bin:$PATH"
-          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|export PATH=\$HOME/anaconda3/bin:\$PATH|export PATH=\/proj/zendai/miniforge3/bin:\$PATH|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/if type -P conda/,/fi/ s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           # Also comment out any conda config commands in the script
-          sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i 's|^conda config|# conda config|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
-          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
           # Replace wheel path in install script with the found wheel
-          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_nightly_tf_plugin_install_wheel.sh
 
 
           # Export the temporary condarc for the script execution too
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
@@ -893,26 +893,26 @@ jobs:
           fi
           conda deactivate || true
           export PATH="$MINIFORGE_PATH/bin:$PATH"
-          sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|export PATH=$HOME/anaconda3/bin:$PATH|export PATH=/proj/zendai/miniforge3/bin:$PATH|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda init bash|# conda init bash|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda config --set auto_activate_base false|# conda config --set auto_activate_base false|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
-          sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
-          sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
+          #sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
 
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
+          #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
