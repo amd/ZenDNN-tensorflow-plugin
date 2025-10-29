@@ -17,8 +17,7 @@
 # ZenDNN_TensorFlow_Plugin CODEOWNERS
 
 # All folders/files except .github
-#*    @AMD-Zenai/zenai_leads @AMD-Zenai/zenai_zentf_dev
-* @kpendyal_amdeng
+*    @AMD-Zenai/zenai_leads @AMD-Zenai/zenai_zentf_dev
 
 # .github folder
 .github/    @kpendyal_amdeng
