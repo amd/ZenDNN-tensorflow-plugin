@@ -8,11 +8,11 @@ env:
   NFS_MOUNT_POINT: daytonax1670.amd.com:/home/ext_hdd/datasets
   CHECK_TYPE: syntactic_check
   PYLINT_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
-  IGN_PYLT_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,third_party,llvm_project,$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt,bazel_build_output.txt,./tests/__init__.py,./scripts/__init__.py"
+  IGN_PYLT_CHK_PATHS: "./third_party,CODEOWNERS,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,third_party,llvm_project,$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt,bazel_build_output.txt,./tests/__init__.py,./scripts/__init__.py"
   CLANG_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
-  IGN_CLG_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
+  IGN_CLG_CHK_PATHS: "./third_party,CODEOWNERS,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
   SHELL_CHECK_PATHS: "scripts/**,tests/**,tensorflow_plugin/**"
-  IGN_SHL_CHK_PATHS: "./third_party,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
+  IGN_SHL_CHK_PATHS: "./third_party,CODEOWNERS,WORKSPACE,configure,LICENSE,README.md,SECURITY.md,THIRD-PARTY-NOTICES,requirements.txt,bazel_build_output.txt"
   LINT_RC_PATH: "$WORKSPACE/ZenDNN_tools/scripts/ci/pylintrc.txt"
   CONDA_ENV_NAME: tf-plugin-syntactic-check-env
 
