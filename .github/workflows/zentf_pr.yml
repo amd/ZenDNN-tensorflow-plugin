@@ -529,6 +529,7 @@ jobs:
         shell: bash
         
       - name: Archive build artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zentf-artifacts
@@ -1005,6 +1006,7 @@ jobs:
         shell: bash
         
       - name: Archive build artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zentf-artifacts
