@@ -25,6 +25,9 @@ cc_library(
         "@llvm_openmp//:libiomp5.so",
         "@zen_dnn//:libamdZenDNN.so",
     ],
+    deps = ["@zendnnl_repo//:zendnnl_lib"],
+    copts = ["-std=c++17", "-fopenmp"],
+    linkopts = ["-fopenmp"],
     visibility = ["//visibility:public"],
 )
 

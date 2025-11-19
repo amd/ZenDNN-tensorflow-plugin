@@ -20,6 +20,12 @@ py_repositories()
 load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies")
 rules_cc_dependencies()
 
+# Load rules_foreign_cc dependencies with required CMake.
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+rules_foreign_cc_dependencies(
+    cmake_version = "3.25.1",  # Specify CMake version.
+)
+
 load(
     "@bazel_toolchains//repositories:repositories.bzl",
     bazel_toolchains_repositories = "repositories",

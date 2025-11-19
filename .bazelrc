@@ -25,3 +25,6 @@ build --per_file_copt=external/.*@-Wno-error
 build --copt=-Wno-error=stringop-overflow
 build --copt=-Wno-comment
 build --copt=-Wno-int-in-bool-context
+
+# Pass environment variables to build actions
+build --action_env=ZENDNNL_MANYLINUX_BUILD

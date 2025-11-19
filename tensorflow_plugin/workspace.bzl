@@ -11,6 +11,22 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     gcc_configure(name = "local_config_gcc")
     syslibs_configure(name = "local_config_syslibs")
 
+    # Add rules_foreign_cc for CMake integration
+    http_archive(
+        name = "rules_foreign_cc",
+        sha256 = "4b33d62cf109bcccf286b30ed7121129cc34cf4f4ed9d8a11f38d9108f40ba74",
+        strip_prefix = "rules_foreign_cc-0.11.1",
+        url = "https://github.com/bazelbuild/rules_foreign_cc/releases/download/0.11.1/rules_foreign_cc-0.11.1.tar.gz",
+    )
+
+    tf_http_archive(
+        name = "zendnnl_repo",
+        build_file = "//third_party:zendnnl_cmake.BUILD",
+        sha256 = "fdfa1366113e07362cae7315b9f91bf849d8d8eb6015a87bd03ec412c8f9ca46",
+        strip_prefix = "ZenDNN-zendnnl-2025-WW46",
+        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnnl-2025-WW46.tar.gz"),
+    )
+
     http_archive(
         name = "bazel_toolchains",
         sha256 = "294cdd859e57fcaf101d4301978c408c88683fbc46fbc1a3829da92afbea55fb",
