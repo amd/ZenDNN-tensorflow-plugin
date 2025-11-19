@@ -1,3 +1,7 @@
+# ******************************************************************************
+# Copyright (c) 2025 Advanced Micro Devices, Inc.
+# All rights reserved.
+# ******************************************************************************
 name: ZenDNN_TF_Plugin_SA_Trailing_Space_Tab_Check_tests
 
 on:
