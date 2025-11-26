@@ -23,7 +23,7 @@ rules_cc_dependencies()
 # Load rules_foreign_cc dependencies with required CMake.
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 rules_foreign_cc_dependencies(
-    cmake_version = "3.25.1",  # Specify CMake version.
+    cmake_version = "3.27.9",  # Specify CMake version.
 )
 
 load(

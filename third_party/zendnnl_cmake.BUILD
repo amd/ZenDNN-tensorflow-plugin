@@ -18,10 +18,10 @@ cmake(
     cache_entries = {
         # ZenDNNL Configurations.
         "ZENDNNL_DEPENDS_ONEDNN": "ON",
-        "ZENDNNL_DEPENDS_AMDBLIS": "ON",
+        "ZENDNNL_DEPENDS_AMDBLIS": "OFF",  # Disabled: mutually exclusive with AOCLDLP
         "ZENDNNL_DEPENDS_AOCLUTILS": "ON",
         "ZENDNNL_DEPENDS_JSON": "ON",
-        "ZENDNNL_DEPENDS_AOCLDLP": "OFF",
+        "ZENDNNL_DEPENDS_AOCLDLP": "ON",  # Enabled: Deep Learning Performance library
         "ZENDNNL_DEPENDS_LIBXSMM": "ON",
 
         # ZenDNNL Library Build Options.
@@ -49,6 +49,7 @@ cmake(
         "ZENDNNL_ONEDNN_INJECTED": "OFF",
         "ZENDNNL_AMDBLIS_INJECTED": "OFF",
         "ZENDNNL_AOCLUTILS_INJECTED": "OFF",
+        "ZENDNNL_AOCLDLP_INJECTED": "OFF",
     },
     env = {
         "CXXFLAGS": "-fopenmp -std=c++17",
@@ -76,6 +77,7 @@ cmake(
         "libau_cpuid.a",
         "libdnnl.a",
         "libxsmm.a",
+        "libaocl-dlp.a",
     ],
 
     # Copy all libraries and headers to the right locations.
@@ -132,8 +134,8 @@ cmake(
         # Copy AOCL Utils headers.
         copy_headers "$INSTALL_BASE/deps/aoclutils/include" "AOCL Utils"
 
-        # Copy AOCL BLIS headers.
-        copy_headers "$INSTALL_BASE/deps/amdblis/include" "AOCL BLIS"
+        # Copy AOCL DLP headers.
+        copy_headers "$INSTALL_BASE/deps/aocldlp/include" "AOCL DLP"
 
         # Copy LIBXSMM headers.
         copy_headers "$INSTALL_BASE/deps/libxsmm/include" "LIBXSMM"
@@ -159,8 +161,8 @@ cmake(
         # Copy OneDNN library.
         copy_lib "$INSTALL_BASE/deps/onednn/$LIB_DIR/libdnnl.a" "libdnnl.a" "OneDNN library"
 
-        # Copy AOCL BLIS library.
-        copy_lib "$INSTALL_BASE/deps/amdblis/lib/libblis-mt.a" "libblis-mt.a" "AOCL BLIS library"
+        # Copy AOCL DLP library.
+        copy_lib "$INSTALL_BASE/deps/aocldlp/lib/libaocl-dlp.a" "libaocl-dlp.a" "AOCL DLP library"
 
         # Copy LIBXSMM library.
         copy_lib "$INSTALL_BASE/deps/libxsmm/lib/libxsmm.a" "libxsmm.a" "LIBXSMM library"
