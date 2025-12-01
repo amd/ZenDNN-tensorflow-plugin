@@ -59,7 +59,8 @@ jobs:
               'check-commit-messages',
               'intelligent analysis',
               'intelligence',
-              'pr status notification'
+              'pr status notification',
+              'zendnn tensorflow plugin ci'
             ];
             
             const isExcluded = (name) => {
