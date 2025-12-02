@@ -68,8 +68,8 @@ jobs:
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
       blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
       blis_release_version: 'AOCL-Sep2025-b1'
-      zendnn_release_hash: 'b9192125b9f9a8046416d913324025c2e1acb54214a125ca1ee2b1279434f573'
-      zendnn_release_version: 'zendnn-2025-WW47'
+      zendnn_release_hash: 'c15fdd1a3f8342cc0657ba6648c55b0b2d648c9a3d76b48cf4a536dffabd0c4b'
+      zendnn_release_version: 'zendnn-2025-WW48'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
@@ -624,8 +624,8 @@ jobs:
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
       blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
       blis_release_version: 'AOCL-Sep2025-b1'
-      zendnn_release_hash: 'b9192125b9f9a8046416d913324025c2e1acb54214a125ca1ee2b1279434f573'
-      zendnn_release_version: 'zendnn-2025-WW47'
+      zendnn_release_hash: 'c15fdd1a3f8342cc0657ba6648c55b0b2d648c9a3d76b48cf4a536dffabd0c4b'
+      zendnn_release_version: 'zendnn-2025-WW48'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
