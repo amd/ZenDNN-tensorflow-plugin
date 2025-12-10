@@ -171,7 +171,7 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "zen_dnn",
         build_file = "//third_party/zen_dnn:zen.BUILD",
-        sha256 = "c15fdd1a3f8342cc0657ba6648c55b0b2d648c9a3d76b48cf4a536dffabd0c4b",
-        strip_prefix = "ZenDNN-zendnn-2025-WW48",
-        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnn-2025-WW48.tar.gz"),
+        sha256 = "98ae5ce6709eb9500022ceff596e5b241590ad534a7afc4b08f39689d69394bf",
+        strip_prefix = "ZenDNN-zendnn-2025-WW49",
+        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnn-2025-WW49.tar.gz"),
     )
