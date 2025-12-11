@@ -15,6 +15,10 @@ on:
         description: 'ZenDNN branch or PR ref (optional, e.g. refs/pull/123/head)'
         required: false
         default: ''
+      zendnnl_ref:
+        description: 'ZenDNNL branch or PR ref (optional, e.g. refs/pull/123/head)'
+        required: false
+        default: ''
       zendnnTF_ref:
         description: 'ZenDTF branch or PR ref (optional, e.g. refs/pull/123/head)'
         required: false
@@ -23,6 +27,10 @@ on:
         description: 'Set to 1 to use local ZenDNN'
         required: false
         default: '1'
+      zentf_use_local_zendnnl:
+        description: 'Set to 1 to use local ZenDNNL'
+        required: false
+        default: '0'
       zentf_use_local_blis:
         description: 'Set to 1 to use local BLIS'
         required: false
@@ -70,10 +78,14 @@ jobs:
       blis_release_version: 'AOCL-Sep2025-b1'
       zendnn_release_hash: '98ae5ce6709eb9500022ceff596e5b241590ad534a7afc4b08f39689d69394bf'
       zendnn_release_version: 'zendnn-2025-WW49'
+      zendnnl_release_hash: 'fdfa1366113e07362cae7315b9f91bf849d8d8eb6015a87bd03ec412c8f9ca46'
+      zendnnl_release_version: 'zendnnl-2025-WW46'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
+      TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '0' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+      ZENDNNL_REF: ${{ github.event.inputs.zendnnl_ref || github.event.client_payload.zendnnl_ref || '' }}
       ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref || github.event.client_payload.zendnnTF_ref || '' }}
       # Add ZenDNN triggering PR information
       ZENDNN_TRIGGERING_PR_NUMBER: ${{ github.event.client_payload.zendnn_pr_number || '' }}
@@ -173,6 +185,22 @@ jobs:
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
+            git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+          if [ "${ZENDNN_REF}" == "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git checkout zendnn_legacy
+            cd "$PARENT_DIR"
+          fi
+
+      - name: Clone ZenDNNL if needed
+        if: env.TF_PLUGIN_USE_LOCAL_ZENDNNL == '1'
+        run: |
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNNL"
+          if [ "${ZENDNNL_REF}" != "" ]; then
+            cd "$PARENT_DIR/ZenDNNL"
+            git fetch origin "${ZENDNNL_REF}"
             git checkout FETCH_HEAD
             cd "$PARENT_DIR"
           fi
@@ -319,6 +347,7 @@ jobs:
           export ZENDNN_TF_VERSION=${{ env.ZENDNN_TF_VERSION }}
           export WORKSPACE=${{ env.WORKSPACE }}
           export ZENTF_USE_LOCAL_ZENDNN=${{ env.ZENTF_USE_LOCAL_ZENDNN }}
+          export ZENTF_USE_LOCAL_ZENDNNL=${{ env.ZENTF_USE_LOCAL_ZENDNNL }}
           export ZENTF_USE_LOCAL_BLIS=${{ env.ZENTF_USE_LOCAL_BLIS }}
           export NATIVE_TF_VERSION=${{ env.NATIVE_TF_VERSION }}
           export UNWANTED_KEYWORDS=${{ env.UNWANTED_KEYWORDS }}
@@ -626,10 +655,14 @@ jobs:
       blis_release_version: 'AOCL-Sep2025-b1'
       zendnn_release_hash: '98ae5ce6709eb9500022ceff596e5b241590ad534a7afc4b08f39689d69394bf'
       zendnn_release_version: 'zendnn-2025-WW49'
+      zendnnl_release_hash: 'fdfa1366113e07362cae7315b9f91bf849d8d8eb6015a87bd03ec412c8f9ca46'
+      zendnnl_release_version: 'zendnnl-2025-WW46'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '1' }}
+      TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '0' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
+      ZENDNNL_REF: ${{ github.event.inputs.zendnnl_ref || github.event.client_payload.zendnnl_ref || '' }}
       ZENDTF_REF: ${{ github.event.inputs.zendnnTF_ref || github.event.client_payload.zendnnTF_ref || '' }}
 
     steps:
@@ -659,6 +692,17 @@ jobs:
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
+            git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+
+      - name: Clone ZenDNN if needed
+        if: env.TF_PLUGIN_USE_LOCAL_ZENDNNL == '1'
+        run: |
+          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNNL"
+          if [ "${ZENDNNL_REF}" != "" ]; then
+            cd "$PARENT_DIR/ZenDNNL"
+            git fetch origin "${ZENDNNL_REF}"
             git checkout FETCH_HEAD
             cd "$PARENT_DIR"
           fi
@@ -795,6 +839,7 @@ jobs:
           export ZENDNN_TF_VERSION=${{ env.ZENDNN_TF_VERSION }}
           export WORKSPACE=${{ env.WORKSPACE }}
           export ZENTF_USE_LOCAL_ZENDNN=${{ env.ZENTF_USE_LOCAL_ZENDNN }}
+          export ZENTF_USE_LOCAL_ZENDNNL=${{ env.ZENTF_USE_LOCAL_ZENDNNL }}
           export ZENTF_USE_LOCAL_BLIS=${{ env.ZENTF_USE_LOCAL_BLIS }}
           export NATIVE_TF_VERSION=${{ env.NATIVE_TF_VERSION }}
           export UNWANTED_KEYWORDS=${{ env.UNWANTED_KEYWORDS }}
