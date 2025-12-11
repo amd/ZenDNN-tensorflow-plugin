@@ -695,8 +695,13 @@ jobs:
             git checkout FETCH_HEAD
             cd "$PARENT_DIR"
           fi
+          if [ "${ZENDNN_REF}" == "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git checkout zendnn_legacy
+            cd "$PARENT_DIR"
+          fi
 
-      - name: Clone ZenDNN if needed
+      - name: Clone ZenDNNL if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNNL == '1'
         run: |
           git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNNL"
