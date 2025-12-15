@@ -28,16 +28,288 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_matmul_kernel_util.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_zendnnl_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
+#include "zendnnl.hpp"
 
 namespace amd_cpu_plugin {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
+
+// ZenDNNL MatMul implementation.
+template <typename T>
+bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
+                             const Tensor &b, const Tensor *bias,
+                             Tensor *output, bool transpose_a, bool transpose_b,
+                             FusedComputationType fusion_type,
+                             const Tensor *addend = nullptr) {
+  try {
+    using namespace zendnnl;
+    using namespace zendnnl::memory;
+    using namespace zendnnl::common;
+
+    // Get tensor dimensions.
+    auto a_shape = a.shape();
+    auto b_shape = b.shape();
+
+    // Basic validation for 2D MatMul.
+    if (a_shape.dims() != 2 || b_shape.dims() != 2) {
+      LogZenDNNLInfo("MatMul", "Only 2D MatMul supported");
+      return false;
+    }
+
+    // Calculate dimensions - use proper unsigned types.
+    uint64_t m, k_a, k_b, n;
+    if (transpose_a) {
+      m = static_cast<uint64_t>(a_shape.dim_size(1));
+      k_a = static_cast<uint64_t>(a_shape.dim_size(0));
+    } else {
+      m = static_cast<uint64_t>(a_shape.dim_size(0));
+      k_a = static_cast<uint64_t>(a_shape.dim_size(1));
+    }
+
+    if (transpose_b) {
+      k_b = static_cast<uint64_t>(b_shape.dim_size(1));
+      n = static_cast<uint64_t>(b_shape.dim_size(0));
+    } else {
+      k_b = static_cast<uint64_t>(b_shape.dim_size(0));
+      n = static_cast<uint64_t>(b_shape.dim_size(1));
+    }
+
+    // Validate inner dimensions match.
+    if (k_a != k_b) {
+      LogZenDNNLInfo("MatMul", "Inner dimensions don't match");
+      return false;
+    }
+
+    uint64_t k = k_a;
+
+    // Determine data type.
+    data_type_t dt;
+    if (std::is_same<T, float>::value) {
+      dt = data_type_t::f32;
+    } else if (std::is_same<T, Eigen::bfloat16>::value) {
+      dt = data_type_t::bf16;
+    } else {
+      LogZenDNNLInfo("MatMul", "Unsupported data type");
+      return false;
+    }
+
+    // Get pointers to TensorFlow tensor data.
+    T *a_data = const_cast<T *>(a.flat<T>().data());
+    T *b_data = const_cast<T *>(b.flat<T>().data());
+    T *output_data = output->flat<T>().data();
+
+    // Calculate buffer sizes.
+    uint64_t a_buffer_size = a.NumElements() * sizeof(T);
+    uint64_t b_buffer_size = b.NumElements() * sizeof(T);
+    uint64_t out_buffer_size = output->NumElements() * sizeof(T);
+
+    // Create tensors with proper index_type (uint64_t) and borrow memory from
+    // TF tensors.
+    // Note: ZenDNNL uses tensor order ("ab" or "ba") to indicate transpose,
+    // not dimension order. Dimensions should always be in logical order.
+    tensor_t input_a, output_tensor;
+
+    // Setup input A tensor - borrow memory from TF tensor.
+    std::vector<uint64_t> a_dims = {m, k};
+    input_a.set_size(a_dims)
+        .set_data_type(dt)
+        .set_order(transpose_a ? "ba" : "ab")
+        .set_storage(static_cast<void *>(a_data), a_buffer_size)
+        .create();
+
+    // Setup output tensor - borrow memory from TF tensor.
+    std::vector<uint64_t> out_dims = {m, n};
+    output_tensor.set_size(out_dims)
+        .set_data_type(dt)
+        .set_storage(static_cast<void *>(output_data), out_buffer_size)
+        .create();
+
+    // Create weights tensor (matrix B) - always {k, n}, use order field for
+    // transpose.
+    tensor_t weights;
+    std::vector<uint64_t> weight_dims = {k, n};
+    weights.set_size(weight_dims)
+        .set_data_type(dt)
+        .set_order(transpose_b ? "ba" : "ab")
+        .set_storage(static_cast<void *>(b_data), b_buffer_size)
+        .set_name("weights")
+        .create();
+
+    // Create matmul context.
+    using namespace zendnnl::ops;
+    matmul_context_t matmul_context;
+    matmul_context.set_param("weights", weights);
+
+    // Handle bias if present and fusion requires it.
+    tensor_t bias_tensor;
+    if (bias && fusion_type != FusedComputationType::kUndefined &&
+        fusion_type != FusedComputationType::kRelu) {
+      // Borrow memory from TF bias tensor.
+      T *bias_data = const_cast<T *>(bias->flat<T>().data());
+      uint64_t bias_buffer_size = bias->NumElements() * sizeof(T);
+
+      // ZenDNNL requires bias dimensions to match output dimensions
+      // For 2D matmul output {m, n}, bias must be {1, n}.
+      std::vector<uint64_t> bias_dims = {1, n};
+      bias_tensor.set_size(bias_dims)
+          .set_data_type(dt)
+          .set_storage(static_cast<void *>(bias_data), bias_buffer_size)
+          .set_name("bias")
+          .create();
+
+      matmul_context.set_param("bias", bias_tensor);
+    }
+
+    // Add post-ops based on fusion type
+    using namespace zendnnl::ops;
+    switch (fusion_type) {
+      case FusedComputationType::kBiasAddWithRelu:
+      case FusedComputationType::kRelu: {
+        post_op_t relu_post_op(post_op_type_t::relu);
+        matmul_context.set_post_op(relu_post_op);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithTanh: {
+        post_op_t tanh_post_op(post_op_type_t::tanh);
+        matmul_context.set_post_op(tanh_post_op);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithSigmoid: {
+        post_op_t sigmoid_post_op(post_op_type_t::sigmoid);
+        matmul_context.set_post_op(sigmoid_post_op);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithGeluApproximate: {
+        post_op_t gelu_post_op(post_op_type_t::gelu_tanh);
+        matmul_context.set_post_op(gelu_post_op);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithGeluExact: {
+        post_op_t gelu_post_op(post_op_type_t::gelu_erf);
+        matmul_context.set_post_op(gelu_post_op);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithAdd: {
+        // Binary add post-op - requires addend tensor.
+        if (addend) {
+          T *addend_data = const_cast<T *>(addend->flat<T>().data());
+          uint64_t addend_buffer_size = addend->NumElements() * sizeof(T);
+
+          // Create addend tensor for binary add.
+          tensor_t addend_tensor;
+          std::vector<uint64_t> addend_dims = {m, n};
+          addend_tensor.set_size(addend_dims)
+              .set_data_type(dt)
+              .set_storage(static_cast<void *>(addend_data), addend_buffer_size)
+              .set_name("binary_add_tensor_0")
+              .create();
+
+          // Add binary add post-op.
+          binary_add_params_t add_params{1.0f, "binary_add_tensor_0"};
+          post_op_t add_post_op(add_params);
+          matmul_context.set_post_op(add_post_op);
+
+          // Need to pass addend tensor as input to operator.
+          matmul_context.set_param("addend", addend_tensor);
+        } else {
+          LogZenDNNLInfo("MatMul",
+                         "Binary add requested but no addend tensor provided");
+          return false;
+        }
+        break;
+      }
+      case FusedComputationType::kBiasAddWithAddAndRelu: {
+        // Binary add + relu post-ops.
+        if (addend) {
+          T *addend_data = const_cast<T *>(addend->flat<T>().data());
+          uint64_t addend_buffer_size = addend->NumElements() * sizeof(T);
+
+          // Create addend tensor for binary add
+          tensor_t addend_tensor;
+          std::vector<uint64_t> addend_dims = {m, n};
+          addend_tensor.set_size(addend_dims)
+              .set_data_type(dt)
+              .set_storage(static_cast<void *>(addend_data), addend_buffer_size)
+              .set_name("binary_add_tensor_0")
+              .create();
+
+          // Add binary add post-op first
+          binary_add_params_t add_params{1.0f, "binary_add_tensor_0"};
+          post_op_t add_post_op(add_params);
+          matmul_context.set_post_op(add_post_op);
+
+          // Then add relu post-op
+          post_op_t relu_post_op(post_op_type_t::relu);
+          matmul_context.set_post_op(relu_post_op);
+
+          // Pass addend tensor as input
+          matmul_context.set_param("addend", addend_tensor);
+        } else {
+          LogZenDNNLInfo(
+              "MatMul",
+              "Binary add+relu requested but no addend tensor provided");
+          return false;
+        }
+        break;
+      }
+      default:
+        // No post-op or unsupported fusion type
+        break;
+    }
+
+    matmul_context.create();
+
+    // Create matmul operator.
+    matmul_operator_t matmul_operator;
+    matmul_operator.set_name("tf_zendnnl_matmul")
+        .set_context(matmul_context)
+        .create();
+
+    // Set input tensor name.
+    input_a.set_name("matmul_input");
+    output_tensor.set_name("matmul_output");
+
+    // Execute MatMul operation
+    status_t status = matmul_operator.set_input("matmul_input", input_a)
+                          .set_output("matmul_output", output_tensor)
+                          .execute();
+
+    if (status != status_t::success) {
+      LogZenDNNLInfo("MatMul", ("Execution failed with status " +
+                                std::to_string(static_cast<int>(status)))
+                                   .c_str());
+      return false;
+    }
+
+    return true;
+
+  } catch (const zendnnl::error_handling::exception_t &e) {
+    LogZenDNNLFallback("MatMul",
+                       ("ZenDNNL exception: " + std::string(e.what())).c_str());
+    return false;
+  } catch (const std::exception &e) {
+    LogZenDNNLFallback("MatMul",
+                       ("Exception: " + std::string(e.what())).c_str());
+    return false;
+  }
+}
+
+// Specialized versions for float and bfloat16
+template bool TryExecuteZenDNNLMatMul<float>(OpKernelContext *, const Tensor &,
+                                             const Tensor &, const Tensor *,
+                                             Tensor *, bool, bool,
+                                             FusedComputationType,
+                                             const Tensor *);
+template bool TryExecuteZenDNNLMatMul<Eigen::bfloat16>(
+    OpKernelContext *, const Tensor &, const Tensor &, const Tensor *, Tensor *,
+    bool, bool, FusedComputationType, const Tensor *);
 
 template <typename T>
 struct LaunchZenFusedMatMulOp {
@@ -306,60 +578,94 @@ class ZenMatMulOp : public OpKernel {
     auto a_ptr = const_cast<T *>(a.template flat<T>().data());
     auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (out->template flat<T>().data());
-    // Check if USE_ZENDNN_MATMUL_DIRECT environment variable is set to enable
-    // direct kernel This allows bypassing the standard ZenDNN matmul primitive
-    // path and using a more optimized direct kernel implementation for specific
-    // fusion types.
-    const char *env_value = std::getenv("USE_ZENDNN_MATMUL_DIRECT");
-    const int int_env_value = env_value ? std::atoi(env_value) : 0;
-    const Tensor *bias = nullptr;
-    if (is_fused && fused_computation_ != FusedComputationType::kRelu) {
-      bias = &context->input(2);
-    }
-    const bool used_zendnn_direct_kernel =
-        int_env_value && may_i_use_zendnn_direct_kernel(
-                             a, b, bias, out, fused_computation_, is_fused);
 
-    if (used_zendnn_direct_kernel) {
-      zendnn_direct_kernel<T>(a, b, bias, out, transpose_a_, transpose_b_,
-                              fused_computation_);
-    } else {
-      // Dimensions of matmul source, weights, bias and destination tensors.
-      memory::dims src_dims = {m, k};
-      memory::dims weight_dims = {k, n};
-      memory::dims bias_dims = {1, n};
-      memory::dims dst_dims = {m, n};
-      memory::format_tag src_format = memory::format_tag::nc;
-      memory::format_tag weight_format = (dim_pair[0].second == 1)
-                                             ? memory::format_tag::io
-                                             : memory::format_tag::oi;
+    // Try ZenDNNL implementation if enabled via USE_ZENDNNL environment
+    // variable
+    bool zendnnl_success = false;
+    if (IsZenDNNLEnabled()) {
+      const Tensor *bias = nullptr;
+      const Tensor *addend = nullptr;
 
-      ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
-                                    src_format, weight_format);
+      // Extract bias tensor for fusion types that need it
+      if (is_fused && fused_computation_ != FusedComputationType::kRelu) {
+        bias = &context->input(2);
+      }
 
-      if (!is_fused) {
-        T *bias_ptr = NULL;
-        if (is_bias_add_gelu) {
-          const Tensor &bias = context->input(2);
-          bias_ptr = const_cast<T *>(bias.template flat<T>().data());
-          matmul_params.post_op_params.push_back({"gelu", {1.0, 0.0, 0.0}});
-        }
-        ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
-            ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+      // Extract addend tensor for binary add fusions
+      if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
+          fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
+        addend = &context->input(3);  // Addend is the 4th input (index 3)
+      }
+
+      zendnnl_success =
+          TryExecuteZenDNNLMatMul<T>(context, a, b, bias, out, transpose_a_,
+                                     transpose_b_, fused_computation_, addend);
+      if (zendnnl_success) {
+        LogZenDNNLSuccess("MatMul");
       } else {
-        bool is_biasadd = (fused_computation_ != FusedComputationType::kRelu);
-        LaunchZenFusedMatMulOp<T>()(context, a, b, matmul_params,
-                                    fused_computation_, fused_computation_args_,
-                                    out, is_biasadd);
+        LogZenDNNLFallback("MatMul", "failed");
       }
     }
-    // If ZenMemPool Optimization is enabled(default), update the state of
-    // Memory pool based on input_array address.
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-        !zendnn_params_.is_eager && zen_pool_buffer) {
-      zen_pool_buffer->ZenMemPoolFree(context, a_ptr);
-      zen_pool_buffer->ZenMemPoolFree(context, b_ptr);
+
+    // Execute ZenDNN path only if ZenDNNL was not successful
+    if (!zendnnl_success) {
+      // Check if USE_ZENDNN_MATMUL_DIRECT environment variable is set to enable
+      // direct kernel This allows bypassing the standard ZenDNN matmul
+      // primitive path and using a more optimized direct kernel implementation
+      // for specific fusion types.
+      const char *env_value = std::getenv("USE_ZENDNN_MATMUL_DIRECT");
+      const int int_env_value = env_value ? std::atoi(env_value) : 0;
+      const Tensor *bias = nullptr;
+      if (is_fused && fused_computation_ != FusedComputationType::kRelu) {
+        bias = &context->input(2);
+      }
+      const bool used_zendnn_direct_kernel =
+          int_env_value && may_i_use_zendnn_direct_kernel(
+                               a, b, bias, out, fused_computation_, is_fused);
+
+      if (used_zendnn_direct_kernel) {
+        zendnn_direct_kernel<T>(a, b, bias, out, transpose_a_, transpose_b_,
+                                fused_computation_);
+      } else {
+        // Dimensions of matmul source, weights, bias and destination tensors.
+        // Explicitly use zendnn::memory to avoid conflict with dnnl::memory
+        // from OneDNN (included via ZenDNNL)
+        zendnn::memory::dims src_dims = {m, k};
+        zendnn::memory::dims weight_dims = {k, n};
+        zendnn::memory::dims bias_dims = {1, n};
+        zendnn::memory::dims dst_dims = {m, n};
+        zendnn::memory::format_tag src_format = zendnn::memory::format_tag::nc;
+        zendnn::memory::format_tag weight_format =
+            (dim_pair[0].second == 1) ? zendnn::memory::format_tag::io
+                                      : zendnn::memory::format_tag::oi;
+
+        ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims,
+                                      dst_dims, src_format, weight_format);
+
+        if (!is_fused) {
+          T *bias_ptr = NULL;
+          if (is_bias_add_gelu) {
+            const Tensor &bias = context->input(2);
+            bias_ptr = const_cast<T *>(bias.template flat<T>().data());
+            matmul_params.post_op_params.push_back({"gelu", {1.0, 0.0, 0.0}});
+          }
+          ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
+              ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
+          matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        } else {
+          bool is_biasadd = (fused_computation_ != FusedComputationType::kRelu);
+          LaunchZenFusedMatMulOp<T>()(context, a, b, matmul_params,
+                                      fused_computation_,
+                                      fused_computation_args_, out, is_biasadd);
+        }
+      }
+      // If ZenMemPool Optimization is enabled(default), update the state of
+      // Memory pool based on input_array address.
+      if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
+          !zendnn_params_.is_eager && zen_pool_buffer) {
+        zen_pool_buffer->ZenMemPoolFree(context, a_ptr);
+        zen_pool_buffer->ZenMemPoolFree(context, b_ptr);
+      }
     }
 
     zendnnInfo(ZENDNN_FWKLOG,
