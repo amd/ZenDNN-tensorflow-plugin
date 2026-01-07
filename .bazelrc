@@ -28,3 +28,11 @@ build --copt=-Wno-int-in-bool-context
 
 # Pass environment variables to build actions
 build --action_env=ZENDNNL_MANYLINUX_BUILD
+
+#Capture entire compiler/linker logs, regardless of size.
+#Print everything in your console (useful for debugging).
+build --experimental_ui_max_stdouterr_bytes=-1
+
+#controls number of parallel jobs for ZenDNN CMake library only
+#ZenDNN builds BLIS and this setting doesn't effect BLIS
+build --define=CPU_COUNT=24
