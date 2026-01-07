@@ -34,7 +34,7 @@ on:
       zentf_use_local_blis:
         description: 'Set to 1 to use local BLIS'
         required: false
-        default: '1'
+        default: '0'
   repository_dispatch:
     types: [zendnn-pr , zendnnTools-pr]
 
@@ -82,7 +82,7 @@ jobs:
       zendnnl_release_version: 'zendnnl-2025-WW46'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '0' }}
       TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '1' }}
-      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
+      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '0' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
       ZENDNNL_REF: ${{ github.event.inputs.zendnnl_ref || github.event.client_payload.zendnnl_ref || '' }}
@@ -659,7 +659,7 @@ jobs:
       zendnnl_release_version: 'zendnnl-2025-WW46'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '0' }}
       TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '1' }}
-      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '1' }}
+      TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '0' }}
       BLIS_TAR_BALL: 'AOCL-Sep2025-b1.tar.gz'
       ZENDNN_REF: ${{ github.event.inputs.zendnn_ref || github.event.client_payload.zendnn_ref || '' }}
       ZENDNNL_REF: ${{ github.event.inputs.zendnnl_ref || github.event.client_payload.zendnnl_ref || '' }}
