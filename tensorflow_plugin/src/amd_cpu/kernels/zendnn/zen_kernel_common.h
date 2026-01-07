@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@
 
 namespace amd_cpu_plugin {
 
+// Tensor type enumeration for ZenDNN operations.
+enum class ZenTensorType { kQint8 = 0, kQuint8 = 1, kFloat = 2, kBfloat16 = 3 };
+
 // Common parameters for ZenDNN nodes.
 struct ZendnnParameters {
   bool reorder_before = false;
   bool reorder_after = false;
   bool is_eager = false;
-  int in_links = 0;
-  int out_links = 0;
-  bool reset = false;
 };
 
 // Initializes and validates ZenDNN parameters configured
@@ -44,9 +44,6 @@ inline Status InitZendnnParameters(OpKernelConstruction* context,
       context->GetAttr("reorder_before", &params->reorder_before));
   TF_RETURN_IF_ERROR(context->GetAttr("reorder_after", &params->reorder_after));
   TF_RETURN_IF_ERROR(context->GetAttr("is_eager", &params->is_eager));
-  TF_RETURN_IF_ERROR(context->GetAttr("in_links", &params->in_links));
-  TF_RETURN_IF_ERROR(context->GetAttr("out_links", &params->out_links));
-  TF_RETURN_IF_ERROR(context->GetAttr("reset", &params->reset));
 
   return OkStatus();
 }

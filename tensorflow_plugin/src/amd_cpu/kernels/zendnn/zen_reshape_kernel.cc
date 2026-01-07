@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -22,7 +22,6 @@ limitations under the License.
 #include <vector>
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
@@ -114,21 +113,6 @@ class ZenReshapeOp : public OpKernel {
     Tensor output(input.dtype());
     CHECK(output.CopyFrom(input, shape));
     context->set_output(0, output);
-
-    // If ZenMemPool is enabled then, update the buffer use status if input
-    // buffer is used for the output buffer.
-    zendnnEnv zen_env_obj = readEnv();
-    ZenMemoryPool<T>* zen_pool_buffer = NULL;
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-        !zendnn_params_.is_eager) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        auto in0_ptr = const_cast<T*>(input.template flat<T>().data());
-        zen_pool_buffer->ZenMemPoolUpdateTensorPtrStatus(
-            context, in0_ptr, zendnn_params_.out_links, zendnn_params_.reset);
-      }
-    }
 
     zendnnInfo(ZENDNN_FWKLOG,
                "ZEN-OP-DEF: _ZenReshape (TF kernel): Compute Is Successful!");

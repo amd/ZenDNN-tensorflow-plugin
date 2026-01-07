@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -24,7 +24,6 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/bcast.h"
 #include "tensorflow_plugin/src/amd_cpu/util/cwise_ops.h"
 #include "tensorflow_plugin/src/amd_cpu/util/cwise_ops_gradient.h"
@@ -443,31 +442,6 @@ class ZenBinaryOp : public ZenBinaryOpShared {
     }
     if (Functor::has_errors && error) {
       SetComputeError(ctx);
-    }
-
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<float>* zen_pool_buffer = NULL;
-
-    // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
-    // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-    // optimization.
-    // Cases where tensors in pool are not free or requested size is more than
-    // available tensor size in Pool, control will fall back to default way of
-    // allocation i.e. with allocate_output(..).
-    // ZenMempool Optimization is not supported by Depthwise Convolution due to
-    // performance drop.
-
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<float>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        auto in0_ptr = const_cast<float*>(in0.template flat<float>().data());
-        auto in1_ptr = const_cast<float*>(in1.template flat<float>().data());
-        zen_pool_buffer->ZenMemPoolFree(ctx, static_cast<void*>(in0_ptr));
-        zen_pool_buffer->ZenMemPoolFree(ctx, static_cast<void*>(in1_ptr));
-      }
     }
 
     zendnnInfo(ZENDNN_FWKLOG,

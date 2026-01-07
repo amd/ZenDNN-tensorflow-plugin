@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -51,7 +51,7 @@ void ZenQuantizedConv2DBiasOrRelu(
     void *output_max, bool Tinput, bool Toutput, bool Tbias,
     const std::vector<float> &bias_scale, bool is_relu, bool is_sum,
     bool is_signed, float factor, int depth, float scale_output,
-    float scale_summand, void *cached_filter_data_, bool reset);
+    float scale_summand, void *cached_filter_data_);
 
 template <typename T>
 void ZenBlockedConv2DBiasEltSum(

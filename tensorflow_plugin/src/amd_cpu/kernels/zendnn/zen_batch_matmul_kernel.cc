@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -25,7 +25,6 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fill_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/matmul_bcast.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
@@ -103,10 +102,6 @@ class ZenBatchMatMulOp : public OpKernel {
     const Tensor &rhs = context->input(1);
 
     bool is_float = std::is_same<Scalar, float>::value;
-
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
 
     if (!v2_bcast) {
       // Using V1, so check to make sure lhs and rhs dimensions are correct
@@ -267,43 +262,9 @@ class ZenBatchMatMulOp : public OpKernel {
                  : rhs.template flat_inner_dims<Scalar, 3>().dimension(
                        adj_y_ ? 1 : 2);
 
-    ZenTensorType out_type =
-        is_float ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
-
-    ZenMemoryPool<Scalar> *zen_pool_buffer = NULL;
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int threadID = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<Scalar>::GetZenMemPool(threadID);
-      if (zen_pool_buffer) {
-        int status = zen_pool_buffer->AcquireZenPoolTensor(
-            context, &output, out_shape, zendnn_params_.out_links,
-            zendnn_params_.reset, out_type);
-        if (status) {
-          zen_enable_mempool = 0;
-        }
-      } else {
-        zen_enable_mempool = 0;
-      }
-    } else if (zen_enable_mempool) {
-      int res = cached_buffer_.NumElements();
-      Status state = OkStatus();
-      if (res <= 0 || res != out_shape.num_elements()) {
-        state = context->allocate_temp(
-            is_float ? DataType::DT_FLOAT : DataType::DT_BFLOAT16, out_shape,
-            &cached_buffer_);
-      }
-      if (state != OkStatus()) {
-        zen_enable_mempool = 0;
-      } else {
-        output = &cached_buffer_;
-        context->set_output(0, *output);
-      }
-    }
-    if (!zen_enable_mempool) {
-      // Output tensor is of the following dimensions:
-      // [ in_batch, out_rows, out_cols, out_depth ]
-      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
-    }
+    // Output tensor is of the following dimensions:
+    // [ in_batch, out_rows, out_cols, out_depth ]
+    OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
     if (output->NumElements() == 0) {
       return;
@@ -458,12 +419,6 @@ class ZenBatchMatMulOp : public OpKernel {
       net.at(i).execute(s, net_args.at(i));
     }
 
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) && zen_pool_buffer) {
-      zen_pool_buffer->ZenMemPoolFree(context,
-                                      static_cast<void *>(input_array));
-      zen_pool_buffer->ZenMemPoolFree(context,
-                                      static_cast<void *>(filter_array));
-    }
     zendnnInfo(
         ZENDNN_FWKLOG,
         "ZEN-OP-DEF: _ZenBatchMatMul (TF kernel): Compute Is Successful!");
@@ -474,13 +429,6 @@ class ZenBatchMatMulOp : public OpKernel {
   bool adj_y_ = false;
   bool is_cache_weight_ = false;
   ZendnnParameters zendnn_params_;
-  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
-  // held when accessing the annotated variable. GUARDED_VAR indicates that
-  // a shared variable is guarded by some unspecified mutex, for use in rare
-  // cases where a valid mutex expression cannot be specified.
-  //
-  // Tensor to hold output buffer memory.
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;
 };

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -63,7 +63,7 @@ void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
 void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
                    NodeDef* new_node) {
   DataType Tinput, Tfilter, out_type, Tbias, Tsummand;
-  bool reset = false, reorder_after = false, reorder_before = false;
+  bool reorder_after = false, reorder_before = false;
   string padding;
   string data_format("NHWC");
 
@@ -96,7 +96,6 @@ void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
   SetAttrValue(data_format, &(*new_attr)["data_format"]);
   SetAttrValue(reorder_before, &(*new_attr)["reorder_before"]);
   SetAttrValue(reorder_after, &(*new_attr)["reorder_after"]);
-  SetAttrValue(reset, &(*new_attr)["reset"]);
   if (has_padding_list) {
     SetAttrValue(padding_list, &(*new_attr)["padding_list"]);
   }
@@ -400,7 +399,6 @@ OpDef GetOpDef(const NodeDef& node_def) {
 void CopyZenAttrs(const NodeDef& orig_node, NodeDef* new_node) {
   AddNodeAttr("reorder_before", false, new_node);
   AddNodeAttr("reorder_after", false, new_node);
-  AddNodeAttr("reset", false, new_node);
   AddNodeAttr("is_eager", false, new_node);
 }
 

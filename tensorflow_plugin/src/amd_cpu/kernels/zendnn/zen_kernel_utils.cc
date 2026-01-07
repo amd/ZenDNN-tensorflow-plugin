@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ void ZenQuantizedConv2DBiasOrRelu(
     void *output_max, bool Tinput, bool Toutput, bool Tbias,
     const std::vector<float> &bias_scale, bool is_relu, bool is_sum,
     bool is_signed, float factor, int depth, float scale_output,
-    float scale_summand, void *cached_filter_data_, bool reset) {
+    float scale_summand, void *cached_filter_data_) {
   using tag = memory::format_tag;
   using dt = memory::data_type;
 
@@ -276,7 +276,6 @@ void ZenQuantizedConv2DBiasOrRelu(
 
   filter_tf_shape.AddDim(user_weights_memory.get_desc().get_size());
 
-  // TODO(plugin): Add INT8 MEMPOOL support.
   // if (res == 0) {
   //   static_cast<OpKernelContext *>(context)->allocate_temp(
   //       DT_QINT8, filter_tf_shape, static_cast<Tensor
@@ -350,10 +349,9 @@ void ZenGemmConvolution2D(void *input_array, int batch_size, int channels,
 /**
  * Function for Blocked Conv2D that fuses elementwise sum. This function
  * assumes one of the inputs of elementwise sum is available in output buffer.
- * TODO(zendnn):  (1) Get buffer for reorders from ZenMemoryPool
- *                (2) Reorder has been used to copy contents from one buffer to
- *                    other. Need to check on memcpy instead for optimal
- *                    performance.
+ * TODO(zendnn):  Reorder has been used to copy contents from one buffer to
+ *                other. Need to check on memcpy instead for optimal
+ *                performance.
  */
 template <typename T>
 void ZenBlockedConv2DBiasEltSum(

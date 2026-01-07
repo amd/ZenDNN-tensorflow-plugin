@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -71,23 +71,6 @@ bool IsZenDnnBF16Enabled() {
     }
   });
   return tf_zendnn_plugin_bf16;
-}
-
-int64_t GetMempool() {
-  static absl::once_flag once;
-  static int64_t mempool = 1;
-  absl::call_once(once, [&] {
-    auto status =
-        ReadInt64FromEnvVar("ZENDNN_ENABLE_MEMPOOL", mempool, &mempool);
-
-    if (!status.ok()) {
-      zendnnInfo(
-          ZENDNN_FWKLOG,
-          "ZENDNN_ENABLE_MEMPOOL is not set. Using the default setting: ",
-          mempool);
-    }
-  });
-  return mempool;
 }
 
 std::string SliceDebugString(const TensorShape& shape, const int64 flat) {

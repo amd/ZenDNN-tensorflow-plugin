@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -94,53 +94,17 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
   in0_num_elements = in0.NumElements();
   in1_num_elements = in1.NumElements();
 
-  // Update the output type.
-  ZenTensorType out_type = ZenTensorType::kFloat;
-
-  zendnnEnv zen_env_obj = readEnv();
-  int zen_enable_mempool =
-      (!zendnn_params.is_eager) ? zen_env_obj.zenEnableMemPool : 0;
-
-  ZenMemoryPool<float> *zen_pool_buffer = NULL;
-
   // TODO(plugin) : TF-Plugin does not have C APIs for forwarding input to
-  // output with shape, therefore, we are defaulting to ZenMemPool Optimization.
+  // output with shape. ZenMemPool Optimization has been removed.
   // Output buffer:
   /*  // (1) Reuse any of the input buffers for output
-      // (2) If not (1), then get buffer from ZenMemPool
-      // (3) If not (1) and (2), then allocate the buffer for output
-  if (ctx->forward_input_to_output_with_shape(0, 0, output_shape, &out)) {
-    in0_reuse = true;
-  } else if (ctx->forward_input_to_output_with_shape(1, 0, output_shape,
-                                                     &out)) {
-    in1_reuse = true;
-  } else */
+      // (2) If not (1), then allocate the buffer for output
+      // Note: ZenMemPool has been removed, so we directly allocate output
+  buffer if (ctx->forward_input_to_output_with_shape(0, 0, output_shape, &out))
+  { in0_reuse = true; } else if (ctx->forward_input_to_output_with_shape(1, 0,
+  output_shape, &out)) { in1_reuse = true; }*/
 
-  // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
-  // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-  // optimization.
-  // Cases where tensors in pool are not free or requested size is more than
-  // available tensor size in Pool, control will fall back to default way of
-  // allocation i.e. with allocate_output(..).
-  // ZenMempool Optimization is not supported by Depthwise Convolution due to
-  // performance drop.
-  if (zen_enable_mempool % MEMPOOL_TYPE) {
-    unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-    zen_pool_buffer = ZenMemoryPool<float>::GetZenMemPool(thread_id);
-    if (zen_pool_buffer) {
-      int status = zen_pool_buffer->AcquireZenPoolTensor(
-          ctx, &out, output_shape, zendnn_params.out_links, zendnn_params.reset,
-          out_type);
-      if (status) {
-        zen_enable_mempool = 0;
-      }
-    } else {
-      zen_enable_mempool = 0;
-    }
-  }
-  if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
-    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, output_shape, &out));
-  }
+  OP_REQUIRES_OK(ctx, ctx->allocate_output(0, output_shape, &out));
   ndims = static_cast<int>(bcast.x_reshape().size());
 }
 

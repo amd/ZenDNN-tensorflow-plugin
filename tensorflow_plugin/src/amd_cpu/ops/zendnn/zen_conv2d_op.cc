@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,9 +48,6 @@ void RegisterZenConv2D() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -86,9 +83,6 @@ void RegisterZenDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -126,9 +120,6 @@ void RegisterZenFusedDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
@@ -173,9 +164,6 @@ void RegisterZenFusedConv2D() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
@@ -227,9 +215,6 @@ void RegisterZenQuantizedConv2DWithBiasAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -278,9 +263,6 @@ void RegisterZenQuantizedConv2DWithBiasAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -334,9 +316,6 @@ void RegisterZenQuantizedConv2DWithBiasSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -390,9 +369,6 @@ void RegisterZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
@@ -433,9 +409,6 @@ void RegisterZenFusedConv2DSum() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
-  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddInput(op_builder, "elementwiseinput: T");

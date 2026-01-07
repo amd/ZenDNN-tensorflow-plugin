@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -29,7 +29,6 @@ namespace amd_cpu_plugin {
 
 bool IsZenDnnEnabled();
 bool IsZenDnnBF16Enabled();
-int64_t GetMempool();
 
 std::string SliceDebugString(const TensorShape& shape, const int64 flat);
 

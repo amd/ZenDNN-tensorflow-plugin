@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -28,7 +28,6 @@ limitations under the License.
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/pooling_ops_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
@@ -91,56 +90,11 @@ class ZenPoolOp : public OpKernel {
                           data_format_,
                           input.shape()};
     TensorShape out_shape = params.forward_output_shape();
-    // Update the output type.
     bool is_input_float = std::is_same<T, float>::value;
-    ZenTensorType out_type =
-        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
-    DataType dtype =
-        (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
 
     // Output tensor.
     Tensor *output = nullptr;
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<T> *zen_pool_buffer = NULL;
-
-    // ZenMemPool optimization reuse o/p tensors from the pool. By default
-    // it's enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-    // optimization.
-    // Cases where tensors in pool are not free or requested size is more than
-    // available tensor size in Pool, control will fall back to default way of
-    // allocation i.e. with allocate_output(..).
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        int status = zen_pool_buffer->AcquireZenPoolTensor(
-            context, &output, out_shape, zendnn_params_.out_links,
-            zendnn_params_.reset, out_type);
-        if (status) {
-          zen_enable_mempool = 0;
-        }
-      } else {
-        zen_enable_mempool = 0;
-      }
-    } else if (zen_enable_mempool) {
-      // Caching the output buffer and reusing it with persistent tensor.
-      int res = cached_buffer_.NumElements();
-      Status state = OkStatus();
-      if (res <= 0 || res != out_shape.num_elements()) {
-        state = context->allocate_temp(dtype, out_shape, &cached_buffer_);
-      }
-      if (state != OkStatus()) {
-        zen_enable_mempool = 0;
-      } else {
-        output = &cached_buffer_;
-        context->set_output(0, *output);
-      }
-    }
-    if (!zen_enable_mempool) {
-      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
-    }
+    OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
     T *output_array = const_cast<T *>(output->template flat<T>().data());
 
@@ -263,15 +217,6 @@ class ZenPoolOp : public OpKernel {
       }
     }
 
-    // If ZenMemPool optimization is enabled(default), update the state of
-    // memory pool based on input_array address.
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-        !zendnn_params_.is_eager && zen_pool_buffer) {
-      zen_pool_buffer->ZenMemPoolFree(
-          context,
-          const_cast<void *>(reinterpret_cast<const void *>(input_array)));
-    }
-
     zendnnInfo(ZENDNN_FWKLOG,
                "ZEN-OP-DEF: _ZenPool (TF kernel): Compute Is Successful!");
   }
@@ -284,13 +229,6 @@ class ZenPoolOp : public OpKernel {
   // FORMAT_NHWC is the default data format in TensorFlow. Hence initializing
   // with it. Reference from tensorflow_plugin/src/amd_cpu/util/tensor_format.h
   TensorFormat data_format_ = TensorFormat::FORMAT_NHWC;
-  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
-  // held when accessing the annotated variable. GUARDED_VAR indicates that
-  // a shared variable is guarded by some unspecified mutex, for use in rare
-  // cases where a valid mutex expression cannot be specified.
-  //
-  // Tensor to hold output buffer memory.
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   // ZenDNN specific.
   ZendnnParameters zendnn_params_;
 };
@@ -334,38 +272,10 @@ class ZenQuantizedPoolOp : public OpKernel {
     TensorShape out_shape = params.forward_output_shape();
     Tensor *output = nullptr, *output_min = nullptr, *output_max = nullptr;
     Toutput *output_array;
-    // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kQint8;
-    if (std::is_same<Toutput, quint8>::value) {
-      out_type = ZenTensorType::kQuint8;
-    }
 
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<Toutput> *zen_pool_buffer = NULL;
-
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<Toutput>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        // Quantized models have 3 outputs. 1 output is used
-        // for computation, other 2 outputs are used during dequantize.
-        int status = zen_pool_buffer->AcquireZenPoolTensor(
-            context, &output, out_shape, zendnn_params_.out_links - 2,
-            zendnn_params_.reset, out_type);
-        if (status) {
-          zen_enable_mempool = 0;
-        }
-      } else {
-        zen_enable_mempool = 0;
-      }
-    }
-    if (!(zen_enable_mempool % MEMPOOL_TYPE)) {
-      // Outtype is not required for default allocation because context
-      // maintains allocation data Type for outputs.
-      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
-    }
+    // Outtype is not required for default allocation because context
+    // maintains allocation data Type for outputs.
+    OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
     auto output_map = output->tensor<Toutput, 4>();
     output_array = const_cast<Toutput *>(output_map.data());
@@ -465,9 +375,6 @@ class ZenQuantizedPoolOp : public OpKernel {
     for (size_t i = 0; i < net.size(); ++i) {
       net.at(i).execute(s, net_args.at(i));
     }
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) && zen_pool_buffer) {
-      zen_pool_buffer->ZenMemPoolFree(context, (void *)input_array);
-    }
 
     zendnnInfo(
         ZENDNN_FWKLOG,
@@ -480,7 +387,6 @@ class ZenQuantizedPoolOp : public OpKernel {
   Padding padding_ = Padding::VALID;
   // ZenDNN specific
   ZendnnParameters zendnn_params_;
-  Tensor cached_data_ TF_GUARDED_BY(mu_);
 };
 
 #define REGISTER_POOL_KERNELS(TYPE)                                     \

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -21,7 +21,6 @@ limitations under the License.
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_fused_batchnorm_kernel.h"
 
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 
 namespace amd_cpu_plugin {
@@ -219,55 +218,10 @@ class ZenFusedBatchNormOp : public OpKernel {
     const T *src_data =
         static_cast<T *>(const_cast<T *>(src_tensor.flat<T>().data()));
 
-    // Update the output type.
-    ZenTensorType out_type = ZenTensorType::kFloat;
-
     // Allocate output (dst) tensor.
     TensorShape tf_shape_dst = tf_shape_src;
-
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<T> *zen_pool_buffer;
-
-    // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
-    // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-    // optimization.
-    // Cases where tensors in pool are not free or requested size is more than
-    // available tensor size in Pool, control will fall back to default way of
-    // allocation i.e. with allocate_output(..).
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        int status = zen_pool_buffer->AcquireZenPoolTensor(
-            context, &dst_tensor, tf_shape_dst, zendnn_params_.out_links,
-            zendnn_params_.reset, out_type);
-        if (status) {
-          zen_enable_mempool = 0;
-        }
-      } else {
-        zen_enable_mempool = 0;
-      }
-    } else if (zen_enable_mempool) {
-      // Caching the output buffer and reusing it with persistent tensor.
-      int res = cached_buffer_.NumElements();
-      Status state = OkStatus();
-      if (res <= 0 || res != tf_shape_dst.num_elements()) {
-        state = context->allocate_temp(DataType::DT_FLOAT, tf_shape_dst,
-                                       &cached_buffer_);
-      }
-      if (state != OkStatus()) {
-        zen_enable_mempool = 0;
-      } else {
-        dst_tensor = &cached_buffer_;
-        context->set_output(0, *dst_tensor);
-      }
-    }
-    if (!zen_enable_mempool) {
-      OP_REQUIRES_OK(context, context->allocate_output(kDstIndex, tf_shape_dst,
-                                                       &dst_tensor));
-    }
+    OP_REQUIRES_OK(context, context->allocate_output(kDstIndex, tf_shape_dst,
+                                                     &dst_tensor));
 
     U *weights_op_data = weights_data;
     U *mean_op_data = saved_mean_tensor->flat<U>().data();
@@ -312,17 +266,6 @@ class ZenFusedBatchNormOp : public OpKernel {
       std::memcpy(batch_mean_data, mean_data, depth_ * sizeof(U));
       std::memcpy(batch_variance_data, variance_data, depth_ * sizeof(U));
     }
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-        !zendnn_params_.is_eager) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        auto src_tensor_map = src_tensor.tensor<float, 4>();
-        const float *src_tensor_array = src_tensor_map.data();
-        zen_pool_buffer->ZenMemPoolFree(context,
-                                        const_cast<float *>(src_tensor_array));
-      }
-    }
     zendnnInfo(
         ZENDNN_FWKLOG,
         "ZEN-OP-DEF: _ZenFusedBatchNorm (TF kernel): Compute Is Successful!");
@@ -338,13 +281,6 @@ class ZenFusedBatchNormOp : public OpKernel {
   size_t depth_ = 0;  // Batch normalization is performed for per channel.
   FusedBNActivationMode activation_mode_ =
       functor::FusedBatchNormActivationMode::kIdentity;
-  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
-  // held when accessing the annotated variable. GUARDED_VAR indicates that
-  // a shared variable is guarded by some unspecified mutex, for use in rare
-  // cases where a valid mutex expression cannot be specified.
-  //
-  // Tensor to hold output buffer memory.
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
   ZendnnParameters zendnn_params_;
 
   void SetMeanVariance(const Tensor &mean, const Tensor &variance) {

@@ -58,7 +58,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -83,7 +82,6 @@ cc_library(
     deps = [
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
-        ":zen_mempool",
         "@com_google_absl//absl/container:inlined_vector",
         "@local_config_tf//:tf_header_lib",
     ] + zendnn_deps(),
@@ -104,7 +102,6 @@ cc_library(
         ":fill_functor",
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
-        ":zen_mempool",
         ":zen_zendnnl_utils",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@zendnnl_repo//:zendnnl_lib",
@@ -122,7 +119,6 @@ cc_library(
         ":fill_functor",
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -140,7 +136,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -156,7 +151,6 @@ cc_library(
     deps = [
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -171,7 +165,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -185,7 +178,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -201,7 +193,6 @@ cc_library(
     deps = [
         ":fill_functor",
         ":zen_kernel_common",
-        ":zen_mempool",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
     ] + zendnn_deps(),
     alwayslink = True,
@@ -218,19 +209,6 @@ ZEN_KERNELS = [
     ":zen_reshape_kernel",
     ":zen_cwise_ops_common_kernel",
 ]
-
-cc_library(
-    name = "zen_mempool",
-    srcs = ["zen_mempool.cc"],
-    hdrs = ["zen_mempool.h"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
-    alwayslink = True,
-)
 
 cc_library(
     name = "zen_kernels_impl",

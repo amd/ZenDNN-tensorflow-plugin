@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -62,9 +62,6 @@ typedef struct {
   // A rule under which to rewrite this node.
   std::function<bool(const utils::MutableNodeView&)> rewrite_rule;
 } ZenFormatInfo;
-
-std::pair<int, int> GetLinksInfo(const NodeDef* node_def,
-                                 const NodeMap& node_map);
 
 const ZenFormatInfo* CheckForNodeZenFormat(
     const utils::MutableNodeView& node_view);

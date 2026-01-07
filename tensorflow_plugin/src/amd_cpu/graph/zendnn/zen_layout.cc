@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -20,12 +20,10 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/zendnn/zen_layout.h"
 
-#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/base/call_once.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_properties.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
@@ -39,7 +37,6 @@ namespace graph {
 namespace {
 
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
-  static absl::once_flag once;
   static std::vector<ZenFormatInfo> rinfo{
       {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
       {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
@@ -92,22 +89,6 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       {"QuantizedMaxPool", "_ZenQuantizedMaxPool", CopyAttrsAll,
        RewriteQuantize},
   };
-  absl::call_once(once, [&] {
-    if (GetMempool() != 0) {
-      rinfo.push_back(
-          {"Add", "_ZenAdd", CopyAttrsAll, RewriteSupportedDataType});
-      rinfo.push_back(
-          {"AddV2", "_ZenAddV2", CopyAttrsAll, RewriteSupportedDataType});
-      rinfo.push_back(
-          {"Sub", "_ZenSub", CopyAttrsAll, RewriteSupportedDataType});
-      rinfo.push_back(
-          {"Mul", "_ZenMul", CopyAttrsAll, RewriteSupportedDataType});
-      rinfo.push_back(
-          {"Maximum", "_ZenMaximum", CopyAttrsAll, RewriteSupportedDataType});
-      rinfo.push_back({"SquaredDifference", "_ZenSquaredDifference",
-                       CopyAttrsAll, RewriteSupportedDataType});
-    }
-  });
   return &rinfo;
 }
 }  // namespace
@@ -128,23 +109,6 @@ const ZenFormatInfo* CheckForNodeZenFormat(
 
   // Else return not found.
   return nullptr;
-}
-
-// Returns a pair of [in_links, out_links] attribute values.
-std::pair<int, int> GetLinksInfo(const NodeDef* node_def,
-                                 const NodeMap& node_map) {
-  std::pair<int, int> links_info;
-  // Non-control inputs also include const type inputs like "kernel" and "bias".
-  // For pluggable device, NodeDef can only provide name of the inputs, which
-  // makes it difficult to differentiate, as in_links is not used, it does not
-  // affect execution of mempool.
-  links_info.first = NumNonControlInputs(*node_def);
-  // Non-control outputs are correctly configured, but the graph provided to
-  // plugin, does not contain "_Retval" node at this phase, hence we increment
-  // the out_links value for the leaf nodes.
-  links_info.second = NumNonControlOutputs((*node_def), node_map);
-  if (links_info.second == 0) links_info.second++;
-  return links_info;
 }
 
 // Rewrites input node to a new node specified by its matching rewrite info.
@@ -170,10 +134,6 @@ Status RewriteNode(ZenFormatContext* ctx, const int node_index,
   new_node_def.set_device(node_def->device());
 
   ri->copy_attrs(node_view, &new_node_def);
-
-  std::pair<int, int> links_info = GetLinksInfo(node_def, node_map);
-  AddNodeAttr("in_links", links_info.first, &new_node_def);
-  AddNodeAttr("out_links", links_info.second, &new_node_def);
 
   // Incoming data edges from 'orig_node' node to new 'new_node' node are
   // already copied in BuildNode. We need to handle control edges now.
@@ -217,15 +177,7 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
     if (!NodeIsOnDevice(device_name, node_def)) continue;
     // Don't rewrite fetch node because must keep its name unchanged.
     const ZenFormatInfo* ri = nullptr;
-    // Check if its the second pass of model.
-    auto found = regex_search(op_name, std::regex("^_Zen"));
-    if (found) {  // In second pass, only update the Zen specfic attributes.
-      std::pair<int, int> links_info = GetLinksInfo(node_def, node_map);
-      const AttrValue* in_links = node_view->GetAttr("in_links");
-      const AttrValue* out_links = node_view->GetAttr("out_links");
-      SetAttrValue(links_info.first, const_cast<AttrValue*>(in_links));
-      SetAttrValue(links_info.second, const_cast<AttrValue*>(out_links));
-    } else if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
+    if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
       // We will first search if node is to be rewritten.
       const string& node_name = node_def->name();
       const string& op_name = node_def->op();
@@ -237,19 +189,6 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
         zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: found node ", node_name,
                    " with op ", op_name, " but rewrite failed.");
       }
-    }
-  }
-
-  // Setting the reset value of last Zen node to true.
-  for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
-    const auto* node_view = ctx.graph_view.GetNode(node_index);
-    const auto* node_def = node_view->node();
-    const string& op_name = node_def->op();
-
-    if (regex_search(op_name, std::regex("^_Zen"))) {
-      const AttrValue* attr = node_view->GetAttr("reset");
-      SetAttrValue(true, const_cast<AttrValue*>(attr));
-      break;
     }
   }
 

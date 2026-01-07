@@ -27,7 +27,6 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_matmul_kernel_util.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_zendnnl_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
@@ -484,71 +483,15 @@ class ZenMatMulOp : public OpKernel {
       out_shape = {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)};
     }
 
-    bool is_float = std::is_same<T, float>::value;
-    // Update the output type.
-    ZenTensorType out_type =
-        (is_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
-
-    zendnnEnv zen_env_obj = readEnv();
     Tensor *out = nullptr;
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<T> *zen_pool_buffer = NULL;
 
     if ((fused_computation_ == FusedComputationType::kBiasAddWithAdd) ||
         (fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu)) {
       const Tensor &add_tensor = context->input(3);
       context->set_output(0, add_tensor);
       out = context->mutable_output(0);
-      if (zen_enable_mempool % MEMPOOL_TYPE) {
-        unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-        zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-        if (zen_pool_buffer) {
-          T *output_array = static_cast<T *>(out->flat<T>().data());
-          zen_pool_buffer->ZenMemPoolUpdateTensorPtrStatus(
-              context, static_cast<T *>(output_array), zendnn_params_.out_links,
-              zendnn_params_.reset);
-        }
-      }
     } else {
-      // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
-      // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-      // optimization.
-      // Cases where tensors in pool are not free or requested size is more than
-      // available tensor size in Pool, control will fall back to default way of
-      // allocation i.e. with allocate_output(..).
-      if (zen_enable_mempool % MEMPOOL_TYPE) {
-        unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-        zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-        if (zen_pool_buffer) {
-          int status = zen_pool_buffer->AcquireZenPoolTensor(
-              context, &out, out_shape, zendnn_params_.out_links,
-              zendnn_params_.reset, out_type);
-          if (status) {
-            zen_enable_mempool = 0;
-          }
-        } else {
-          zen_enable_mempool = 0;
-        }
-      } else if (zen_enable_mempool) {
-        DataType out_type =
-            (is_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
-        // Caching the output buffer and reusing it with persistent tensor.
-        int res = cached_buffer_.NumElements();
-        Status state = OkStatus();
-        if (res <= 0 || res != out_shape.num_elements()) {
-          state = context->allocate_temp(out_type, out_shape, &cached_buffer_);
-        }
-        if (state != OkStatus()) {
-          zen_enable_mempool = 0;
-        } else {
-          out = &cached_buffer_;
-          context->set_output(0, *out);
-        }
-      }
-      if (!zen_enable_mempool) {
-        OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &out));
-      }
+      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &out));
 
       if (out->NumElements() == 0) {
         // If a has shape [0, x] or b has shape [x, 0], the output shape
@@ -659,13 +602,6 @@ class ZenMatMulOp : public OpKernel {
                                       fused_computation_args_, out, is_biasadd);
         }
       }
-      // If ZenMemPool Optimization is enabled(default), update the state of
-      // Memory pool based on input_array address.
-      if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-          !zendnn_params_.is_eager && zen_pool_buffer) {
-        zen_pool_buffer->ZenMemPoolFree(context, a_ptr);
-        zen_pool_buffer->ZenMemPoolFree(context, b_ptr);
-      }
     }
 
     zendnnInfo(ZENDNN_FWKLOG,
@@ -676,13 +612,6 @@ class ZenMatMulOp : public OpKernel {
   bool is_reshape_ = false;
   bool transpose_a_ = false;
   bool transpose_b_ = false;
-  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
-  // held when accessing the annotated variable. GUARDED_VAR indicates that
-  // a shared variable is guarded by some unspecified mutex, for use in rare
-  // cases where a valid mutex expression cannot be specified.
-  //
-  // Tensor to hold output buffer memory.
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
 
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;

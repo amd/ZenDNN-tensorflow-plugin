@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -22,7 +22,6 @@ limitations under the License.
 #include <limits>
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_mempool.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_transpose_functor.h"
 #include "tensorflow_plugin/src/amd_cpu/util/bounds_check.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
@@ -114,72 +113,15 @@ class ZenTransposeOp : public OpKernel {
       return;
     }
 
-    // Update the output type.
-    bool is_input_float = std::is_same<T, float>::value;
-    ZenTensorType out_type =
-        (is_input_float) ? ZenTensorType::kFloat : ZenTensorType::kBfloat16;
-
     // Output tensor.
     Tensor *output = nullptr;
-    zendnnEnv zen_env_obj = readEnv();
-    int zen_enable_mempool =
-        zendnn_params_.is_eager ? 0 : zen_env_obj.zenEnableMemPool;
-    ZenMemoryPool<T> *zen_pool_buffer = NULL;
-
-    // ZenMemPool Optimization reuse o/p tensors from the pool. By default its
-    // enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory pool
-    // optimization.
-    // Cases where tensors in pool are not free or requested size is more than
-    // available tensor size in Pool, control will fall back to default way of
-    // allocation i.e. with allocate_output(..).
-    if (zen_enable_mempool % MEMPOOL_TYPE) {
-      unsigned int thread_id = GetZenTFthreadId(std::this_thread::get_id());
-      zen_pool_buffer = ZenMemoryPool<T>::GetZenMemPool(thread_id);
-      if (zen_pool_buffer) {
-        int status = zen_pool_buffer->AcquireZenPoolTensor(
-            context, &output, shape, zendnn_params_.out_links,
-            zendnn_params_.reset, out_type);
-        if (status) {
-          zen_enable_mempool = 0;
-        }
-      } else {
-        zen_enable_mempool = 0;
-      }
-    } else if (zen_enable_mempool) {
-      DataType out_type =
-          (is_input_float) ? DataType::DT_FLOAT : DataType::DT_BFLOAT16;
-      // Caching the output buffer and reusing it with persistent tensor.
-      int res = cached_buffer_.NumElements();
-      Status state = OkStatus();
-      if (res <= 0 || res != input.NumElements()) {
-        state =
-            context->allocate_temp(out_type, input.shape(), &cached_buffer_);
-      }
-      if (state != OkStatus()) {
-        zen_enable_mempool = 0;
-      } else {
-        output = &cached_buffer_;
-        context->set_output(0, *output);
-      }
-    }
-    if (!zen_enable_mempool) {
-      OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
-    }
+    OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
 
     if (shape.num_elements() > 0) {
       OP_REQUIRES_OK(context, DoTranspose<T, is_conjugate>(
                                   context, input, permutation, output));
     }
 
-    // If ZenMemPool Optimization is enabled(default), update the state of
-    // memory pool based on input_array address.
-    if ((zen_env_obj.zenEnableMemPool % MEMPOOL_TYPE) &&
-        !zendnn_params_.is_eager && zen_pool_buffer) {
-      T *input_array = const_cast<T *>(input.template flat<T>().data());
-
-      zen_pool_buffer->ZenMemPoolFree(context,
-                                      reinterpret_cast<void *>(input_array));
-    }
     zendnnInfo(ZENDNN_FWKLOG,
                "ZEN-OP-DEF: _ZenTranspose (TF kernel): Compute Is Successful!");
   }
@@ -187,13 +129,6 @@ class ZenTransposeOp : public OpKernel {
  private:
   /* ZenDNN specific */
   ZendnnParameters zendnn_params_;
-  // TF_GUARDED_BY allows the user to specify a particular mutex that should be
-  // held when accessing the annotated variable. GUARDED_VAR indicates that
-  // a shared variable is guarded by some unspecified mutex, for use in rare
-  // cases where a valid mutex expression cannot be specified.
-  //
-  // Tensor to hold output buffer memory.
-  Tensor cached_buffer_ TF_GUARDED_BY(mu_);
 };
 
 // inv = ZenInvertPermutationOp(T<int32/int64> p) takes a permutation of

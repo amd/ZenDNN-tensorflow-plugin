@@ -39,13 +39,8 @@ echo "TF_ENABLE_ONEDNN_OPTS=$TF_ENABLE_ONEDNN_OPTS"
 # Setting ZenDNN Environment variables.
 echo "Setting ZenDNN Environment variables."
 echo "The following settings gave us the best results. However, these details should be verified by the user empirically."
-# Switch to set zen mempool optimization.
-# Default value is 1, but for this release we recommend :
-#   2 - For NLP and LLM models.
-#   3 - For CNN models.
-export ZENDNN_ENABLE_MEMPOOL=2
+
 if [ "$interface" = "java" ]; then
-    export ZENDNN_ENABLE_MEMPOOL=0
     export KMP_BLOCKTIME=1
     export KMP_TPAUSE=0
     export KMP_FORKJOIN_BARRIER_PATTERN=dist,dist
@@ -59,14 +54,6 @@ if [ "$interface" = "java" ]; then
     echo "KMP_REDUCTION_BARRIER_PATTERN=$KMP_REDUCTION_BARRIER_PATTERN"
     echo "KMP_AFFINITY=$KMP_AFFINITY"
 fi
-echo "ZENDNN_ENABLE_MEMPOOL=$ZENDNN_ENABLE_MEMPOOL"
-# Variable to set the max no. of tensors that can be used inside zen memory pool.
-export ZENDNN_TENSOR_POOL_LIMIT=1024
-echo "ZENDNN_TENSOR_POOL_LIMIT=$ZENDNN_TENSOR_POOL_LIMIT"
-# Enable/Disable fixed max size allocation for Persistent tensor with
-# zen memory pool optimization. By default, its disabled.
-export ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=0
-echo "ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE=$ZENDNN_TENSOR_BUF_MAXSIZE_ENABLE"
 # Convolution algo path.
 #   0. AUTO
 #   1. GEMM
