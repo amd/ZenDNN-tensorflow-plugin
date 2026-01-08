@@ -181,7 +181,7 @@ jobs:
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          git clone  --branch zendnn_legacy https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
@@ -199,9 +199,14 @@ jobs:
         run: |
           git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNNL"
           if [ "${ZENDNNL_REF}" != "" ]; then
-            cd "$PARENT_DIR/ZenDNNL"
+            cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNNL_REF}"
             git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+          if [ "${ZENDNNL_REF}" == "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git checkout main
             cd "$PARENT_DIR"
           fi
 
@@ -688,7 +693,7 @@ jobs:
       - name: Clone ZenDNN if needed
         if: env.TF_PLUGIN_USE_LOCAL_ZENDNN == '1'
         run: |
-          git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
+          git clone  --branch zendnn_legacy https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNN"
           if [ "${ZENDNN_REF}" != "" ]; then
             cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNN_REF}"
@@ -706,9 +711,14 @@ jobs:
         run: |
           git clone  --branch main https://${{ secrets.ZIAIE_PAT }}@github.com/AMD-Zenai/ZenDNN.git "$PARENT_DIR/ZenDNNL"
           if [ "${ZENDNNL_REF}" != "" ]; then
-            cd "$PARENT_DIR/ZenDNNL"
+            cd "$PARENT_DIR/ZenDNN"
             git fetch origin "${ZENDNNL_REF}"
             git checkout FETCH_HEAD
+            cd "$PARENT_DIR"
+          fi
+          if [ "${ZENDNNL_REF}" == "" ]; then
+            cd "$PARENT_DIR/ZenDNN"
+            git checkout main
             cd "$PARENT_DIR"
           fi
 
