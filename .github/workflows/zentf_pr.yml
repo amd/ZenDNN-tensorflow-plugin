@@ -475,65 +475,65 @@ jobs:
       - name: Run Kernel Tests
         if: success()
         run: |
-          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
-             if [ -z "$WHEEL_FILE" ]; then
-                echo "Error: No built wheel found in workspace!"
-                 exit 1
-             fi
-             echo "Found wheel: $WHEEL_FILE"
+          #WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+          #   if [ -z "$WHEEL_FILE" ]; then
+          #      echo "Error: No built wheel found in workspace!"
+          #       exit 1
+          #   fi
+          #   echo "Found wheel: $WHEEL_FILE"
 
           # Run kernel tests
           # Create a local lib directory
-          mkdir -p $WORKSPACE/local
-          export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
+          #mkdir -p $WORKSPACE/local
+          #export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
 
           # Create a temporary container and extract libgomp.so.1
-          cd $WORKSPACE/local
-          USER_ID=$(id -u)
-          GROUP_ID=$(id -g)
-          docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
-          ls -la libgomp.so.1
+          #cd $WORKSPACE/local
+          #USER_ID=$(id -u)
+          #GROUP_ID=$(id -g)
+          #docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
+          #ls -la libgomp.so.1
           
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
-          mkdir -p /tmp/zenai/zentf
-          export CONDARC="/tmp/zenai/zentf/temp_condarc"
-          echo 'channel_priority: strict' > $CONDARC
-          echo 'channels:' >> $CONDARC
-          echo '  - conda-forge' >> $CONDARC
-          echo '  - defaults' >> $CONDARC
-          echo 'default_channels: []' >> $CONDARC
-          echo 'ssl_verify: true' >> $CONDARC
-          echo 'changeps1: true' >> $CONDARC
+          #mkdir -p /tmp/zenai/zentf
+          #export CONDARC="/tmp/zenai/zentf/temp_condarc"
+          #echo 'channel_priority: strict' > $CONDARC
+          #echo 'channels:' >> $CONDARC
+          #echo '  - conda-forge' >> $CONDARC
+          #echo '  - defaults' >> $CONDARC
+          #echo 'default_channels: []' >> $CONDARC
+          #echo 'ssl_verify: true' >> $CONDARC
+          #echo 'changeps1: true' >> $CONDARC
 
-          export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
-          export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
-          mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
-          export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
-          mkdir -p $PIP_CACHE_DIR
+          #export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
+          #export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
+          #mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
+          #export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
+          #mkdir -p $PIP_CACHE_DIR
 
-          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
-          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
-          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
-          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
-          export CONDA_NOTICES_ENABLED=false
-          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+          #export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          #export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          #export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          #export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          #export CONDA_NOTICES_ENABLED=false
+          #mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
 
-          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
-          mkdir -p $CONDA_ROOT_PREFIX
-          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
-          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
-          touch $CONDA_ENVIRONMENTS_TXT_FILE
+          #export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          #mkdir -p $CONDA_ROOT_PREFIX
+          #export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          #mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          #touch $CONDA_ENVIRONMENTS_TXT_FILE
           
-          export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
-          export PATH="$MINIFORGE_PATH/bin:$PATH"
-          if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
-              . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
-          else
-              export PATH="$MINIFORGE_PATH/bin:$PATH"
-          fi
-          conda deactivate || true
-          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
+          #export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
+          #    . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
+          #else
+          #    export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #fi
+          #conda deactivate || true
+          #export PATH="$MINIFORGE_PATH/bin:$PATH"
           #sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
@@ -543,8 +543,8 @@ jobs:
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
-          PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
+          #PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          #WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
           #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
@@ -558,19 +558,27 @@ jobs:
           echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          export ZENDNNL_ENABLE_PROFILER=1
-          export ZENDNNL_API_LOG_LEVEL=4
-          export TF_ENABLE_ZENDNN_OPTS=1
-          export TF_ENABLE_ONEDNN_OPTS=0
-          export TF_CPP_MAX_VLOG_LEVEL=1
-          export TF_CPP_MIN_LOG_LEVEL=2
+          #export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          #export ZENDNNL_ENABLE_PROFILER=1
+          #export ZENDNNL_API_LOG_LEVEL=4
+          #export TF_ENABLE_ZENDNN_OPTS=1
+          #export TF_ENABLE_ONEDNN_OPTS=0
+          #export TF_CPP_MAX_VLOG_LEVEL=1
+          #export TF_CPP_MIN_LOG_LEVEL=2
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
           echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
-          CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
+          #CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
+          pyversion=${{ env.PYTHON_VERSION }}
+          docker run --name manylinux_tf_plugin_presub_p$pyversion -itd --privileged -v $HOME:$HOME -v /proj/zendai:/proj/zendai -v /home/runner:/home/runner mkmhub.amd.com/sw-aig-zendnn-zentf-dev/zentf-$ZENDNN_VERSION-tf-$ZENDNN_TF_VERSION-xco
+          docker start manylinux_tf_plugin_presub_p$pyversion
+          docker exec manylinux_tf_plugin_presub_p$pyversion bash -c "export HOME=$HOME;export KERNELS_LIST=$KERNELS_LIST;export BUILD_PYTHON_VERSIONS=export BUILD_PYTHON_VERSIONS;export PYTHON_VERSION=$PYTHON_VERSION;export ZENDNN_VERSION=$ZENDNN_VERSION;export ZENDNN_TF_VERSION=$ZENDNN_TF_VERSION;export WORKSPACE=$WORKSPACE;source $WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_kernel_tests.sh $pyversion"
         shell: bash
+
+      - name: Fail if kernel script failed
+        if: failure()
+        run: exit 1
         
       - name: Archive build artifacts
         if: always()
@@ -985,65 +993,65 @@ jobs:
       - name: Run Kernel Tests
         if: success()
         run: |
-          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
-             if [ -z "$WHEEL_FILE" ]; then
-                echo "Error: No built wheel found in workspace!"
-                 exit 1
-             fi
-             echo "Found wheel: $WHEEL_FILE"
+          #WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+          #   if [ -z "$WHEEL_FILE" ]; then
+          #      echo "Error: No built wheel found in workspace!"
+          #       exit 1
+          #   fi
+          #   echo "Found wheel: $WHEEL_FILE"
 
           # Run kernel tests
           # Create a local lib directory
-          mkdir -p $WORKSPACE/local
-          export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
+          #mkdir -p $WORKSPACE/local
+          #export LD_LIBRARY_PATH=$WORKSPACE/local:$LD_LIBRARY_PATH
 
           # Create a temporary container and extract libgomp.so.1
-          cd $WORKSPACE/local
-          USER_ID=$(id -u)
-          GROUP_ID=$(id -g)
-          docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
-          ls -la libgomp.so.1
+          #cd $WORKSPACE/local
+          #USER_ID=$(id -u)
+          #GROUP_ID=$(id -g)
+          #docker run --rm -v $(pwd):/output ubuntu:22.04 bash -c "apt-get update && apt-get install -y libgomp1 && cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 /output/ && chown $USER_ID:$GROUP_ID /output/libgomp.so.1 && chmod 755 /output/libgomp.so.1"
+          #ls -la libgomp.so.1
           
           cd "$PARENT_DIR/ZenDNN_tools/scripts/ci"
           # Adjust paths like in install step
-          mkdir -p /tmp/zenai/zentf
-          export CONDARC="/tmp/zenai/zentf/temp_condarc"
-          echo 'channel_priority: strict' > $CONDARC
-          echo 'channels:' >> $CONDARC
-          echo '  - conda-forge' >> $CONDARC
-          echo '  - defaults' >> $CONDARC
-          echo 'default_channels: []' >> $CONDARC
-          echo 'ssl_verify: true' >> $CONDARC
-          echo 'changeps1: true' >> $CONDARC
+          #mkdir -p /tmp/zenai/zentf
+          #export CONDARC="/tmp/zenai/zentf/temp_condarc"
+          #echo 'channel_priority: strict' > $CONDARC
+          #echo 'channels:' >> $CONDARC
+          #echo '  - conda-forge' >> $CONDARC
+          #echo '  - defaults' >> $CONDARC
+          #echo 'default_channels: []' >> $CONDARC
+          #echo 'ssl_verify: true' >> $CONDARC
+          #echo 'changeps1: true' >> $CONDARC
 
-          export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
-          export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
-          mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
-          export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
-          mkdir -p $PIP_CACHE_DIR
+          #export CONDA_PKGS_DIRS=/tmp/zenai/zentf/conda_pkgs
+          #export CONDA_ENVS_PATH=/tmp/zenai/zentf/conda_envs
+          #mkdir -p $CONDA_PKGS_DIRS $CONDA_ENVS_PATH
+          #export PIP_CACHE_DIR=/tmp/zenai/zentf/pip_cache
+          #mkdir -p $PIP_CACHE_DIR
 
-          export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
-          export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
-          export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
-          export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
-          export CONDA_NOTICES_ENABLED=false
-          mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
+          #export CONDA_CACHE_DIR="/tmp/zenai/zentf/conda_cache"
+          #export CONDA_NOTICES_CACHE_DIR="/tmp/zenai/zentf/conda_notices"
+          #export CONDA_USER_DATA_DIR="/tmp/zenai/zentf/conda_userdata"
+          #export XDG_CACHE_HOME="/tmp/zenai/zentf/xdg_cache"
+          #export CONDA_NOTICES_ENABLED=false
+          #mkdir -p $CONDA_CACHE_DIR $CONDA_NOTICES_CACHE_DIR $CONDA_USER_DATA_DIR $XDG_CACHE_HOME
 
-          export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
-          mkdir -p $CONDA_ROOT_PREFIX
-          export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
-          mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
-          touch $CONDA_ENVIRONMENTS_TXT_FILE
+          #export CONDA_ROOT_PREFIX="/tmp/zenai/zentf/conda_root"
+          #mkdir -p $CONDA_ROOT_PREFIX
+          #export CONDA_ENVIRONMENTS_TXT_FILE="/tmp/zenai/zentf/conda_envs/environments.txt"
+          #mkdir -p $(dirname $CONDA_ENVIRONMENTS_TXT_FILE)
+          #touch $CONDA_ENVIRONMENTS_TXT_FILE
           
-          export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
-          export PATH="$MINIFORGE_PATH/bin:$PATH"
-          if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
-              . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
-          else
-              export PATH="$MINIFORGE_PATH/bin:$PATH"
-          fi
-          conda deactivate || true
-          export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #export MINIFORGE_PATH="/proj/zendai/miniforge3"  # Update this path
+          #export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #if [ -f "$MINIFORGE_PATH/etc/profile.d/conda.sh" ]; then
+          #    . "$MINIFORGE_PATH/etc/profile.d/conda.sh"
+          #else
+          #    export PATH="$MINIFORGE_PATH/bin:$PATH"
+          #fi
+          #conda deactivate || true
+          #export PATH="$MINIFORGE_PATH/bin:$PATH"
           #sed -i '/if type -P conda/,/^fi$/ s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|export PATH=\$PATH:\$HOME/anaconda3/bin|export PATH=\$HOME/anaconda3/bin:\$PATH|' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|\$HOME/datasets/|/proj/zendai/datasets/|g' zendnn_ci_tf_plugin_kernel_tests.sh
@@ -1053,27 +1061,42 @@ jobs:
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^source ~/.bashrc|# source ~/.bashrc\nsource "$MINIFORGE_PATH/etc/profile.d/conda.sh"\nexport PATH="/tmp/zenai/zentf/conda_root/bin:$PATH"|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i '/conda init bash/,+3 s|^|# |' zendnn_ci_tf_plugin_kernel_tests.sh
-          PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-          WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
+          #PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          #WHEEL_PY="cp$(echo $PYTHON_VERSION | tr -d '.')-cp$(echo $PYTHON_VERSION | tr -d '.')"
           #sed -E -i 's|(pip install[[:space:]]+/proj/zendai/datasets/ci_predownloaded_wheels/tf/tensorflow-\$ZENDNN_TF_VERSION-)[*]\.whl|\1'"$WHEEL_PY"'*.whl|g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's/tf_keras-\$ZENDNN_TF_VERSION-\(.*\.whl\)/tf_keras-2.20.1\1/g' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i "s|\$WORKSPACE/zentf-.*-cp.*-cp.*\.whl|$WHEEL_FILE|g" zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/i conda activate' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i '/^conda activate tf-plugin-v\$ZENDNN_TF_VERSION-zendnn-v\$ZENDNN_VERSION-rel-env$/a conda env list;unset PIP_INDEX_URL;unset PIP_EXTRA_INDEX_URL' zendnn_ci_tf_plugin_kernel_tests.sh
           #sed -i 's|^conda config|# conda config|g' zendnn_ci_tf_plugin_kernel_tests.sh
-
+          
+          
+          echo "=========== Modified kernel test script ==========="
+          #cat zendnn_ci_tf_plugin_kernel_tests.sh
+          echo "==================================================="
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
-          export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          #export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          #export ZENDNNL_ENABLE_PROFILER=1
+          #export ZENDNNL_API_LOG_LEVEL=4
+          #export TF_ENABLE_ZENDNN_OPTS=1
+          #export TF_ENABLE_ONEDNN_OPTS=0
+          #export TF_CPP_MAX_VLOG_LEVEL=1
+          #export TF_CPP_MIN_LOG_LEVEL=2
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
           echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
           export BUILD_PYTHON_VERSIONS=${{ env.PYTHON_VERSION }}
-          echo "=========== FILE: zendnn_ci_tf_plugin_kernel_tests.sh ==========="
-          cat zendnn_ci_tf_plugin_kernel_tests.sh
-          echo "==================================================="
-          CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
+          #CONDARC=$CONDARC bash zendnn_ci_tf_plugin_kernel_tests.sh
+          pyversion=${{ env.PYTHON_VERSION }}
+          docker run --name manylinux_tf_plugin_presub_p$pyversion -itd --privileged -v $HOME:$HOME -v /proj/zendai:/proj/zendai -v /home/runner:/home/runner mkmhub.amd.com/sw-aig-zendnn-zentf-dev/zentf-$ZENDNN_VERSION-tf-$ZENDNN_TF_VERSION-xco
+          docker start manylinux_tf_plugin_presub_p$pyversion
+          docker exec manylinux_tf_plugin_presub_p$pyversion bash -c "export HOME=$HOME;export KERNELS_LIST=$KERNELS_LIST;export BUILD_PYTHON_VERSIONS=export BUILD_PYTHON_VERSIONS;export PYTHON_VERSION=$PYTHON_VERSION;export ZENDNN_VERSION=$ZENDNN_VERSION;export ZENDNN_TF_VERSION=$ZENDNN_TF_VERSION;export WORKSPACE=$WORKSPACE;source $WORKSPACE/ZenDNN_tools/scripts/ci/zendnn_ci_tf_plugin_kernel_tests.sh $pyversion"
         shell: bash
+
+      - name: Fail if kernel script failed
+        if: failure()
+        run: exit 1  
         
       - name: Archive build artifacts
         if: always()
