@@ -475,12 +475,12 @@ jobs:
       - name: Run Kernel Tests
         if: success()
         run: |
-          #WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
-          #   if [ -z "$WHEEL_FILE" ]; then
-          #      echo "Error: No built wheel found in workspace!"
-          #       exit 1
-          #   fi
-          #   echo "Found wheel: $WHEEL_FILE"
+          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+             if [ -z "$WHEEL_FILE" ]; then
+                echo "Error: No built wheel found in workspace!"
+                 exit 1
+             fi
+             echo "Found wheel: $WHEEL_FILE"
 
           # Run kernel tests
           # Create a local lib directory
@@ -993,12 +993,12 @@ jobs:
       - name: Run Kernel Tests
         if: success()
         run: |
-          #WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
-          #   if [ -z "$WHEEL_FILE" ]; then
-          #      echo "Error: No built wheel found in workspace!"
-          #       exit 1
-          #   fi
-          #   echo "Found wheel: $WHEEL_FILE"
+          WHEEL_FILE=$(find "$WORKSPACE" -maxdepth 1 -name "zentf*.whl" | head -n 1)
+             if [ -z "$WHEEL_FILE" ]; then
+                echo "Error: No built wheel found in workspace!"
+                 exit 1
+             fi
+             echo "Found wheel: $WHEEL_FILE"
 
           # Run kernel tests
           # Create a local lib directory
