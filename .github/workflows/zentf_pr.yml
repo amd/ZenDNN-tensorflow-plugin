@@ -559,6 +559,12 @@ jobs:
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
           #sed -i '1i echo "DEBUG: Inside script - PYTHON_VERSION=$PYTHON_VERSION"' zendnn_ci_nightly_tf_plugin_install_wheel.sh
           export PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          export ZENDNNL_ENABLE_PROFILER=1
+          export ZENDNNL_API_LOG_LEVEL=4
+          export TF_ENABLE_ZENDNN_OPTS=1
+          export TF_ENABLE_ONEDNN_OPTS=0
+          export TF_CPP_MAX_VLOG_LEVEL=1
+          export TF_CPP_MIN_LOG_LEVEL=2
           echo "DEBUG: PYTHON_VERSION is set to: $PYTHON_VERSION"
           echo "DEBUG: ZENDNN_TF_VERSION is set to: $ZENDNN_TF_VERSION"
           echo "DEBUG: ZENDNN_VERSION is set to: $ZENDNN_VERSION"
