@@ -35,9 +35,7 @@ namespace amd_cpu_plugin {
 template <typename T, bool is_conjugate = false>
 class ZenTransposeOp : public OpKernel {
  public:
-  explicit ZenTransposeOp(OpKernelConstruction *context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-  }
+  explicit ZenTransposeOp(OpKernelConstruction *context) : OpKernel(context) {}
 
   // output = ZenTransposeOp(T<any> input, T<int32> perm) takes a tensor
   // of type T and rank N, and a permutation of 0, 1, ..., N-1. It
@@ -54,8 +52,7 @@ class ZenTransposeOp : public OpKernel {
   // REQUIRES: input.dims() == perm.size().
   // REQUIRES: perm is a permutation.
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenTranspose (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor &input = context->input(0);
     const Tensor &perm = context->input(1);
@@ -122,13 +119,8 @@ class ZenTransposeOp : public OpKernel {
                                   context, input, permutation, output));
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenTranspose (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
-
- private:
-  /* ZenDNN specific */
-  ZendnnParameters zendnn_params_;
 };
 
 // inv = ZenInvertPermutationOp(T<int32/int64> p) takes a permutation of
@@ -141,13 +133,10 @@ template <typename T>
 class ZenInvertPermutationOp : public OpKernel {
  public:
   explicit ZenInvertPermutationOp(OpKernelConstruction *context)
-      : OpKernel(context) {
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-  }
+      : OpKernel(context) {}
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenInvertPermutation (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor &input = context->input(0);
     OP_REQUIRES(
@@ -176,14 +165,8 @@ class ZenInvertPermutationOp : public OpKernel {
       Tout(d) = i;
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenInvertPermutation (TF kernel): Compute Is "
-               "Successful!");
+    // Old ZenDNN logging removed;
   }
-
- private:
-  /* ZenDNN specific */
-  ZendnnParameters zendnn_params_;
 };
 
 REGISTER_KERNEL_BUILDER(

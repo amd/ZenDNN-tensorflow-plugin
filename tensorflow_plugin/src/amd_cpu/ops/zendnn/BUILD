@@ -1,5 +1,4 @@
 load("//tensorflow_plugin:amd_cpu_plugin.bzl", "tf_copts")
-load("//third_party/zen_dnn:build_defs.bzl", "zendnn_deps")
 
 package(licenses = ["notice"])  # Apache 2.0
 
@@ -13,7 +12,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -27,7 +26,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -41,7 +40,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -55,7 +54,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -69,7 +68,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -83,7 +82,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -97,7 +96,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -111,7 +110,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -125,20 +124,22 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
+# ALL ops temporarily disabled.
+# Enable the ops as we add the support for it with ZenDNNL.
 ZEN_OPS = [
-    ":zen_conv2d_op",
+    # ":zen_conv2d_op",
     ":zen_matmul_ops",
-    ":zen_softmax_op",
-    ":zen_pooling_ops",
-    ":zen_fused_batchnorm_ops",
-    ":zen_transpose_op",
-    ":zen_batch_matmul_ops",
-    ":zen_reshape_op",
-    ":zen_cwise_ops",
+    # ":zen_softmax_op",
+    # ":zen_pooling_ops",
+    # ":zen_fused_batchnorm_ops",
+    # ":zen_transpose_op",
+    # ":zen_batch_matmul_ops",
+    # ":zen_reshape_op",
+    # ":zen_cwise_ops",
 ]
 
 cc_library(

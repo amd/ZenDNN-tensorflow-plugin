@@ -1,5 +1,4 @@
 load("//tensorflow_plugin:amd_cpu_plugin.bzl", "tf_copts")
-load("//third_party/zen_dnn:build_defs.bzl", "zendnn_deps")
 
 package(licenses = ["notice"])  # Apache 2.0
 
@@ -34,7 +33,6 @@ cc_library(
     copts = tf_copts(),
     linkstatic = 1,
     visibility = ["//visibility:public"],
-    deps = zendnn_deps(),
     alwayslink = True,
 )
 
@@ -59,7 +57,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -84,7 +82,7 @@ cc_library(
         ":zen_kernel_common",
         "@com_google_absl//absl/container:inlined_vector",
         "@local_config_tf//:tf_header_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -105,7 +103,7 @@ cc_library(
         ":zen_zendnnl_utils",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@zendnnl_repo//:zendnnl_lib",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -120,7 +118,7 @@ cc_library(
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -137,7 +135,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -152,7 +150,7 @@ cc_library(
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -166,7 +164,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -179,7 +177,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
@@ -194,20 +192,22 @@ cc_library(
         ":fill_functor",
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-    ] + zendnn_deps(),
+    ],
     alwayslink = True,
 )
 
+# ALL kernels temporarily disabled.
+# Enable the kernel as we add the support for it with ZenDNNL.
 ZEN_KERNELS = [
-    ":zen_softmax_kernel",
-    ":zen_conv2d_kernel",
+    # ":zen_softmax_kernel",
+    # ":zen_conv2d_kernel",
     ":zen_matmul_kernels",
-    ":zen_pooling_kernels",
-    ":zen_fused_batchnorm_kernel",
-    ":zen_transpose_kernel",
-    ":zen_batch_matmul_kernels",
-    ":zen_reshape_kernel",
-    ":zen_cwise_ops_common_kernel",
+    # ":zen_pooling_kernels",
+    # ":zen_fused_batchnorm_kernel",
+    # ":zen_transpose_kernel",
+    # ":zen_batch_matmul_kernels",
+    # ":zen_reshape_kernel",
+    # ":zen_cwise_ops_common_kernel",
 ]
 
 cc_library(

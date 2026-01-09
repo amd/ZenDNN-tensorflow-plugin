@@ -38,8 +38,6 @@ class ZenSoftmaxOp : public OpKernel {
   ~ZenSoftmaxOp() {}
 
   explicit ZenSoftmaxOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-
     string data_format_str = "";
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format_str));
     OP_REQUIRES(context, FormatFromString(data_format_str, &data_format_),
@@ -50,8 +48,7 @@ class ZenSoftmaxOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenSoftmax (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
     ZenExecutor* ex = ex->getInstance();
     engine eng = ex->getEngine();
     stream s = ex->getStream();
@@ -135,13 +132,11 @@ class ZenSoftmaxOp : public OpKernel {
       net.at(i).execute(s, net_args.at(i));
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenSoftmax (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
   TensorFormat data_format_ = TensorFormat::FORMAT_NHWC;
-  ZendnnParameters zendnn_params_;
 };
 
 #define REGISTER_SOFTMAX_KERNELS(TYPE)                                  \

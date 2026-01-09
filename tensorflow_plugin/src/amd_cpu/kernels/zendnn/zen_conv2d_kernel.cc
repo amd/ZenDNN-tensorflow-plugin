@@ -63,11 +63,10 @@ class ZenConv2DOp : public OpKernel {
     OP_REQUIRES(context, params_.data_format == FORMAT_NHWC,
                 errors::Unimplemented("ZenDNN Conv implementation supports "
                                       "NHWC tensor format only for now."));
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
   }
 
   void Compute(OpKernelContext* context) override {
-    zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: _ZenConv (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor& input = context->input(0);
     const Tensor& filter = context->input(1);
@@ -115,9 +114,8 @@ class ZenConv2DOp : public OpKernel {
           dimensions.pad_rows_before, dimensions.pad_cols_before,
           dimensions.pad_rows_after, dimensions.pad_cols_after,
           dimensions.stride_rows, dimensions.stride_cols, bias_arr,
-          output_array, dimensions.out_rows, dimensions.out_cols,
-          zendnn_params_.is_eager, zendnn_params_.reorder_before,
-          zendnn_params_.reorder_after, &(cached_filter_data_), context);
+          output_array, dimensions.out_rows, dimensions.out_cols, false, false,
+          false, &(cached_filter_data_), context);
     } else if (blocked_nhwc) {
       ZenConvolution2DBiasOrRelu<T>(
           eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
@@ -126,9 +124,8 @@ class ZenConv2DOp : public OpKernel {
           dimensions.pad_rows_before, dimensions.pad_cols_before,
           dimensions.pad_rows_after, dimensions.pad_cols_after,
           dimensions.stride_rows, dimensions.stride_cols, bias_arr,
-          output_array, dimensions.out_rows, dimensions.out_cols,
-          zendnn_params_.is_eager, zendnn_params_.reorder_before,
-          zendnn_params_.reorder_after, (&cached_filter_data_), context);
+          output_array, dimensions.out_rows, dimensions.out_cols, false, false,
+          false, (&cached_filter_data_), context);
     } else {
       // GEMM based convolution.
       ZenGemmConvolution2D(
@@ -142,15 +139,12 @@ class ZenConv2DOp : public OpKernel {
           false, nullptr, nullptr, nullptr);
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenConv (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  protected:
   Conv2DParameters params_;
   Tensor cached_filter_data_ TF_GUARDED_BY(mu_);
-  /* ZenDNN specific */
-  ZendnnParameters zendnn_params_;
 };
 
 #define REGISTER_CONV2D_KERNELS(TYPE)                                  \

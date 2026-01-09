@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -33,6 +33,7 @@ limitations under the License.
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "tensorflow/c/experimental/grappler/grappler.h"
+#include "tensorflow/core/platform/logging.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/auto_mixed_precision/auto_mixed_precision_lists.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/graph_view/mutable_graph_view.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/function.h"
@@ -87,8 +88,7 @@ Status GetAutoMixedPrecisionMode(const char* device_name,
     *model = AutoMixedPrecisionMode::CPU_BFLOAT16;
   }
 
-  zendnnInfo(ZENDNN_FWKLOG, "Run advanced auto mixed precision datatype ",
-             mode_type, " on ", device_name);
+  // Old ZenDNN logging removed;
   return OkStatus();
 }
 
@@ -269,7 +269,7 @@ Status GraphTypeTopologyView::InitializeFromGraph(
         const string error_message = strings::StrCat(
             "Non-existent input ", input, " in node ", node_type.node->name());
         if (skip_invalid_edges_) {
-          zendnnVerbose(ZENDNN_FWKLOG, "Skip error: ", error_message);
+          // Old ZenDNN logging removed;
         } else {
           return errors::InvalidArgument(error_message);
         }
@@ -319,7 +319,7 @@ Status GraphTypeTopologyView::AddEphemeralEdges(
       const string error_message =
           strings::StrCat("Non-existent src node: ", edge.src.node->name());
       if (skip_invalid_edges_) {
-        zendnnVerbose(ZENDNN_FWKLOG, "Skip error: ", error_message);
+        // Old ZenDNN logging removed;
       } else {
         return errors::InvalidArgument(error_message);
       }
@@ -332,7 +332,7 @@ Status GraphTypeTopologyView::AddEphemeralEdges(
       const string error_message =
           strings::StrCat("Non-existent dst node: ", edge.dst.node->name());
       if (skip_invalid_edges_) {
-        zendnnVerbose(ZENDNN_FWKLOG, "Skip error: ", error_message);
+        // Old ZenDNN logging removed;
       } else {
         return errors::InvalidArgument(error_message);
       }
@@ -747,11 +747,7 @@ bool AutoMixedPrecisionImpl::NodeHasF16KernelForTypeAttr(
 }
 
 void AutoMixedPrecisionImpl::LogSkippedNode(const NodeDef& node) const {
-  zendnnVerbose(ZENDNN_FWKLOG, "Skipping ", node.op(), " node ", node.name(),
-                " because it ",
-                (MustPreserve(node)
-                     ? "must be preserved"
-                     : "is not on the device, or the device is not suitable"));
+  MustPreserve(node);
 }
 
 bool AutoMixedPrecisionImpl::MustPreserve(const NodeDef& node) const {
@@ -823,13 +819,11 @@ void AutoMixedPrecisionImpl::ConvertBatchNormOpsToV2() {
     if (!ShouldProcess(*node)) continue;
     bool changed = false;
     if (node->op() == "FusedBatchNorm") {
-      zendnnVerbose(ZENDNN_FWKLOG, "Changing op of ", node->op(), " node ",
-                    node->name(), " to FusedBatchNormV2");
+      // Old ZenDNN logging removed;
       node->set_op("FusedBatchNormV2");
       changed = true;
     } else if (node->op() == "FusedBatchNormGrad") {
-      zendnnVerbose(ZENDNN_FWKLOG, "Changing op of ", node->op(), " node ",
-                    node->name(), " to FusedBatchNormGradV2");
+      // Old ZenDNN logging removed;
       node->set_op("FusedBatchNormGradV2");
       changed = true;
     }
@@ -865,7 +859,7 @@ Status AutoMixedPrecisionImpl::Optimize() {
   TF_RETURN_IF_ERROR(ValidateLists(f16_allowlist_, f16_denylist_,
                                    f16_inferlist_, f16_clearlist_));
 
-  zendnnVerbose(ZENDNN_FWKLOG, "Identifying nodes that should be processed");
+  // Old ZenDNN logging removed;
   for (const NodeDef& node : graph_->node()) {
     bool should_process =
         (mode_ == AutoMixedPrecisionMode::CPU_BFLOAT16)
@@ -878,14 +872,13 @@ Status AutoMixedPrecisionImpl::Optimize() {
     }
   }
 
-  zendnnVerbose(ZENDNN_FWKLOG, "Converting FusedBatchNorm* ops to V2");
+  // Old ZenDNN logging removed;
   ConvertBatchNormOpsToV2();
 
-  zendnnVerbose(ZENDNN_FWKLOG, "Building node type map for graph");
+  // Old ZenDNN logging removed;
   TF_RETURN_IF_ERROR(node_type_map_.Init(*graph_));
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Constructing graph type attribute topology view");
+  // Old ZenDNN logging removed;
   TF_RETURN_IF_ERROR(
       graph_type_view_.InitializeFromGraph(*graph_, node_type_map_));
 
@@ -896,12 +889,10 @@ Status AutoMixedPrecisionImpl::Optimize() {
                                                    &deny_set);
   std::vector<NodeTypeIdEdge> ephemeral_edges;
   for (const auto& cluster : tensor_list_clusters) {
-    zendnnVerbose(ZENDNN_FWKLOG, "Found safe Tensor List cluster of size ",
-                  cluster.size());
-    for (const NodeDef* node : cluster) {
-      zendnnVerbose(ZENDNN_FWKLOG, "  Cluster member: ", node->op(), " node ",
-                    node->name());
-    }
+    // Old ZenDNN logging removed;
+    // for (const NodeDef* node : cluster) {
+    // Old ZenDNN logging removed;
+    // }
     FindTensorListImplicitFloat32Edges(cluster, &ephemeral_edges);
   }
   TF_RETURN_IF_ERROR(graph_type_view_.AddEphemeralEdges(ephemeral_edges));
@@ -936,69 +927,54 @@ Status AutoMixedPrecisionImpl::Optimize() {
   //    affecting numerical stability.
 
   absl::flat_hash_set<int> allow_set;
-  zendnnVerbose(ZENDNN_FWKLOG, "Beginning pass 1 to add allowlist ops");
+  // Old ZenDNN logging removed;
   AddAllowlistOps(&allow_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 1");
+  // Old ZenDNN logging removed;
 
   if (allow_set.empty()) {
-    zendnnInfo(ZENDNN_FWKLOG, "No allowlist ops found, nothing to do");
+    // Old ZenDNN logging removed;
     return OkStatus();
   }
 
-  zendnnVerbose(
-      ZENDNN_FWKLOG,
-      "Beginning pass 2 to propagate deny forwards from denylist ops ",
-      "through clear/inferlist ops");
+  // Old ZenDNN logging removed;
   PropagateDenyFwdThroughClearAndInfer(&deny_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 2");
+  // Old ZenDNN logging removed;
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Forcing color match between data structure ops");
+  // Old ZenDNN logging removed;
   for (const auto& cluster : tensor_list_clusters) {
     ForceColorMatchBetweenTensorListOps(cluster, &allow_set, &deny_set);
   }
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Beginning pass 3 to set clear and infer nodes to allow if "
-                "they are between allow ops");
+  // Old ZenDNN logging removed;
   AddClearAndInferToAllowIfBetweenAllow(deny_set, &allow_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 3");
+  // Old ZenDNN logging removed;
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Beginning pass 4 to add infer list ops to allow if they "
-                "directly follow allow nodes");
+  // Old ZenDNN logging removed;
   AddInferToAllowIfFollowAllow(deny_set, &allow_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 4");
+  // Old ZenDNN logging removed;
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Beginning pass 5 to propagate allow from allow nodes through "
-                "clearlist ops");
+  // Old ZenDNN logging removed;
   PropagateAllowThroughClear(deny_set, &allow_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 5");
+  // Old ZenDNN logging removed;
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Beginning pass 6 to remove some nodes which could not be "
-                "changed to F16 from allow set");
+  // Old ZenDNN logging removed;
   RemoveAllowsetWithFp32(&allow_set);
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished pass 6");
+  // Old ZenDNN logging removed;
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Forcing color match between data structure ops");
+  // Old ZenDNN logging removed;
   for (const auto& cluster : tensor_list_clusters) {
     ForceColorMatchBetweenTensorListOps(cluster, &allow_set, &deny_set);
   }
 
-  zendnnVerbose(ZENDNN_FWKLOG, "Forcing color match on loop edges");
+  // Old ZenDNN logging removed;
   TF_RETURN_IF_ERROR(ForceColorMatchOnRecurrentEdges(&allow_set));
 
-  zendnnVerbose(ZENDNN_FWKLOG, "Finding existing casts that can be made allow");
+  // Old ZenDNN logging removed;
   MakeCastsAllowIfAllOutputsAllow(&allow_set);
 
-  zendnnVerbose(ZENDNN_FWKLOG,
-                "Beginning final pass to change type attributes and insert "
-                "Cast ops at paint boundaries");
+  // Old ZenDNN logging removed;
   TF_RETURN_IF_ERROR(ChangeTypeAttrsAndAddCasts(allow_set));
-  zendnnVerbose(ZENDNN_FWKLOG, "Finished final pass");
+  // Old ZenDNN logging removed;
 
   return OkStatus();
 }
@@ -1121,11 +1097,7 @@ void AutoMixedPrecisionImpl::FindTensorListImplicitFloat32Edges(
             CHECK(item_fp32)  // Crash OK
                 << "No float32 type attribute found for " << item.node->op()
                 << " node " << item.node->name();
-            zendnnVerbose(ZENDNN_FWKLOG, "Adding ephemeral float32 edge from ",
-                          item_fp32->node->op(), " node ",
-                          item_fp32->node->name(), " to ",
-                          root_fp32->node->op(), " node ",
-                          root_fp32->node->name());
+            // Old ZenDNN logging removed;
             implicit_fp32_edges->emplace_back(*item_fp32, *root_fp32);
           }
         }));
@@ -1141,12 +1113,9 @@ void AutoMixedPrecisionImpl::AddAllowlistOps(
     bool force_allow = force_all_f16_ && CanForceFP16(*root.node);
     if (f16_allowlist_.count(root.node->op()) || force_allow) {
       bool inserted = allow_set->insert(root_idx).second;
-      if (inserted) {
-        zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                      root.type_attr.DebugString(), " of node ",
-                      root.node->name(), " ALLOW because its op ",
-                      root.node->op(), " is on the allowlist");
-      }
+      // if (inserted) {
+      // Old ZenDNN logging removed;
+      // }
     }
   }
 }
@@ -1197,9 +1166,7 @@ void AutoMixedPrecisionImpl::PropagateDenyFwdThroughClearAndInfer(
           bool inserted = deny_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                          item.type_attr.DebugString(), " of ", item.node->op(),
-                          " node ", item.node->name(), " DENY");
+            // Old ZenDNN logging removed;
           }
         }));
   }
@@ -1253,9 +1220,7 @@ void AutoMixedPrecisionImpl::AddClearAndInferToAllowIfBetweenAllow(
           bool inserted = allow_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                          item.type_attr.DebugString(), " of ", item.node->op(),
-                          " node ", item.node->name(), " ALLOW");
+            // Old ZenDNN logging removed;
           }
         }));
   }
@@ -1293,9 +1258,7 @@ void AutoMixedPrecisionImpl::PropagateAllowThroughClear(
           bool inserted = allow_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                          item.type_attr.DebugString(), " of ", item.node->op(),
-                          " node ", item.node->name(), " ALLOW");
+            // Old ZenDNN logging removed;
           }
         }));
   }
@@ -1326,9 +1289,7 @@ void AutoMixedPrecisionImpl::AddInferToAllowIfFollowAllow(
     if (has_allow_fanin) {
       bool inserted = allow_set->insert(item_idx).second;
       if (inserted) {
-        zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                      item.type_attr.DebugString(), " of ", item.node->op(),
-                      " node ", item.node->name(), " ALLOW");
+        // Old ZenDNN logging removed;
       }
     }
   }
@@ -1345,10 +1306,7 @@ void AutoMixedPrecisionImpl::RemoveAllowsetWithFp32(
         (!SupportsF16(root))) {
       auto erased = allow_set->erase(root_idx);
       if (erased) {
-        zendnnVerbose(ZENDNN_FWKLOG, "UnPainting type ",
-                      root.type_attr.DebugString(), " of node ",
-                      root.node->name(), " ALLOW because its op ",
-                      root.node->op(), " is not support F16 DataType");
+        // Old ZenDNN logging removed;
       }
     }
   }
@@ -1395,24 +1353,15 @@ Status AutoMixedPrecisionImpl::ForceColorMatchOnRecurrentEdges(
       if (any_merge_is_not_allow) {
         for (int merge_idx : merge_idxs) {
           if (allow_set->erase(merge_idx)) {
-            zendnnVerbose(ZENDNN_FWKLOG, "Painting type T of Merge node ",
-                          graph_type_view_.GetNode(merge_idx)->node->name(),
-                          " DENY to match the color of its sibling Merge nodes "
-                          "with common NextIteration node ",
-                          node.name());
+            // Old ZenDNN logging removed;
           }
         }
         if (allow_set->erase(nextiter_idx)) {
-          zendnnVerbose(ZENDNN_FWKLOG, "Painting type T of NextIteration node ",
-                        node.name(),
-                        " DENY to match the color of its output Merge node(s)");
+          // Old ZenDNN logging removed;
         }
       } else {
         if (allow_set->insert(nextiter_idx).second) {
-          zendnnVerbose(
-              ZENDNN_FWKLOG, "Painting type T of NextIteration node ",
-              node.name(),
-              " ALLOW to match the color of its output Merge node(s)");
+          // Old ZenDNN logging removed;
         }
       }
     }
@@ -1449,12 +1398,7 @@ void AutoMixedPrecisionImpl::ForceColorMatchBetweenTensorListOps(
   if (!any_deny && !any_allow) return;
   for (int node_type_idx : node_type_idxs) {
     const NodeTypeId& node_type = *graph_type_view_.GetNode(node_type_idx);
-    zendnnVerbose(ZENDNN_FWKLOG, "Painting type ",
-                  node_type.type_attr.DebugString(), " of ",
-                  node_type.node->op(), " node ", node_type.node->name(), " ",
-                  (any_deny ? "DENY" : "ALLOW"),
-                  " because at least one of its siblings is ",
-                  (any_deny ? "DENY" : "ALLOW"));
+    // Old ZenDNN logging removed;
     if (any_deny) {
       allow_set->erase(node_type_idx);
       deny_set->insert(node_type_idx);
@@ -1545,9 +1489,7 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
       if (!IsFloat32(*graph_type_view_.GetNode(node_type_idx))) continue;
       bool src_is_allow = allow_set.count(node_type_idx);
       if (src_is_allow) {
-        zendnnVerbose(ZENDNN_FWKLOG, "Changing type ", type_attr.DebugString(),
-                      " of ", node->op(), " node ", node->name(), " to ",
-                      DataTypeString(target_dtype_));
+        // Old ZenDNN logging removed;
         if (!SetDataType(node, type_attr, target_dtype_)) {
           return errors::Internal("Failed to set type attribute");
         }
@@ -1574,10 +1516,7 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
           if (src_is_allow != dst_is_allow) {
             if (!added_cast_node) {
               bool to_f16 = dst_is_allow;
-              zendnnVerbose(
-                  ZENDNN_FWKLOG, "Inserting cast to ",
-                  (to_f16 ? DataTypeString(target_dtype_) : "DT_FLOAT"), " at ",
-                  src.node->op(), " ", src.node->name(), ":", src.port_id);
+              // Old ZenDNN logging removed;
               added_cast_node = graph_view_.AddNode(
                   BuildCastNode(src, to_f16, src.node->device()));
               if (to_f16 && !IsConstant(*node) && !IsVariable(*node) &&
@@ -1594,10 +1533,10 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
   }
 
   const char* type_str = "bfloat16";
-  zendnnInfo(ZENDNN_FWKLOG, "Converted ", num_nodes_changed, "/",
-             num_nodes_preop, " nodes to ", type_str, " precision using ",
-             num_nonvar_casts_to_f16, " cast(s) to ", type_str,
-             " (excluding Const and Variable casts)");
+  LOG(INFO) << "Converted " << num_nodes_changed << "/" << num_nodes_preop
+            << " nodes to " << type_str << " precision using "
+            << num_nonvar_casts_to_f16 << " cast(s) to " << type_str
+            << " (excluding Const and Variable casts)";
   return OkStatus();
 }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -386,9 +386,7 @@ void zendnn_direct_kernel(const Tensor &a, const Tensor &b, const Tensor *bias,
 
   // Check if any of the pointers is null.
   if (a_ptr == nullptr || b_ptr == nullptr || c_ptr == nullptr) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: zendnn_direct_kernel: Null pointer detected, "
-               "returning early!");
+    // Old ZenDNN logging removed;
     return;
   }
 

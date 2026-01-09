@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -282,18 +282,19 @@ class OpKernelContext {
   //
   //  Status mutable_output(StringPiece name, Tensor** tensor);
   //
-  static const Eigen::ThreadPoolDevice& eigen_cpu_device_singleton() {
-    static Eigen::ThreadPool threadpool(port::NumSchedulableCPUs());
-    static Eigen::ThreadPoolDevice threadpool_device(
-        &threadpool,
-        (port::NumSchedulableCPUs() + port::NumHyperthreadsPerCore() - 1) /
-            port::NumHyperthreadsPerCore());
-    return threadpool_device;
-  }
-
-  const Eigen::ThreadPoolDevice& eigen_cpu_device() const {
-    return eigen_cpu_device_singleton();
-  }
+  // Eigen device functions commented out - not needed for vanilla TF plugin
+  // static const Eigen::ThreadPoolDevice& eigen_cpu_device_singleton() {
+  //   static Eigen::ThreadPool threadpool(port::NumSchedulableCPUs());
+  //   static Eigen::ThreadPoolDevice threadpool_device(
+  //       &threadpool,
+  //       (port::NumSchedulableCPUs() + port::NumHyperthreadsPerCore() - 1) /
+  //           port::NumHyperthreadsPerCore());
+  //   return threadpool_device;
+  // }
+  //
+  // const Eigen::ThreadPoolDevice& eigen_cpu_device() const {
+  //   return eigen_cpu_device_singleton();
+  // }
 
   void CtxFailure(const Status& s);
   void CtxFailureWithWarning(const Status& s);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -588,6 +588,14 @@ bool FindContractionWithBias(const RemapperContext& ctx, int node_index,
       IsInPreserveSet(ctx, contraction_node_def))
     return false;
 
+  // TODO(plugin): ZenDNN does not support double dtype currently.
+  if (HasDataType(contraction_node_def, DT_DOUBLE)) return false;
+
+  // We do not yet have support for DepthWiseConv2D fusion.
+  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
+  // conversion is disabled in zen_layout.cc.
+  if (IsDepthwiseConv2dNative(*contraction_node_def)) return false;
+
   const ContractionWithBiasAdd pattern{contraction_node_view->node_index(),
                                        node_index, bias_port};
   // We successfully found a {Conv2D, MatMul}+BiasAdd pattern.
@@ -690,6 +698,9 @@ bool FindContractionWithActivation(const RemapperContext& ctx, int node_index,
       IsInPreserveSet(ctx, contraction_node_def))
     return false;
 
+  // TODO(plugin): ZenDNN does not support double dtype currently.
+  if (HasDataType(contraction_node_def, DT_DOUBLE)) return false;
+
   const ContractionWithActivation pattern{contraction_node_view->node_index(),
                                           node_index};
   // We successfully found a Matmul + Relu pattern.
@@ -777,6 +788,11 @@ bool FindContractionWithBiasAndActivation(
   // We have not encountered any other Contraction + BiasAdd + {Sigmoid}
   // pattern.
   if (IsSigmoid(*node_def) && !IsMatMul(*contraction_def)) return false;
+
+  // We do not yet have support for DepthWiseConv2D fusion.
+  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
+  // conversion is disabled in zen_layout.cc.
+  if (IsDepthwiseConv2dNative(*contraction_def)) return false;
 
   // Verify the inter node has control fanin&fanout or not.
   if (HasControlFaninOrFanout(*bias_add_node_view)) {
@@ -990,11 +1006,12 @@ bool FindPadWithContraction(const RemapperContext& ctx, int node_index,
   // Root of the pattern must be a Conv or FusedConv.
   if (HasControlFaninOrFanout(*node_view)) return false;
 
-  // Root node must be (_Fused)Conv2D/(_Fused)DepthwiseConv2dNative.
+  // Root node must be (_Fused)Conv2D.
+  // We do not yet have support for DepthWiseConv2D fusion.
+  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
+  // conversion is disabled in zen_layout.cc.
   const auto* node_def = node_view->node();
-  const bool is_ok = IsConv2D(*node_def) || node_def->op() == kFusedConv2D ||
-                     IsDepthwiseConv2dNative(*node_def) ||
-                     node_def->op() == kFusedDepthwiseConv2dNative;
+  const bool is_ok = IsConv2D(*node_def) || node_def->op() == kFusedConv2D;
   if (!is_ok) {
     return false;
   }
@@ -1034,7 +1051,7 @@ bool FindPadWithContraction(const RemapperContext& ctx, int node_index,
 
   const PadWithContraction pattern{pad_node_view->node_index(), node_index};
 
-  // We successfully found a Pad + (_Fused)Conv2D/DepthwiseConv2dNative pattern.
+  // We successfully found a Pad + (_Fused)Conv2D pattern.
   *matched = pattern;
 
   return true;
@@ -2073,9 +2090,7 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   const GraphDef* graph = ctx->graph_view.graph();
   const NodeDef& contraction = graph->node(matched.contraction);
   const NodeDef& bias_add = graph->node(matched.bias_add);
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(),
-             " with BiasAdd: bias_add=", bias_add.name(),
-             " contraction = ", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(bias_add.name());
@@ -2125,10 +2140,7 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   // ZenDNN only supports fusion for Conv and MatMul.
   DCHECK(IsConvOrMatMul(contraction));
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with BiasAdd ",
-             bias_add.op(), " and Add ", add.op(),
-             " : bias_add=", bias_add.name(), " add=", add.name(),
-             " contraction=", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(add.name());
@@ -2175,10 +2187,7 @@ Status AddFusedContractionNode(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& activation = graph->node(matched.activation);
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with BiasAdd and ",
-             activation.op(), ":", " activation=", activation.name(),
-             " bias_add=", bias_add.name(),
-             " contraction=", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2225,9 +2234,7 @@ Status AddFusedMatMulSigmoidNode(RemapperContext* ctx,
   const NodeDef& activation = graph->node(matched.activation);  // Sigmoid.
 
   // Log the fusion operation.
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with ",
-             activation.op(), ":", " activation=", activation.name(),
-             " contraction=", contraction.name());
+  // Old ZenDNN logging removed;
 
   // Create the new fused node.
   NodeDef fused_node;
@@ -2271,9 +2278,7 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   const NodeDef& contraction = graph->node(matched.contraction);
   const NodeDef& activation = graph->node(matched.activation);
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with ",
-             activation.op(), ":", " activation=", activation.name(),
-             " contraction=", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2313,11 +2318,7 @@ Status AddFusedContractionNode(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& add = graph->node(matched.add);
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", contraction.op(), " with BiasAdd ",
-             bias_add.op(), " and Add ", add.op(), " and Activation ",
-             activation.op(), ": activation=", activation.name(),
-             " bias_add=", bias_add.name(), " add=", add.name(),
-             " contraction=", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2338,6 +2339,9 @@ Status AddFusedContractionNode(
     fused_node.set_op(kFusedDepthwiseConv2dNative);
     CopyDepthwiseConv2dNativeAttributes(contraction, &fused_node);
     // TODO(plugin) : Check if _ZenFusedBatchMatMul is a possibility.
+  } else if (IsMatMul(contraction)) {
+    fused_node.set_op(kFusedMatMul);
+    CopyMatMulAttributes(contraction, &fused_node);
   } else {
     CHECK(false);
   }
@@ -2367,8 +2371,7 @@ Status AddFusedConv2DNode(RemapperContext* ctx,
   const NodeDef& contraction = graph->node(matched.contraction);
   DCHECK(IsConv2D(contraction)) << "Only Conv2D supported for now";
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse Conv2D with BatchNorm: batch_norm =",
-             fused_batch_norm.name(), " conv2d =", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(fused_batch_norm.name());
@@ -2409,10 +2412,7 @@ Status AddFusedConv2DNode(RemapperContext* ctx,
 
   const NodeDef& activation = graph->node(matched.activation);
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse Conv2D with BatchNorm and ", activation.op(),
-             ": activation =", activation.name(),
-             " batch_norm =", fused_batch_norm.name(),
-             " conv2d =", contraction.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2451,9 +2451,7 @@ Status AddFusedBatchNormExNode(RemapperContext* ctx,
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
   const NodeDef& activation = graph->node(matched.activation);
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", activation.op(),
-             " with FusedBatchNorm: activation=", activation.name(),
-             " for fused_batch_norm=", fused_batch_norm.name());
+  // Old ZenDNN logging removed;
 
   // Replace FusedBatchNorm with _FusedBatchNormEx + Activation.
   NodeDef fused_op;
@@ -2679,10 +2677,7 @@ Status AddFusedBatchMatMulBiasAddActivation(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& activation = graph->node(matched.activation);
 
-  zendnnInfo(ZENDNN_FWKLOG, "Fuse ", batch_matmul.op(), " with BiasAdd and ",
-             activation.op(), ":", " activation=", activation.name(),
-             " bias_add=", bias_add.name(),
-             " batch_matmul=", batch_matmul.name());
+  // Old ZenDNN logging removed;
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2768,7 +2763,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
   std::vector<bool> invalidated_nodes(num_nodes);
   std::vector<bool> nodes_to_delete(num_nodes);
 
-  zendnnInfo(ZENDNN_FWKLOG, "RemapperPass: Start to fuse nodes.");
+  // Old ZenDNN logging removed;
 
   // Infer statically first and only once.
   ctx.GetGraphProperties();
@@ -2799,8 +2794,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
     if (is_visited) {
       if (invalidated_nodes[i] && last_op != node_def->op()) {
         // Recheck current node to find more possible fusion.
-        zendnnInfo(ZENDNN_FWKLOG, "Recheck node ", node_def->op(), " : ",
-                   node_def->name());
+        // Old ZenDNN logging removed;
         last_op = node_def->op();
       } else {
         // Iterate to next node and reset all flags.
@@ -2818,13 +2812,12 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
     if (nodes_to_delete[i]) {
       continue;
     }
-    zendnnInfo(ZENDNN_FWKLOG, " Processing ", node_def->op(), " ",
-               node_def->name());
+    // Old ZenDNN logging removed;
     {
       // Keras Dense layer fwd fusion.
       KerasDenseLayerFwd keras_dense_layer_fwd;
       if (FindKerasDenseLayerFwd(ctx, i, &keras_dense_layer_fwd)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found KerasDenseLayerFwd pattern.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(AddKerasDenseLayerFwd(
             &ctx, keras_dense_layer_fwd, &invalidated_nodes, &nodes_to_delete));
         continue;
@@ -2834,8 +2827,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAndAddActivation contract_with_bias_and_add_activation;
       if (FindContractionWithBiasAndAddActivation(
               ctx, i, &contract_with_bias_and_add_activation)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found ContractionWithBiasAndAddActivation pattern.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_add_activation,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2845,7 +2837,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap MatMul+Relu into the _FusedMatMul.
       ContractionWithActivation contract_with_activation;
       if (FindContractionWithActivation(ctx, i, &contract_with_activation)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithActivation pattern.");
+        // Old ZenDNN logging removed;
         AddFusedContractionNode(&ctx, contract_with_activation,
                                 &invalidated_nodes, &nodes_to_delete);
         continue;
@@ -2854,7 +2846,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap _FusedMatMul{MatMul + BiasAdd} + Sigmoid into the _FusedMatMul.
       ContractionWithActivation contract_with_sigmoid;
       if (FindContractionWithSigmoid(ctx, i, &contract_with_sigmoid)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithSigmoid pattern.");
+        // Old ZenDNN logging removed;
         AddFusedMatMulSigmoidNode(&ctx, contract_with_sigmoid,
                                   &invalidated_nodes, &nodes_to_delete);
         continue;
@@ -2864,8 +2856,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAddAndAdd contract_with_bias_and_add;
       if (FindContractionWithBiasAddAndAdd(ctx, i,
                                            &contract_with_bias_and_add)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found ContractionWithBiasAddAndAdd pattern.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_add,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2876,7 +2867,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // _Fused{Conv2D,DepthwiseConv2dNative,MatMul}.
       ContractionWithBiasAdd contract_with_bias;
       if (FindContractionWithBias(ctx, i, &contract_with_bias)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithBiasAdd pattern.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(AddFusedContractionNode(
             &ctx, contract_with_bias, &invalidated_nodes, &nodes_to_delete));
         continue;
@@ -2887,8 +2878,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAddAndActivation contract_with_bias_and_activation;
       if (FindContractionWithBiasAndActivation(
               ctx, i, &contract_with_bias_and_activation)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found ContractionWithBiasAddAndActivation pattern.");
+        // Old ZenDNN logging removed;
         TF_RETURN_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_activation,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2896,44 +2886,44 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       }
 
       // Remap Conv2D+FusedBatchNorm into the _FusedConv2D.
-      ContractionWithBatchNorm contract_with_batch_norm;
-      if (FindConv2DWithBatchNorm(ctx, i, &contract_with_batch_norm)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found ContractionWithBatchNorm pattern.");
-        TF_RETURN_IF_ERROR(AddFusedConv2DNode(&ctx, contract_with_batch_norm,
-                                              &invalidated_nodes,
-                                              &nodes_to_delete));
-        continue;
-      }
+      // ContractionWithBatchNorm contract_with_batch_norm;
+      // if (FindConv2DWithBatchNorm(ctx, i, &contract_with_batch_norm)) {
+      //   // Old ZenDNN logging removed;
+      //   TF_RETURN_IF_ERROR(AddFusedConv2DNode(&ctx, contract_with_batch_norm,
+      //                                         &invalidated_nodes,
+      //                                         &nodes_to_delete));
+      //   continue;
+      // }
 
       // Remap Conv2D+FusedBatchNorm+Activation into the _FusedConv2D.
-      ContractionWithBatchNormAndActivation
-          contract_with_batch_norm_and_activation;
-      if (FindConv2DWithBatchNormAndActivation(
-              ctx, i, &contract_with_batch_norm_and_activation)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found ContractionWithBatchNormAndActivation pattern.");
-        TF_RETURN_IF_ERROR(
-            AddFusedConv2DNode(&ctx, contract_with_batch_norm_and_activation,
-                               &invalidated_nodes, &nodes_to_delete));
-        continue;
-      }
+      // ContractionWithBatchNormAndActivation
+      //     contract_with_batch_norm_and_activation;
+      // if (FindConv2DWithBatchNormAndActivation(
+      //         ctx, i, &contract_with_batch_norm_and_activation)) {
+      //   // Old ZenDNN logging removed;
+      //   TF_RETURN_IF_ERROR(
+      //       AddFusedConv2DNode(&ctx, contract_with_batch_norm_and_activation,
+      //                          &invalidated_nodes, &nodes_to_delete));
+      //   continue;
+      // }
 
       // Remap FusedBatchNorm+<Activation> into _FusedBatchNormEx.
-      FusedBatchNormEx fused_batch_norm_ex;
-      if (FindFusedBatchNormEx(ctx, i, &fused_batch_norm_ex)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found FindFusedBatchNormEx pattern.");
-        TF_ABORT_IF_ERROR(AddFusedBatchNormExNode(
-            &ctx, fused_batch_norm_ex, &invalidated_nodes, &nodes_to_delete));
-      }
+      // FusedBatchNormEx fused_batch_norm_ex;
+      // if (FindFusedBatchNormEx(ctx, i, &fused_batch_norm_ex)) {
+      //   // Old ZenDNN logging removed;
+      //   TF_ABORT_IF_ERROR(AddFusedBatchNormExNode(
+      //       &ctx, fused_batch_norm_ex, &invalidated_nodes,
+      //       &nodes_to_delete));
+      // }
 
       // Remap BatchMatMul + Mul into the _FusedBatchMatMul.
-      ContractionWithMul contract_with_mul;
-      if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found BatchMatMul pattern with BinaryMul.");
-        AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
-                                &nodes_to_delete);
-        continue;
-      }
+      // ContractionWithMul contract_with_mul;
+      // if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
+      //   // Old ZenDNN logging removed;
+      //   AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
+      //                           &nodes_to_delete);
+      //   continue;
+      // }
 
       // Remap MatMul + BiasAdd + gelu-subgraph.
       std::map<string, int> matched_nodes_map;
@@ -2943,8 +2933,7 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       if (FindMatMulBiasAddAndGelu(&ctx, i, &matched_nodes_map,
                                    &remove_node_indices, &is_gelu_approximate,
                                    &expand_dims)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found MatMulBiasAddAndGelu pattern with",
-                   (is_gelu_approximate ? "" : "out"), " Gelu Approximate.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(AddFusedMatMulBiasAddAndGelu(
             &ctx, matched_nodes_map, remove_node_indices, &invalidated_nodes,
             &nodes_to_delete, is_gelu_approximate, expand_dims));
@@ -2952,36 +2941,35 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       }
 
       // Remap BatchMatMul + Mul + AddV2 into the _FusedBatchMatMul.
-      matched_nodes_map.clear();
-      remove_node_indices.clear();
-      std::vector<string> input_node_names;
-      input_node_names.clear();
-      if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
-                               &remove_node_indices, &input_node_names)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found BatchMatMul pattern with BinaryMul and Add.");
-        TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
-            &ctx, matched_nodes_map, remove_node_indices, input_node_names,
-            &invalidated_nodes, &nodes_to_delete));
-        continue;
-      }
+      // matched_nodes_map.clear();
+      // remove_node_indices.clear();
+      // std::vector<string> input_node_names;
+      // input_node_names.clear();
+      // if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
+      //                          &remove_node_indices, &input_node_names)) {
+      //   // Old ZenDNN logging removed;
+      //   TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
+      //       &ctx, matched_nodes_map, remove_node_indices, input_node_names,
+      //       &invalidated_nodes, &nodes_to_delete));
+      //   continue;
+      // }
 
       // Remap BatchMatMul + BiadAdd + Activation into the _FusedBatchMatMul.
-      BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
-      if (FindBatchMatMulBiasAddActivation(ctx, i,
-                                           &batchmatmul_biasadd_activation)) {
-        zendnnInfo(ZENDNN_FWKLOG,
-                   " Found BatchMatMul pattern with BiasAdd and Activation.");
-        TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
-            &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
-            &nodes_to_delete));
-        continue;
-      }
+      // BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
+      // if (FindBatchMatMulBiasAddActivation(ctx, i,
+      //                                      &batchmatmul_biasadd_activation))
+      //                                      {
+      //   // Old ZenDNN logging removed;
+      //   TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
+      //       &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
+      //       &nodes_to_delete));
+      //   continue;
+      // }
 
       // Remap Pad + (_Fused)Conv2D to (_Fused)Conv2D.
       PadWithContraction pad_conv;
       if (FindPadWithContraction(ctx, i, &pad_conv)) {
-        zendnnInfo(ZENDNN_FWKLOG, " Found PadWithContraction pattern.");
+        // Old ZenDNN logging removed;
         TF_ABORT_IF_ERROR(AddPadWithContractionNode(
             &ctx, pad_conv, &invalidated_nodes, &nodes_to_delete));
         continue;

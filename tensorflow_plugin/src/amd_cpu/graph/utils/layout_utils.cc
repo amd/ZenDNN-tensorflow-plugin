@@ -396,10 +396,15 @@ OpDef GetOpDef(const NodeDef& node_def) {
   return op_def;
 }
 
+// TODO: Remove in_links, out_links, and reset attributes from
+// all ops once eager layout rewrite is migrated back to zentf from TensorFlow.
 void CopyZenAttrs(const NodeDef& orig_node, NodeDef* new_node) {
   AddNodeAttr("reorder_before", false, new_node);
   AddNodeAttr("reorder_after", false, new_node);
   AddNodeAttr("is_eager", false, new_node);
+  AddNodeAttr("in_links", 0, new_node);
+  AddNodeAttr("out_links", 0, new_node);
+  AddNodeAttr("reset", false, new_node);
 }
 
 void CopyAllAttrs(const NodeDef& orig_node, NodeDef* new_node) {

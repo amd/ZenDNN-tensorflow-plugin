@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -248,9 +248,7 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
       // TODO(plugin): remove this workaround, once stock-tf supports "dtype"
       // attribute for "QuantizeV2" op
       if (node.op() == "QuantizeV2" && attr_name == "dtype") {
-        zendnnInfo(ZENDNN_FWKLOG, node.op(), " ", node.name(),
-                   " has dtype attr. dtype is meaningless in stock TF and "
-                   "ZenDNN-TF-Plugin. It only works with ZenDNN config TF.");
+        // Old ZenDNN logging removed;
         continue;
       }
 
@@ -260,8 +258,7 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
           ((node.op() == "QuantizedMaxPool" ||
             node.op() == "QuantizedConcatV2") &&
            attr_name == "out_type")) {
-        zendnnInfo(ZENDNN_FWKLOG, "Find unexpected attr ", attr_name, " in op ",
-                   node.op());
+        // Old ZenDNN logging removed;
         continue;
       }
 

@@ -38,6 +38,9 @@ void RegisterZenBatchMatMul() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_cache_weight: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_x: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_y: bool = false");
@@ -46,11 +49,9 @@ void RegisterZenBatchMatMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenBatchMatMul Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenBatchMatMul Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -70,6 +71,9 @@ void RegisterZenBatchMatMulV2() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_cache_weight: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_x: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_y: bool = false");
@@ -78,11 +82,9 @@ void RegisterZenBatchMatMulV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenBatchMatMulV2 Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenBatchMatMulV2 Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -105,18 +107,18 @@ void RegisterZenFusedBatchMatMulV2() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool = false");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_cache_weight: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchMatMulV2 Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenFusedBatchMatMulV2 Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }

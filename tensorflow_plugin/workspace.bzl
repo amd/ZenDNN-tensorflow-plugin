@@ -159,19 +159,3 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
         strip_prefix = "openmp-10.0.1.src",
         urls = tf_mirror_urls("https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.1/openmp-10.0.1.src.tar.xz"),
     )
-
-    tf_http_archive(
-        name = "amd_blis",
-        build_file = "//third_party/amd_blis:blis.BUILD",
-        sha256 = "9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319",
-        strip_prefix = "blis-AOCL-Sep2025-b1",
-        urls = tf_mirror_urls("https://github.com/amd/blis/archive/refs/tags/AOCL-Sep2025-b1.tar.gz"),
-    )
-
-    tf_http_archive(
-        name = "zen_dnn",
-        build_file = "//third_party/zen_dnn:zen.BUILD",
-        sha256 = "c59bf50d2a425d36416ea63bf6cdc1670422f20a49baf4b3af83d0b4854aeaa9",
-        strip_prefix = "ZenDNN-zendnn-2025-WW50",
-        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnn-2025-WW50.tar.gz"),
-    )

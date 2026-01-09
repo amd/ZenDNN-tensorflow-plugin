@@ -42,8 +42,6 @@ class ZenBatchMatMulOp : public OpKernel {
   virtual ~ZenBatchMatMulOp() {}
 
   explicit ZenBatchMatMulOp(OpKernelConstruction *context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-
     OP_REQUIRES_OK(context, context->GetAttr("adj_x", &adj_x_));
     OP_REQUIRES_OK(context, context->GetAttr("adj_y", &adj_y_));
 
@@ -95,8 +93,7 @@ class ZenBatchMatMulOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenBatchMatMul (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor &lhs = context->input(0);
     const Tensor &rhs = context->input(1);
@@ -419,16 +416,13 @@ class ZenBatchMatMulOp : public OpKernel {
       net.at(i).execute(s, net_args.at(i));
     }
 
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-DEF: _ZenBatchMatMul (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
   bool adj_x_ = false;
   bool adj_y_ = false;
   bool is_cache_weight_ = false;
-  ZendnnParameters zendnn_params_;
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;
 };

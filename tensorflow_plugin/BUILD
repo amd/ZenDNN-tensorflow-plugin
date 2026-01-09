@@ -21,9 +21,7 @@ cc_binary(
 cc_library(
     name = "zen_libs_linux",
     srcs = [
-        "@amd_blis//:libblis-mt.so.5",
         "@llvm_openmp//:libiomp5.so",
-        "@zen_dnn//:libamdZenDNN.so",
     ],
     deps = [
         "@zendnnl_repo//:zendnnl_lib",

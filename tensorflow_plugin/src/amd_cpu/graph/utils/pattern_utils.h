@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -257,11 +257,7 @@ class SubGraphMatcher {
       for (const auto& fanouts : fanouts_by_ports) {
         for (const auto& fanout : fanouts) {
           if (!matched_node_indices_.count(fanout.node_index())) {
-            zendnnInfo(
-                ZENDNN_FWKLOG, "The node ", node_view->node()->op(), "[",
-                node_view->node()->name(), "] can't find fanout ",
-                fanout.node_index(), "[",
-                graph_view_->GetNode(fanout.node_index())->node()->name(), "]");
+            // Old ZenDNN logging removed;
             return false;
           }
         }

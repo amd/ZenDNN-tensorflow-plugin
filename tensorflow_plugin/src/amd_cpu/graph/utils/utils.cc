@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -129,9 +129,7 @@ Status CreateWritableFile(const string& dirname, const string& name,
   }
 
   if (dir.empty()) {
-    zendnnInfo(ZENDNN_FWKLOG, "Failed to dump ", name,
-               " because dump location is not specified through either "
-               "DUMP_GRAPH_PREFIX environment variable or function argument.");
+    // Old ZenDNN logging removed;
     return errors::InvalidArgument("DUMP_GRAPH_PREFIX not specified");
   }
 
@@ -188,7 +186,7 @@ string DumpGraphDefToFile(const string& name, GraphDef const& graph_def,
     return StrCat("(failed to dump Graph to '", filepath,
                   "': ", status.ToString(), ")");
   }
-  zendnnVerbose(ZENDNN_FWKLOG, "Dumped Graph to ", filepath);
+  // Old ZenDNN logging removed;
   return filepath;
 }
 
@@ -393,7 +391,7 @@ NodeDef* GetTailOfChain(const NodeDef& source, const NodeMap& node_map,
     }
     next = node_map.GetNode(current->input(0));
     if (next == nullptr) {
-      zendnnInfo(ZENDNN_FWKLOG, "Node not found: ", current->input(0));
+      // Old ZenDNN logging removed;
     }
   }
   return const_cast<NodeDef*>(current);

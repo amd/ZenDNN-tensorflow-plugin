@@ -48,6 +48,9 @@ void RegisterZenFusedBatchNorm() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 "exponential_avg_factor: float = 1.0");
@@ -57,11 +60,9 @@ void RegisterZenFusedBatchNorm() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchNorm Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchNorm Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -89,6 +90,9 @@ void RegisterZenFusedBatchNormV2() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 "exponential_avg_factor: float = 1.0");
@@ -98,12 +102,9 @@ void RegisterZenFusedBatchNormV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchNormV2 Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenFusedBatchNormV2 Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -132,6 +133,9 @@ void RegisterZenFusedBatchNormV3() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 "exponential_avg_factor: float = 1.0");
@@ -141,12 +145,9 @@ void RegisterZenFusedBatchNormV3() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchNormV3 Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenFusedBatchNormV3 Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -176,6 +177,9 @@ void RegisterZenFusedBatchNormEx() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "epsilon: float = 0.0001");
   TF_OpDefinitionBuilderAddAttr(op_builder,
                                 "exponential_avg_factor: float = 1.0");
@@ -188,12 +192,9 @@ void RegisterZenFusedBatchNormEx() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedBatchNormEx Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenFusedBatchNormEx Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }

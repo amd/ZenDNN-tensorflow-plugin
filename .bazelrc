@@ -25,6 +25,9 @@ build --per_file_copt=external/.*@-Wno-error
 build --copt=-Wno-error=stringop-overflow
 build --copt=-Wno-comment
 build --copt=-Wno-int-in-bool-context
+# ToDo: Remove this once we have a fix for the unused function warning
+build --copt=-Wno-unused-function
+build --copt=-Wno-unused-variable
 
 # Pass environment variables to build actions
 build --action_env=ZENDNNL_MANYLINUX_BUILD

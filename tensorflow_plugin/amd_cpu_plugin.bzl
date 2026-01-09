@@ -15,8 +15,6 @@
 #
 #*******************************************************************************
 
-load("//third_party/zen_dnn:build_defs.bzl", "if_zendnn")
-
 # Return the options to use for a C++ library or binary build.
 # Uses the ":optmode" config_setting to pick the options.
 
@@ -30,15 +28,14 @@ def tf_copts(android_optimization_level_override = "-O2", is_external = False):
     # is currently only being set for Android.
     # To clear this value, and allow the CROSSTOOL default
     # to be used, pass android_optimization_level_override=None
-    return (
-        [
-            "-Wno-sign-compare",
-            "-fexceptions",
-            "-ftemplate-depth=900",
-            "-msse3",
-            "-pthread",
-        ] + if_zendnn(["-DAMD_ZENDNN"])
-    )
+    return [
+        "-Wno-sign-compare",
+        "-fexceptions",
+        "-ftemplate-depth=900",
+        "-msse3",
+        "-pthread",
+        "-DAMD_ZENDNN",
+    ]
 
 def _get_transitive_headers(hdrs, deps):
     return depset(

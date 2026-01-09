@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -155,21 +155,21 @@ void OpKernelContext::set_output(int index, const Tensor& tensor) {
 /// all below CtxFailure will pass back the TF_Status created by plugin.
 /// so we need not to delete it, which will be controlled by TF.
 void OpKernelContext::CtxFailure(const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, s);
+  // Logging commented out - old ZenDNN logging removed
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 void OpKernelContext::CtxFailure(const char* file, int line, const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, file, ": ", line, s);
+  // Logging commented out - old ZenDNN logging removed
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelContext::CtxFailureWithWarning(const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, s);
+  // Logging commented out - old ZenDNN logging removed
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 void OpKernelContext::CtxFailureWithWarning(const char* file, int line,
                                             const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, file, line, s);
+  // Logging commented out - old ZenDNN logging removed
   TF_OpKernelContext_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
@@ -326,24 +326,24 @@ Status OpKernelConstruction::GetAttr<std::vector<float>>(
 }
 
 void OpKernelConstruction::CtxFailure(const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, s);
+  LOG(ERROR) << s.ToString();
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelConstruction::CtxFailure(const char* file, int line,
                                       const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, file, ":", line, s);
+  LOG(ERROR) << file << ":" << line << " " << s.ToString();
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelConstruction::CtxFailureWithWarning(const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, s);
+  LOG(WARNING) << s.ToString();
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
 void OpKernelConstruction::CtxFailureWithWarning(const char* file, int line,
                                                  const Status& s) {
-  zendnnInfo(ZENDNN_FWKLOG, file, ": ", line, s);
+  LOG(WARNING) << file << ": " << line << " " << s.ToString();
   TF_OpKernelConstruction_Failure(ctx_, TF_StatusFromStatus(s, status_));
 }
 
@@ -547,11 +547,7 @@ Status FindKernelRegistration(
     }
 
     if (*reg != nullptr) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "No device-specific kernels found for NodeDef '",
-                 FormatNodeDefForError(node_name, has_experimental_debug_info,
-                                       experimental_debug_info),
-                 "'", "Will fall back to a default kernel.");
+      // Logging commented out - old ZenDNN logging removed
     }
   }
   return OkStatus();
@@ -626,6 +622,6 @@ Status FindKernelDef(const DeviceType& device_type, const NodeDef& node_def,
 
 void CheckNotInComputeAsync(OpKernelContext* ctx,
                             const char* correct_macro_name) {
-  zendnnInfo(ZENDNN_FWKLOG, __FILE__, ":", __LINE__, "need impl!");
+  // Logging commented out - old ZenDNN logging removed
 }
 }  // namespace amd_cpu_plugin

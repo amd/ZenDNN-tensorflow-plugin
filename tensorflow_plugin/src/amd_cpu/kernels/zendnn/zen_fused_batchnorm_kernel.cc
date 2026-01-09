@@ -65,16 +65,13 @@ class ZenFusedBatchNormOp : public OpKernel {
                       "_ZenFusedBatchNorm only support Relu activation"));
     }
 
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-
     depth_ = 0;
     mean_values_ = nullptr;
     variance_values_ = nullptr;
   }
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenFusedBatchNorm (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const size_t kSrcIndex = 0;       // Index of src input tensor.
     const size_t kScaleIndex = 1;     // Index of scale tensor.
@@ -266,9 +263,8 @@ class ZenFusedBatchNormOp : public OpKernel {
       std::memcpy(batch_mean_data, mean_data, depth_ * sizeof(U));
       std::memcpy(batch_variance_data, variance_data, depth_ * sizeof(U));
     }
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-DEF: _ZenFusedBatchNorm (TF kernel): Compute Is Successful!");
+
+    // Old ZenDNN logging removed;
   }
 
  private:
@@ -281,7 +277,6 @@ class ZenFusedBatchNormOp : public OpKernel {
   size_t depth_ = 0;  // Batch normalization is performed for per channel.
   FusedBNActivationMode activation_mode_ =
       functor::FusedBatchNormActivationMode::kIdentity;
-  ZendnnParameters zendnn_params_;
 
   void SetMeanVariance(const Tensor &mean, const Tensor &variance) {
     mean_values_ =

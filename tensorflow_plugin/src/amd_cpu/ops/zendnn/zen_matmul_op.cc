@@ -26,6 +26,12 @@
 
 namespace amd_cpu_plugin {
 
+// TODO(zentf): Remove is_eager, reorder_before, reorder_after, in_links,
+// out_links, and reset attributes from all ops once eager layout rewrite
+// is migrated back to zentf from TensorFlow.
+// Refer:
+// https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/common_runtime/eager/zen_eager_op_rewrite.cc
+
 // Routine for registering _ZenMatMul op.
 void RegisterZenMatMul() {
   TF_Status* status = TF_NewStatus();
@@ -40,6 +46,9 @@ void RegisterZenMatMul() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_a: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "grad_b: bool = false");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
@@ -47,10 +56,9 @@ void RegisterZenMatMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-REG: _ZenMatMul Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenMatMul Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -76,16 +84,17 @@ void RegisterZenFusedMatMul() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedMatMul Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedMatMul Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -106,6 +115,9 @@ void RegisterZenMatMulBiasAddGelu() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // TODO(plugin) :: Update shape inference function with
   // shape_inference::MatMulShape.
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
@@ -113,12 +125,9 @@ void RegisterZenMatMulBiasAddGelu() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenMatMulBiasAddGelu Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenMatMulBiasAddGelu Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -143,11 +152,9 @@ void RegisterMatMulBiasAddGelu() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: MatMulBiasAddGelu Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: MatMulBiasAddGelu Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }

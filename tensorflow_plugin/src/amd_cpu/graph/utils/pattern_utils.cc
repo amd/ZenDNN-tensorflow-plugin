@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -108,19 +108,16 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
   // fanins, we can continue to the matching.
   if (node_view->NumControllingFanins() > 0 &&
       (fanin_checking || pattern.node_status != NodeStatus::kRemain)) {
-    zendnnVerbose(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
-                  "] failed due to controlling fanins");
+    // Old ZenDNN logging removed;
     return false;
   }
 
   if (node_view->NumControlledFanouts() > 0) {
-    zendnnVerbose(ZENDNN_FWKLOG, pattern.op, "[", pattern.label,
-                  "] failed due to controlled fanouts");
+    // Old ZenDNN logging removed;
     return false;
   }
 
-  zendnnVerbose(ZENDNN_FWKLOG, pattern.op, "[", pattern.label, "] vs. ",
-                node_view->node()->op(), "[", node_view->node()->name(), "]");
+  // Old ZenDNN logging removed;
 
   bool op_type_matched = false;
   if (pattern.op == "*") {
@@ -141,8 +138,7 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
     }
   }
   if (op_type_matched) {
-    zendnnVerbose(ZENDNN_FWKLOG, "The op type IS a match ",
-                  node_view->node()->op(), " vs. ", pattern.op);
+    // Old ZenDNN logging removed;
     // If op type matches and current node is visited first time, insert current
     // node to node_label_to_index_ map with the current label as the key.
     // Multiple occurances of same label in the pattern syntax indicates that
@@ -158,21 +154,18 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
         remove_node_indices_.insert(node_view->node_index());
       }
     } else if (node_label_to_index_[label] != node_view->node_index()) {
-      zendnnVerbose(ZENDNN_FWKLOG, "The label (", label, ") ",
-                    node_label_to_index_[label], " can't match ",
-                    node_view->node_index());
+      // Old ZenDNN logging removed;
       auto name1 =
           graph_view_->GetNode(node_label_to_index_[label])->node()->name();
       auto name2 = node_view->node()->name();
-      zendnnVerbose(ZENDNN_FWKLOG, "The exsiting name is ", name1);
-      zendnnVerbose(ZENDNN_FWKLOG, "Current name is ", name2);
+      // Old ZenDNN logging removed;
+      // Old ZenDNN logging removed;
       return false;  // label constraint could not be satisfied.
     } else {
       DCHECK(node_label_to_index_[label] == node_view->node_index());
     }
   } else {
-    zendnnVerbose(ZENDNN_FWKLOG, "The op type is not match ",
-                  node_view->node()->op(), " vs. ", pattern.op);
+    // Old ZenDNN logging removed;
     return false;
   }
   // Current root of the pattern syntax is matched with the current node.
@@ -185,9 +178,7 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
     auto graph_children = node_view->GetRegularFanins();
     auto num_children = graph_children.size();
     if (!has_n_inputs && num_children != pattern.children.size()) {
-      zendnnVerbose(ZENDNN_FWKLOG, "The ", pattern.label,
-                    "'s children size is not consistent (", num_children,
-                    " vs. ", pattern.children.size(), ")");
+      // Old ZenDNN logging removed;
       return false;
     } else {
       // A pattern is a graph that we would like to match with a subgraph of
@@ -262,7 +253,7 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::GetMatchedNodes(
       *matched_nodes_map = this->node_label_to_index_;
       *remove_node_indices = this->remove_node_indices_;
     } else {
-      zendnnVerbose(ZENDNN_FWKLOG, "Some nodes in preserve set");
+      // Old ZenDNN logging removed;
     }
   } else {
     found_match = false;

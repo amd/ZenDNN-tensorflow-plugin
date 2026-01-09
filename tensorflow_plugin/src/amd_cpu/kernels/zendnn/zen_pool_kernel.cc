@@ -70,12 +70,10 @@ class ZenPoolOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format_str));
     OP_REQUIRES(context, FormatFromString(data_format_str, &data_format_),
                 errors::InvalidArgument("Invalid data format"));
-
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
   }
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: _ZenPool (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     int data_format = (data_format_ == FORMAT_NCHW) ? 1 : 0;
 
@@ -217,8 +215,7 @@ class ZenPoolOp : public OpKernel {
       }
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenPool (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
@@ -229,8 +226,6 @@ class ZenPoolOp : public OpKernel {
   // FORMAT_NHWC is the default data format in TensorFlow. Hence initializing
   // with it. Reference from tensorflow_plugin/src/amd_cpu/util/tensor_format.h
   TensorFormat data_format_ = TensorFormat::FORMAT_NHWC;
-  // ZenDNN specific.
-  ZendnnParameters zendnn_params_;
 };
 
 template <typename Toutput>
@@ -254,12 +249,10 @@ class ZenQuantizedPoolOp : public OpKernel {
     } else if (padding_str == "SAME") {
       padding_ = Padding::SAME;
     }
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
   }
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenQuantizedPool (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor &input = context->input(0);
     auto input_map = input.tensor<quint8, 4>();  // experimented and proven that
@@ -376,17 +369,13 @@ class ZenQuantizedPoolOp : public OpKernel {
       net.at(i).execute(s, net_args.at(i));
     }
 
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-DEF: _ZenQuantizedPool (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
   std::vector<int32> ksize_ = {};
   std::vector<int32> stride_ = {};
   Padding padding_ = Padding::VALID;
-  // ZenDNN specific
-  ZendnnParameters zendnn_params_;
 };
 
 #define REGISTER_POOL_KERNELS(TYPE)                                     \

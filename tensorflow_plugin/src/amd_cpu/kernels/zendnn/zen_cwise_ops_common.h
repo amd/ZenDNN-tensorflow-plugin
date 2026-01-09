@@ -313,15 +313,13 @@ class ZenBinaryOpShared : public OpKernel {
     // Caller must check ctx->status() upon return for non-ok status.
     // If ctx->status().ok() is true, then out is guaranteed to be allocated.
     explicit ZenBinaryOpState(OpKernelContext* ctx, const std::string& op,
-                              bool has_attr, bool incompatible_shape_error,
-                              ZendnnParameters zendnn_params);
+                              bool has_attr, bool incompatible_shape_error);
 
     const Tensor& in0;
     const Tensor& in1;
 
     BCast bcast;
     Tensor* out = nullptr;
-    ZendnnParameters zendnn_params;
     int64 out_num_elements;
 
     int64 in0_num_elements;
@@ -346,26 +344,19 @@ class ZenBinaryOpShared : public OpKernel {
 //   Functor: defined in cwise_ops.h. E.g., functor::add.
 template <typename Functor>
 class ZenBinaryOp : public ZenBinaryOpShared {
- private:
-  /* ZenDNN specific */
-  ZendnnParameters zendnn_params_;
-
  public:
   typedef typename Functor::in_type Tin;    // Input scalar data type.
   typedef typename Functor::out_type Tout;  // Output scalar data type.
 
   explicit ZenBinaryOp(OpKernelConstruction* ctx)
       : ZenBinaryOpShared(ctx, DataTypeToEnum<Tout>::v(),
-                          DataTypeToEnum<Tin>::v()) {
-    OP_REQUIRES_OK(ctx, InitZendnnParameters(ctx, &zendnn_params_));
-  }
+                          DataTypeToEnum<Tin>::v()) {}
 
   void Compute(OpKernelContext* ctx) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenBinary (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     // 'state': Shared helper not dependent on T to reduce code size
-    ZenBinaryOpState state(ctx, op_name, false, false, zendnn_params_);
+    ZenBinaryOpState state(ctx, op_name, false, false);
 
     auto& bcast = state.bcast;
     const CPUDevice& eigen_device = ctx->eigen_cpu_device();
@@ -444,8 +435,7 @@ class ZenBinaryOp : public ZenBinaryOpShared {
       SetComputeError(ctx);
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenBinary (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 };
 

@@ -36,10 +36,7 @@ bool IsZenDnnEnabled() {
                                      &ZenDNN_enabled);
 
     if (!status.ok()) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "TF_ENABLE_ZENDNN_OPTS is not set to either '0', 'false', "
-                 "'1', or 'true'. Using the default setting: ",
-                 ZenDNN_enabled);
+      // Logging commented out - old ZenDNN logging removed
     }
   });
   return ZenDNN_enabled;
@@ -64,10 +61,7 @@ bool IsZenDnnBF16Enabled() {
       }
     }
     if (!status.ok()) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "TF_ZENDNN_PLUGIN_BF16 is not set to either '0', 'false', "
-                 "or '1', 'true'. Using the default setting: ",
-                 tf_zendnn_plugin_bf16);
+      // Logging commented out - old ZenDNN logging removed
     }
   });
   return tf_zendnn_plugin_bf16;

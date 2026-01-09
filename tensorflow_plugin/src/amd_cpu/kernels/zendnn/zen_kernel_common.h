@@ -25,29 +25,6 @@ namespace amd_cpu_plugin {
 // Tensor type enumeration for ZenDNN operations.
 enum class ZenTensorType { kQint8 = 0, kQuint8 = 1, kFloat = 2, kBfloat16 = 3 };
 
-// Common parameters for ZenDNN nodes.
-struct ZendnnParameters {
-  bool reorder_before = false;
-  bool reorder_after = false;
-  bool is_eager = false;
-};
-
-// Initializes and validates ZenDNN parameters configured
-// by OpKernel attributes.
-//
-// @input context Context from which prameters are read
-//         params Parameters for ZenDNN Op
-// @return Status
-inline Status InitZendnnParameters(OpKernelConstruction* context,
-                                   ZendnnParameters* params) {
-  TF_RETURN_IF_ERROR(
-      context->GetAttr("reorder_before", &params->reorder_before));
-  TF_RETURN_IF_ERROR(context->GetAttr("reorder_after", &params->reorder_after));
-  TF_RETURN_IF_ERROR(context->GetAttr("is_eager", &params->is_eager));
-
-  return OkStatus();
-}
-
 }  // namespace amd_cpu_plugin
 
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_KERNELS_ZENDNN_ZEN_KERNEL_COMMON_H_

@@ -36,13 +36,10 @@ namespace amd_cpu_plugin {
 template <typename T>
 class ZenReshapeOp : public OpKernel {
  public:
-  explicit ZenReshapeOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
-  }
+  explicit ZenReshapeOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenReshape (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor& input = context->input(0);
     const Tensor& sizes = context->input(1);
@@ -114,12 +111,10 @@ class ZenReshapeOp : public OpKernel {
     CHECK(output.CopyFrom(input, shape));
     context->set_output(0, output);
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenReshape (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
-  ZendnnParameters zendnn_params_;
   template <typename Tshape>
   Status ValidateSizes(const Tensor& sizes, int64_t* product,
                        int* unknown_index, TensorShape* shape,

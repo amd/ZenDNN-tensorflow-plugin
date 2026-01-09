@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -125,8 +125,7 @@ class NodeMapInternal {
   // invalid if graph is changed.
   explicit NodeMapInternal(GraphDefT* graph) {
     if (graph == nullptr) {
-      zendnnInfo(ZENDNN_FWKLOG,
-                 "NodeMapInternal constructor is called with a nullptr!");
+      // Old ZenDNN logging removed;
       return;
     }
     nodes_.reserve(graph->node_size());
@@ -138,7 +137,7 @@ class NodeMapInternal {
       // Check that the graph doesn't contain multiple nodes with the same name.
       if (!rslt.second) {
         // The first node found with a given name becomes the canonical.
-        zendnnInfo(ZENDNN_FWKLOG, "Duplicated node in the graph: ", node_name);
+        // Old ZenDNN logging removed;
       }
       NodeDefT* canonical = rslt.second ? node : rslt.first->second;
       for (const auto& input : node->input()) {
@@ -194,7 +193,7 @@ class NodeMapInternal {
     const string node_name = NodeName(name);
     auto it = nodes_.find(node_name);
     if (it == nodes_.end()) {
-      zendnnInfo(ZENDNN_FWKLOG, "Node could not be found: ", name);
+      // Old ZenDNN logging removed;
       return nullptr;
     }
     return it->second;

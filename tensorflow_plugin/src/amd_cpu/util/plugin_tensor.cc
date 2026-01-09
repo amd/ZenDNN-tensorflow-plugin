@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -145,8 +145,7 @@ Tensor::Tensor(DataType type, const TensorShape& shape, TF_Tensor* buf)
     : shape_(shape), buf_(buf) {
   shape_.set_data_type(type);
   if (!buf_) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "When creating a new tensor, buf must be a non-null pointer!");
+    // Logging commented out - old ZenDNN logging removed
   }
 }
 
@@ -327,10 +326,9 @@ bool Tensor::FromProto(const TensorProto& proto) {
       break;                                                   \
   }
 
-#define CASES(TYPE_ENUM, STMTS)                                    \
-  CASES_WITH_DEFAULT(                                              \
-      TYPE_ENUM, STMTS, zendnnInfo(ZENDNN_FWKLOG, "Type not set"); \
-      , zendnnInfo(ZENDNN_FWKLOG, "Unexpected type: ", TYPE_ENUM);)
+#define CASES(TYPE_ENUM, STMTS)                                     \
+  CASES_WITH_DEFAULT(TYPE_ENUM, STMTS, /* Logging commented out */; \
+                     , /* Logging commented out */;)
 
 void Tensor::AsProtoTensorContent(TensorProto* proto) {
   proto->Clear();
@@ -571,7 +569,7 @@ string Tensor::SummarizeValue(int64 max_entries, bool print_v2) const {
         if (i > 0) strings::StrAppend(&ret, " ");
         switch (dtype()) {
           case DT_VARIANT: {
-            zendnnInfo(ZENDNN_FWKLOG, "Variant type not supported.");
+            // Logging commented out - old ZenDNN logging removed
           } break;
           default:
             strings::StrAppend(&ret, "?");

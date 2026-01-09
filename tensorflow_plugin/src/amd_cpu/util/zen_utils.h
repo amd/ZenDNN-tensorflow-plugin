@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -30,76 +30,17 @@ limitations under the License.
 
 #include "tensorflow/core/platform/cpu_info.h"
 #include "tensorflow_plugin/src/amd_cpu/util/env_var.h"
-#include "zendnn.hpp"          // NOLINT(build/include_subdir)
-#include "zendnn_helper.hpp"   // NOLINT(build/include_subdir)
-#include "zendnn_logging.hpp"  // NOLINT(build/include_subdir)
 
-using zendnn::_zendnnGetLogState;
-using zendnn::_zendnnLogMessage;
-using zendnn::algorithm;
-using zendnn::engine;
-using zendnn::memory;
-using zendnn::post_ops;
-using zendnn::primitive;
-using zendnn::prop_kind;
-using zendnn::stream;
-using zendnn::zenConvAlgoType;
-using zendnn::ZENDNN_FWKLOG;
-using zendnn::zendnnEnv;
+// NOTE: ZenDNNL header not included here. Files that need ZenDNNL should
+// include "zendnnl.hpp" directly and use "using namespace zendnnl;" locally.
+//
+// IMPORTANT: Old ZenDNN utility classes (ZenExecutor, ZenPrimitive, etc.) have
+// been REMOVED. Only MatMul uses ZenDNNL now. Other ops are disabled and will
+// use vanilla TensorFlow implementations.
 
 namespace amd_cpu_plugin {
 
-// For single engine and stream
-// TODO(zendnn): Need a complete graph manager entity. This can be moved to
-// within that.
-class ZenExecutor {
- private:
-  inline static ZenExecutor *instance = 0;
-  engine eng_;
-  std::vector<std::shared_ptr<stream>> engine_stream_;
-
-  ZenExecutor() {
-    engine temp_eng(engine::kind::cpu, 0);
-    eng_ = temp_eng;
-    std::shared_ptr<stream> temp_stream = std::make_shared<stream>(eng_);
-    std::vector<std::shared_ptr<stream>> temp_vec_stream = {temp_stream};
-    engine_stream_ = temp_vec_stream;
-  }
-
- public:
-  static ZenExecutor *getInstance() {
-    if (!instance) {
-      instance = new ZenExecutor();
-    }
-    return instance;
-  }
-
-  engine getEngine() { return eng_; }
-
-  stream getStream() {
-    std::shared_ptr<stream> s = engine_stream_[engine_stream_.size() - 1];
-    stream res = *s;
-    return res;
-  }
-
-  std::shared_ptr<stream> getStreamPtr() {
-    return engine_stream_[engine_stream_.size() - 1];
-  }
-
-  void addStream() {
-    std::shared_ptr<stream> temp_stream = std::make_shared<stream>(eng_);
-    engine_stream_.push_back(temp_stream);
-  }
-};
-
-inline void execute_primitives(
-    const std::vector<primitive> &primitives, std::shared_ptr<stream> stream,
-    const std::vector<std::unordered_map<int, memory>> &net_args) {
-  DCHECK_EQ(primitives.size(), net_args.size());
-  for (size_t i = 0; i < primitives.size(); ++i) {
-    primitives.at(i).execute(*stream, net_args.at(i));
-  }
-}
+// Old ZenDNN utility classes removed - MatMul uses ZenDNNL directly
 
 // LRUCache is a class which implements LRU (Least Recently Used) cache.
 // The implementation is taken from
@@ -208,92 +149,9 @@ class LRUCache {
   std::list<std::string> lru_list_;
 };
 
-class ZenPrimitive {
- public:
-  virtual ~ZenPrimitive() {}
-  ZenPrimitive() {
-    ZenExecutor *ex = ex->getInstance();
-    cpu_engine_ = ex->getEngine();
-  }
-  explicit ZenPrimitive(const engine &cpu_engine) { cpu_engine_ = cpu_engine; }
-  unsigned char *DummyData = nullptr;
-  engine cpu_engine_;
-  const engine &GetEngine() { return cpu_engine_; }
-};
-
-class ZenPrimitiveFactory {
- public:
-  ZenPrimitiveFactory() {}
-
-  ~ZenPrimitiveFactory() {}
-
-  ZenPrimitive *GetOp(const std::string &key) {
-    auto &lru_cache = ZenPrimitiveFactory::GetLRUCache();
-    return lru_cache.GetOp(key);
-  }
-
-  void SetOp(const std::string &key, ZenPrimitive *op) {
-    auto &lru_cache = ZenPrimitiveFactory::GetLRUCache();
-    lru_cache.SetOp(key, op);
-  }
-
-  // Function to decide whether HW has AVX512 or AVX2.
-  static inline bool IsLegacyPlatform() {
-    return (
-        !tensorflow::port::TestCPUFeature(
-            tensorflow::port::CPUFeature::AVX512F) &&
-        !tensorflow::port::TestCPUFeature(tensorflow::port::CPUFeature::AVX2));
-  }
-
-  // Function to check whether primitive reuse optimization is disabled.
-  static inline bool IsReuseOptDisabled() {
-    bool is_reuse_opt_disabled = false;
-    TF_CHECK_OK(ReadBoolFromEnvVar("TF_ZEN_PRIMITIVE_REUSE_DISABLE", false,
-                                   &is_reuse_opt_disabled));
-    return is_reuse_opt_disabled;
-  }
-
- private:
-  static inline LRUCache<ZenPrimitive> &GetLRUCache() {
-    static const int kCapacity = 1024;  // cache capacity
-    static thread_local LRUCache<ZenPrimitive> lru_cache_(kCapacity);
-    return lru_cache_;
-  }
-};
-
-// Utility class for creating keys of Zen primitive pool.
-// The implementation is taken from : tensorflow/core/util/mkl_util.h.
-class FactoryKeyCreator {
- public:
-  FactoryKeyCreator() { key_.reserve(kMaxKeyLength); }
-
-  ~FactoryKeyCreator() {}
-
-  void AddAsKey(const std::string &str) { Append(str); }
-
-  void AddAsKey(const memory::dims &dims) {
-    for (unsigned int i = 0; i < dims.size(); i++) {
-      AddAsKey<int>(dims[i]);
-    }
-  }
-
-  template <typename T>
-  void AddAsKey(const T data) {
-    auto buffer = reinterpret_cast<const char *>(&data);
-    Append(StringPiece(buffer, sizeof(T)));
-  }
-
-  std::string GetKey() { return key_; }
-
- private:
-  std::string key_;
-  const char kDelimiter = 'x';
-  const int kMaxKeyLength = 256;
-  void Append(StringPiece s) {
-    key_.append(std::string(s));
-    key_.append(1, kDelimiter);
-  }
-};
+// ZenPrimitive, ZenPrimitiveFactory, and FactoryKeyCreator classes removed.
+// These were for old ZenDNN library and are no longer used.
+// MatMul now uses ZenDNNL directly without these utility classes.
 
 }  // namespace amd_cpu_plugin
 

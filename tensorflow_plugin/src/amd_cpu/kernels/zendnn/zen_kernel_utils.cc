@@ -362,9 +362,7 @@ void ZenBlockedConv2DBiasEltSum(
     void *bias_array, void *output_array, int out_height, int out_width,
     bool is_eager, bool reorder_before, bool reorder_after,
     void *cached_filter_data_, void *context) {
-  zendnnInfo(ZENDNN_FWKLOG,
-             "ZenBlockedConv2DBiasEltSum (TF kernel): New API for DIRECT "
-             "CONV2D with elementwise sum fused");
+  // Old ZenDNN logging removed;
 
   using tag = memory::format_tag;
   using dt = memory::data_type;
@@ -685,9 +683,7 @@ void ZenConvolution2DBiasOrRelu(
       memory({{conv1_bias_tz}, dtype, tag::x}, eng, bias_array);
 
   if (blocked_nhwc) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZenConvolution2DBiasOrRelu (TF kernel): New API for DIRECT "
-               "CONV ZenConvolution2DBiasOrRelu");
+    // Old ZenDNN logging removed;
 
     zendnn::memory conv1_src_memory =
         memory({{conv1_src_tz}, dtype, tag::nhwc}, eng, input_array);
@@ -770,9 +766,7 @@ void ZenConvolution2DBiasOrRelu(
     }
 
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZenConvolution2DBiasOrRelu (TF kernel): New API for GEMM CONV "
-               "ZenConvolution2DBiasOrRelu");
+    // Old ZenDNN logging removed;
     zendnn::memory user_src_memory =
         memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
     zendnn::memory conv1_dst_memory =
@@ -859,11 +853,7 @@ void ZenConvolution2DBatchNormOrRelu(
       memory({{conv1_bias_tz}, dt::f32, tag::x}, eng, bias_array);
 
   if (blocked_nhwc) {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for DIRECT CONV",
-        (elementwise_input ? "zenConvolution2DBatchNormSum"
-                           : "ZenConvolution2DBatchNormOrRelu"));
+    // Old ZenDNN logging removed;
 
     zendnn::memory conv1_src_memory =
         memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
@@ -975,11 +965,7 @@ void ZenConvolution2DBatchNormOrRelu(
                  1 /* batch_size */, alpha /* leakyrelu_alpha */);
     }
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZenConvolution2DBatchNormOrRelu (TF kernel): New API for DIRECT CONV",
-        (elementwise_input ? "zenConvolution2DBatchNormSum"
-                           : "ZenConvolution2DBatchNormOrRelu"));
+    // Old ZenDNN logging removed;
     zendnn::memory user_src_memory =
         memory({{conv1_src_tz}, dt::f32, tag::nhwc}, eng, input_array);
     zendnn::memory conv1_dst_memory =

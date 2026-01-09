@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -79,12 +79,12 @@ inline const strings::AlphaNum& PrepareForStrCat(const strings::AlphaNum& a) {
   } while (0)
 
 // For propagating errors when calling a function.
-#define TF_ABORT_IF_ERROR(...)                       \
-  do {                                               \
-    ::amd_cpu_plugin::Status _status(__VA_ARGS__);   \
-    if (TF_PREDICT_FALSE(!_status.ok())) {           \
-      zendnnInfo(ZENDNN_FWKLOG, _status.ToString()); \
-    }                                                \
+#define TF_ABORT_IF_ERROR(...)                                 \
+  do {                                                         \
+    ::amd_cpu_plugin::Status _status(__VA_ARGS__);             \
+    if (TF_PREDICT_FALSE(!_status.ok())) {                     \
+      /* Logging commented out - old ZenDNN logging removed */ \
+    }                                                          \
   } while (0)
 
 // Convenience functions for generating and using error status.

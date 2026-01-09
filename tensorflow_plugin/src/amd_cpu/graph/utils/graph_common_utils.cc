@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -42,7 +42,7 @@ bool Is1D(const TensorShapeProto& proto) {
   auto tensor_shape = TensorShape(proto);
 
   for (int i = 0; i < tensor_shape.dims(); ++i) {
-    zendnnVerbose(ZENDNN_FWKLOG, tensor_shape.dim_size(i));
+    // Old ZenDNN logging removed;
   }
   return (tensor_shape.dims() == 1);
 }

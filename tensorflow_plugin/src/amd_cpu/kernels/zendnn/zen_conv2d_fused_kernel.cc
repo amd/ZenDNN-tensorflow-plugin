@@ -53,11 +53,9 @@ class ZenQuantizedConv2DOp : public OpKernel {
       OP_REQUIRES_OK(context, context->GetAttr("padding_list", &padding_list_));
     }
     OP_REQUIRES_OK(context, InitConv2DParameters(context, &params_));
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
   }
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenQuantizedConv2D (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     ZenExecutor *ex = ex->getInstance();
     engine eng = ex->getEngine();
@@ -265,17 +263,13 @@ class ZenQuantizedConv2DOp : public OpKernel {
         output_array, output_min, output_max, in_type, (bool)out_type,
         bias_type, bias_scales, is_relu, is_sum, is_signed, factor,
         is_depthwise, scale_output, scale_summand, &cached_filter_data_);
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-DEF: _ZenQuantizedConv2D (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
   Conv2DParameters params_;
   // Additional attributes to support new Padding definition and tensors.
   std::vector<int64> padding_list_;
-  // ZenDNN specific.
-  ZendnnParameters zendnn_params_;
   Tensor cached_filter_data_ TF_GUARDED_BY(mu_);
 };
 
@@ -285,7 +279,6 @@ class ZenFusedConv2DOp : public OpKernel {
  public:
   explicit ZenFusedConv2DOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, InitConv2DParameters(context, &params_));
-    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
     using FCT = FusedComputationType;
 
     std::vector<FusedComputationPattern> patterns = {};
@@ -316,8 +309,7 @@ class ZenFusedConv2DOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenFusedConv (TF kernel): In Compute!");
+    // Old ZenDNN logging removed;
 
     const Tensor &input = context->input(0);
     const Tensor &filter = context->input(1);
@@ -349,19 +341,16 @@ class ZenFusedConv2DOp : public OpKernel {
     if (is_sum) {
       LaunchZenFusedConv2DSumOp<T>()(
           context, input, filter, dinput, fused_computation_,
-          fused_computation_args_, dimensions, output, zendnn_params_.is_eager,
-          zendnn_params_.reorder_before, zendnn_params_.reorder_after,
+          fused_computation_args_, dimensions, output, false, false, false,
           &cached_filter_data_);
     } else {
-      LaunchZenFusedConv2DOp<T>()(
-          context, input, filter, fused_computation_, fused_computation_args_,
-          dimensions, output, zendnn_params_.is_eager,
-          zendnn_params_.reorder_before, zendnn_params_.reorder_after,
-          &cached_filter_data_, is_depthwise, alpha_);
+      LaunchZenFusedConv2DOp<T>()(context, input, filter, fused_computation_,
+                                  fused_computation_args_, dimensions, output,
+                                  false, false, false, &cached_filter_data_,
+                                  is_depthwise, alpha_);
     }
 
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-DEF: _ZenFusedConv (TF kernel): Compute Is Successful!");
+    // Old ZenDNN logging removed;
   }
 
  private:
@@ -370,9 +359,6 @@ class ZenFusedConv2DOp : public OpKernel {
   Tensor cached_filter_data_ TF_GUARDED_BY(mu_);
   FusedComputationType fused_computation_ = FusedComputationType::kUndefined;
   FusedComputationArgs fused_computation_args_;
-
-  // ZenDNN specific.
-  ZendnnParameters zendnn_params_;
 };
 
 #define REGISTER_FUSED_CONV2D_KERNELS(TYPE)                                 \

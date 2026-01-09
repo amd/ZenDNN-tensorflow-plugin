@@ -38,56 +38,58 @@ namespace {
 
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
   static std::vector<ZenFormatInfo> rinfo{
-      {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
-      {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
-       RewriteSupportedDataType},
-      {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
-       RewriteFusedConv2D},
-      {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
-       CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
-      {"MaxPool", "_ZenMaxPool", CopyAttrsAll, RewriteSupportedDataType},
-      {"AvgPool", "_ZenAvgPool", CopyAttrsAll, RewriteSupportedDataType},
+      // {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
+      // {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative",
+      // CopyAttrsZenConv2D,
+      //  RewriteSupportedDataType},
+      // {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
+      //  RewriteFusedConv2D},
+      // {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
+      //  CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
+      // {"MaxPool", "_ZenMaxPool", CopyAttrsAll, RewriteSupportedDataType},
+      // {"AvgPool", "_ZenAvgPool", CopyAttrsAll, RewriteSupportedDataType},
       {"MatMul", "_ZenMatMul", CopyAttrsAll, RewriteSupportedDataType},
       {"_FusedMatMul", "_ZenFusedMatMul", CopyAttrsAll, RewriteFusedMatMul},
-      {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsZenBatchMatMul,
-       RewriteSupportedDataType},
-      {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsZenBatchMatMul,
-       RewriteSupportedDataType},
-      {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsZenBatchMatMul,
-       RewriteSupportedDataType},
+      // {"BatchMatMul", "_ZenBatchMatMul", CopyAttrsZenBatchMatMul,
+      //  RewriteSupportedDataType},
+      // {"BatchMatMulV2", "_ZenBatchMatMulV2", CopyAttrsZenBatchMatMul,
+      //  RewriteSupportedDataType},
+      // {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2",
+      // CopyAttrsZenBatchMatMul,
+      //  RewriteSupportedDataType},
       // We are not supporting BLOCKED format execution.
-      {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll,
-       RewriteSupportedDataType},
-      {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll,
-       RewriteSupportedDataType},
-      {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll,
-       RewriteSupportedDataType},
-      {"_FusedBatchNormEx", "_ZenFusedBatchNormEx", CopyAttrsAll,
-       RewriteSupportedDataType},
-      {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
-      {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
-      {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
-       RewriteSupportedDataType},
+      // {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll,
+      //  RewriteSupportedDataType},
+      // {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll,
+      //  RewriteSupportedDataType},
+      // {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll,
+      //  RewriteSupportedDataType},
+      // {"_FusedBatchNormEx", "_ZenFusedBatchNormEx", CopyAttrsAll,
+      //  RewriteSupportedDataType},
+      // {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
+      // {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
+      // {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
+      //  RewriteSupportedDataType},
       // TODO(plugin): Disabling _ZenTranspose for this release (i.e., v1.0) as
       // we are observing performance drop with it. Find the solution for it and
       // enable the below rewrite.
       // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
-      {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
-       RewriteSupportedDataType},
-      {"QuantizedConv2DWithBiasAndReluAndRequantize",
-       "_ZenQuantizedConv2DWithBiasAndReluAndRequantize", CopyAttrsQCBR,
-       RewriteQuantize},
-      {"QuantizedConv2DWithBiasAndRequantize",
-       "_ZenQuantizedConv2DWithBiasAndRequantize", CopyAttrsQuantizedConv2D,
-       RewriteQuantize},
-      {"QuantizedConv2DWithBiasSumAndReluAndRequantize",
-       "_ZenQuantizedConv2DWithBiasSumAndReluAndRequantize", CopyAttrsQCBR,
-       RewriteQuantize},
-      {"QuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
-       "_ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
-       CopyAttrsQCBR, RewriteQuantize},
-      {"QuantizedMaxPool", "_ZenQuantizedMaxPool", CopyAttrsAll,
-       RewriteQuantize},
+      // {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
+      //  RewriteSupportedDataType},
+      // {"QuantizedConv2DWithBiasAndReluAndRequantize",
+      //  "_ZenQuantizedConv2DWithBiasAndReluAndRequantize", CopyAttrsQCBR,
+      //  RewriteQuantize},
+      // {"QuantizedConv2DWithBiasAndRequantize",
+      //  "_ZenQuantizedConv2DWithBiasAndRequantize", CopyAttrsQuantizedConv2D,
+      //  RewriteQuantize},
+      // {"QuantizedConv2DWithBiasSumAndReluAndRequantize",
+      //  "_ZenQuantizedConv2DWithBiasSumAndReluAndRequantize", CopyAttrsQCBR,
+      //  RewriteQuantize},
+      // {"QuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
+      //  "_ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
+      //  CopyAttrsQCBR, RewriteQuantize},
+      // {"QuantizedMaxPool", "_ZenQuantizedMaxPool", CopyAttrsAll,
+      //  RewriteQuantize},
   };
   return &rinfo;
 }
@@ -167,7 +169,7 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
   // Skip nodes that were invalidated.
   int num_nodes = multable_graph_def.node_size();
 
-  zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: Start to rewrite nodes.");
+  // Old ZenDNN logging removed;
 
   for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
     const auto* node_view = ctx.graph_view.GetNode(node_index);
@@ -179,15 +181,13 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
     const ZenFormatInfo* ri = nullptr;
     if ((ri = CheckForNodeZenFormat(*node_view)) != nullptr) {
       // We will first search if node is to be rewritten.
-      const string& node_name = node_def->name();
-      const string& op_name = node_def->op();
+      // const string& node_name = node_def->name();
+      // const string& op_name = node_def->op();
 
       if (RewriteNode(&ctx, node_index, ri, node_map) == OkStatus()) {
-        zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: rewrote node ", node_name,
-                   " with op ", op_name, " for Zen layout optimization.");
+        // Old ZenDNN logging removed;
       } else {
-        zendnnInfo(ZENDNN_FWKLOG, "ZenLayoutPass: found node ", node_name,
-                   " with op ", op_name, " but rewrite failed.");
+        // Old ZenDNN logging removed;
       }
     }
   }

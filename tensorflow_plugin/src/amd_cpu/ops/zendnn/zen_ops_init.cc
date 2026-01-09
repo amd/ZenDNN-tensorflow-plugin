@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@
 #include "tensorflow_plugin/src/amd_cpu/ops/zendnn/zen_ops_init.h"
 
 void RegisterZenOps() {
-  RegisterZenSoftmaxOp();
-  RegisterZenConv2DOps();
+  // RegisterZenSoftmaxOp();
+  // RegisterZenConv2DOps();
   RegisterZenMatMulOps();
-  RegisterZenPoolingOps();
-  RegisterZenFusedBatchNormOps();
-  RegisterZenTransposeOps();
-  RegisterZenBatchMatMulOps();
-  RegisterZenReshapeOp();
-  RegisterZenCwiseOps();
+  // RegisterZenPoolingOps();
+  // RegisterZenFusedBatchNormOps();
+  // RegisterZenTransposeOps();
+  // RegisterZenBatchMatMulOps();
+  // RegisterZenReshapeOp();
+  // RegisterZenCwiseOps();
 }

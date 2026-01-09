@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2024 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -699,8 +699,7 @@ Status MutableGraphView::UpdateFanouts(absl::string_view from_node_name,
 
 Status MutableGraphView::UpdateFanoutsInternal(NodeDef* from_node,
                                                NodeDef* to_node) {
-  zendnnInfo(ZENDNN_FWKLOG, "Update fanouts from '$0' to '$1'.",
-             from_node->name(), to_node->name());
+  // Old ZenDNN logging removed;
   if (from_node == to_node) {
     return OkStatus();
   }

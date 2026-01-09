@@ -45,17 +45,17 @@ void RegisterZenQuantizedMaxPool() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedMaxPool Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenQuantizedMaxPool Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -79,17 +79,17 @@ void RegisterZenQuantizedAvgPool() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedAvgPool Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenQuantizedAvgPool Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -110,16 +110,17 @@ void RegisterZenAvgPool() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenAvgPool Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenAvgPool Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -143,16 +144,17 @@ void RegisterZenMaxPool() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenMaxPool Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenMaxPool Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }

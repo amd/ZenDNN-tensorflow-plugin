@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -103,7 +103,7 @@ class ConvUtil {
       dimensions->stride_rows = stride_rows;
       dimensions->stride_cols = stride_cols;
     } else if (strides_.size() == 5) {
-      zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv3D Error!!");
+      // Old ZenDNN logging removed;
     }
   }
 
@@ -118,7 +118,7 @@ class ConvUtil {
       dimensions->dilation_rows = dilations_rows;
       dimensions->dilation_cols = dilations_cols;
     } else if (dilations_.size() == 5) {
-      zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv3D Error!!");
+      // Old ZenDNN logging removed;
     }
   }
 
@@ -161,7 +161,7 @@ class ConvUtil {
       dimensions->input_cols = input_cols;
 
     } else if (strides_.size() == 5) {  // NCDHW format for Conv3D
-      zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv3D Error!!");
+      // Old ZenDNN logging removed;
     }
 #undef CHECK_BOUNDS
   }
@@ -218,7 +218,7 @@ class ConvUtil {
         dimensions->filter_cols = filter_cols;
       }
     } else {  // Conv3D
-      zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv3D Error!!");
+      // Old ZenDNN logging removed;
     }
   }
 
@@ -241,7 +241,7 @@ class ConvUtil {
       Padding padding_type;
       if (pad_enabled) {  // false by choice
         padding_type = Padding::EXPLICIT;
-        zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv Fuse Error!!");
+        // Old ZenDNN logging removed;
       } else {
         padding_type = padding_;
         if (padding_type == Padding::EXPLICIT) {
@@ -263,7 +263,7 @@ class ConvUtil {
                          dimensions->dilation_cols, dimensions->stride_cols,
                          padding_type, &out_cols, &pad_left, &pad_right));
     } else {
-      zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-DEF: ZenConv3D Error!!");
+      // Old ZenDNN logging removed;
     }
 
     dimensions->out_rows = out_rows;

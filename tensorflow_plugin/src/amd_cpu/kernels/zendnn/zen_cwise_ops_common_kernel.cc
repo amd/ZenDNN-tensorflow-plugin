@@ -64,11 +64,10 @@ void ZenBinaryOpShared::SetComputeError(OpKernelContext *ctx) {
 
 ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(
     OpKernelContext *ctx, const string &op, bool has_attr,
-    bool incompatible_shape_error, ZendnnParameters zendnn_params)
+    bool incompatible_shape_error)
     : in0(ctx->input(0)),
       in1(ctx->input(1)),
       bcast(BCast::FromShape(in0.shape()), BCast::FromShape(in1.shape())),
-      zendnn_params(zendnn_params),
       out_num_elements(0),
       in0_num_elements(0),
       in1_num_elements(0),

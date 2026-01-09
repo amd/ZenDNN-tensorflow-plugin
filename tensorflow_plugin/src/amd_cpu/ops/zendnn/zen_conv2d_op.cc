@@ -48,15 +48,17 @@ void RegisterZenConv2D() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG, "ZEN-OP-REG: _ZenConv2D Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenConv2D Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -83,17 +85,17 @@ void RegisterZenDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenDepthwiseConv2dNative Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenDepthwiseConv2dNative Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -120,6 +122,9 @@ void RegisterZenFusedDepthwiseConv2dNative() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
@@ -131,13 +136,9 @@ void RegisterZenFusedDepthwiseConv2dNative() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenFusedDepthwiseConv2dNative Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedDepthwiseConv2dNative Op Registration Is "
-               "Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -164,6 +165,9 @@ void RegisterZenFusedConv2D() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddAttr(op_builder, "num_args: int >= 0");
@@ -175,11 +179,9 @@ void RegisterZenFusedConv2D() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedConv2D Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedConv2D Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -215,18 +217,17 @@ void RegisterZenQuantizedConv2DWithBiasAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasAndRequantize Op "
-               "Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasAndRequantize Op "
-               "Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -263,18 +264,17 @@ void RegisterZenQuantizedConv2DWithBiasAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasAndReluAndRequantize Op "
-               "Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasAndReluAndRequantize Op "
-               "Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -316,18 +316,17 @@ void RegisterZenQuantizedConv2DWithBiasSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasSumAndReluAndRequantize "
-               "Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasSumAndReluAndRequantize "
-               "Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -369,20 +368,17 @@ void RegisterZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   TF_OpDefinitionBuilderSetShapeInferenceFunction(op_builder,
                                                   &unknown_shape_fn);
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize "
-        "Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(
-        ZENDNN_FWKLOG,
-        "ZEN-OP-REG: _ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize "
-        "Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
@@ -409,6 +405,9 @@ void RegisterZenFusedConv2DSum() {
   TF_OpDefinitionBuilderAddAttr(op_builder, "is_eager: bool = false");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_before: bool");
   TF_OpDefinitionBuilderAddAttr(op_builder, "reorder_after: bool");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "in_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "out_links: int");
+  TF_OpDefinitionBuilderAddAttr(op_builder, "reset: bool");
   // Fusion specific attributes.
   TF_OpDefinitionBuilderAddInput(op_builder, "args: num_args * T");
   TF_OpDefinitionBuilderAddInput(op_builder, "elementwiseinput: T");
@@ -421,11 +420,9 @@ void RegisterZenFusedConv2DSum() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedConv2DSum Op Registration Failed!");
+    // Old ZenDNN logging removed;
   } else {
-    zendnnInfo(ZENDNN_FWKLOG,
-               "ZEN-OP-REG: _ZenFusedConv2DSum Op Registration Is Successful!");
+    // Old ZenDNN logging removed;
   }
   TF_DeleteStatus(status);
 }
