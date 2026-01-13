@@ -21,7 +21,7 @@
 // Routines for registering Zen ops.
 // void RegisterZenConv2DOps();
 void RegisterZenMatMulOps();
-// void RegisterZenPoolingOps();
+void RegisterZenPoolingOps();
 // void RegisterZenSoftmaxOp();
 // void RegisterZenFusedBatchNormOps();
 // void RegisterZenTransposeOps();
