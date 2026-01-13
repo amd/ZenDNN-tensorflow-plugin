@@ -143,6 +143,32 @@ cmake(
         # Copy OneDNN headers.
         copy_headers "$INSTALL_BASE/deps/onednn/include" "OneDNN"
 
+        # TODO(plugin): Improve and simplify the following copy operation.
+        # Copy operators directory with full structure (includes matmul/aocl_dlp/).
+        OPERATORS_SRC="$INSTALL_BASE/zendnnl/include/operators"
+        if [ -d "$OPERATORS_SRC" ]; then
+            mkdir -p "$INSTALLDIR/zendnnl/include/operators"
+            cp -r "$OPERATORS_SRC"/* "$INSTALLDIR/zendnnl/include/operators/"
+            echo "Operators headers copied (preserving directory structure)"
+        else
+            echo "ERROR: Operators headers not found at $OPERATORS_SRC"
+            exit 1
+        fi
+
+        # WORKAROUND: Copy lowoha_common.hpp from source tree if missing
+        # (CMake FILE_SET bug - file is declared as public but not installed)
+        LOWOHA_COMMON_INSTALLED="$INSTALLDIR/zendnnl/include/lowoha_operators/matmul/lowoha_common.hpp"
+        if [ ! -f "$LOWOHA_COMMON_INSTALLED" ]; then
+            LOWOHA_COMMON_SRC="$EXT_BUILD_ROOT/external/zendnnl_repo/zendnnl/src/lowoha_operators/matmul/lowoha_common.hpp"
+            if [ -f "$LOWOHA_COMMON_SRC" ]; then
+                cp "$LOWOHA_COMMON_SRC" "$LOWOHA_COMMON_INSTALLED"
+                echo "lowoha_common.hpp copied from source (CMake install workaround)"
+            else
+                echo "ERROR: lowoha_common.hpp not found in source at $LOWOHA_COMMON_SRC"
+                exit 1
+            fi
+        fi
+
         # === REQUIRED DEPENDENCY LIBRARIES ===
 
         echo "DEBUG: ZENDNNL_MANYLINUX_BUILD=${ZENDNNL_MANYLINUX_BUILD:-unset}"

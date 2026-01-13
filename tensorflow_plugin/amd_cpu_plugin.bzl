@@ -35,6 +35,7 @@ def tf_copts(android_optimization_level_override = "-O2", is_external = False):
         "-msse3",
         "-pthread",
         "-DAMD_ZENDNN",
+        "-DZENDNNL_DEPENDS_AOCLDLP",
     ]
 
 def _get_transitive_headers(hdrs, deps):

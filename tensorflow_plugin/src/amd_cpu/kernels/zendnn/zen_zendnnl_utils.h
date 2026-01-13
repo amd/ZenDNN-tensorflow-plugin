@@ -30,6 +30,16 @@ inline void LogZenDNNLInfo(const char* kernel_name, const char* message) {
   // std::cout << "ZenDNNL " << kernel_name << ": " << message << std::endl;
 }
 
+// Check if ZenDNN MatMul Direct API is enabled via environment variable
+inline bool IsZenDnnMatmulDirectEnabled() {
+  static int use_direct = -1;  // Cache the result
+  if (use_direct == -1) {
+    const char* env_value = std::getenv("USE_ZENDNN_MATMUL_DIRECT");
+    use_direct = env_value ? std::atoi(env_value) : 0;
+  }
+  return use_direct != 0;
+}
+
 }  // namespace amd_cpu_plugin
 
 #endif  // TENSORFLOW_PLUGIN_SRC_AMD_CPU_KERNELS_ZENDNN_ZEN_ZENDNNL_UTILS_H_

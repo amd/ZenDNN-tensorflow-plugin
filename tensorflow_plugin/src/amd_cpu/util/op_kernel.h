@@ -282,19 +282,18 @@ class OpKernelContext {
   //
   //  Status mutable_output(StringPiece name, Tensor** tensor);
   //
-  // Eigen device functions commented out - not needed for vanilla TF plugin
-  // static const Eigen::ThreadPoolDevice& eigen_cpu_device_singleton() {
-  //   static Eigen::ThreadPool threadpool(port::NumSchedulableCPUs());
-  //   static Eigen::ThreadPoolDevice threadpool_device(
-  //       &threadpool,
-  //       (port::NumSchedulableCPUs() + port::NumHyperthreadsPerCore() - 1) /
-  //           port::NumHyperthreadsPerCore());
-  //   return threadpool_device;
-  // }
-  //
-  // const Eigen::ThreadPoolDevice& eigen_cpu_device() const {
-  //   return eigen_cpu_device_singleton();
-  // }
+  static const Eigen::ThreadPoolDevice& eigen_cpu_device_singleton() {
+    static Eigen::ThreadPool threadpool(port::NumSchedulableCPUs());
+    static Eigen::ThreadPoolDevice threadpool_device(
+        &threadpool,
+        (port::NumSchedulableCPUs() + port::NumHyperthreadsPerCore() - 1) /
+            port::NumHyperthreadsPerCore());
+    return threadpool_device;
+  }
+
+  const Eigen::ThreadPoolDevice& eigen_cpu_device() const {
+    return eigen_cpu_device_singleton();
+  }
 
   void CtxFailure(const Status& s);
   void CtxFailureWithWarning(const Status& s);

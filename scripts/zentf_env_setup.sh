@@ -56,6 +56,20 @@ if [ "$interface" = "java" ]; then
 fi
 
 # TODO(plugin): Add the ZenDNNL environment variables.
+# ZENDNNL_MATMUL_ALGO options:
+# -1: none (default selection logic)
+# 0: dynamic_dispatch (LOA only)
+# 1: aocl_dlp_blocked
+# 2: onednn_blocked
+# 3: libxsmm_blocked (LOA only)
+# 4: aocl_dlp
+# 5: onednn
+# 6: libxsmm (LOA only)
+# auto: auto_tuner (LOA only)
+export ZENDNNL_MATMUL_ALGO=2
+echo "ZENDNNL_MATMUL_ALGO=$ZENDNNL_MATMUL_ALGO"
+export USE_ZENDNN_MATMUL_DIRECT=1
+echo "USE_ZENDNN_MATMUL_DIRECT=$USE_ZENDNN_MATMUL_DIRECT"
 
 # OMP settings
 # The below settings are for Turin. Please update it based on your machine.
