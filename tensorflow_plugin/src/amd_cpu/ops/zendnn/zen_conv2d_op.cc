@@ -433,11 +433,11 @@ void RegisterZenConv2DOps() {
   amd_cpu_plugin::RegisterZenConv2D();
   amd_cpu_plugin::RegisterZenFusedConv2D();
   amd_cpu_plugin::RegisterZenFusedConv2DSum();
-  amd_cpu_plugin::RegisterZenDepthwiseConv2dNative();
-  amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasAndRequantize();
-  amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasSumAndReluAndRequantize();
-  amd_cpu_plugin::
-      RegisterZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize();
-  amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasAndReluAndRequantize();
-  amd_cpu_plugin::RegisterZenFusedDepthwiseConv2dNative();
+  // amd_cpu_plugin::RegisterZenDepthwiseConv2dNative();
+  // amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasAndRequantize();
+  // amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasSumAndReluAndRequantize();
+  // amd_cpu_plugin::
+  //     RegisterZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize();
+  // amd_cpu_plugin::RegisterZenQuantizedConv2DWithBiasAndReluAndRequantize();
+  // amd_cpu_plugin::RegisterZenFusedDepthwiseConv2dNative();
 }

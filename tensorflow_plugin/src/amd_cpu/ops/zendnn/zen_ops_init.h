@@ -19,7 +19,7 @@
 #define TENSORFLOW_PLUGIN_SRC_AMD_CPU_OPS_ZENDNN_ZEN_OPS_INIT_H_
 
 // Routines for registering Zen ops.
-// void RegisterZenConv2DOps();
+void RegisterZenConv2DOps();
 void RegisterZenMatMulOps();
 void RegisterZenSoftmaxOp();
 void RegisterZenPoolingOps();

@@ -70,12 +70,10 @@ cc_library(
         "zen_conv2d_fused_kernel.cc",
         "zen_conv2d_kernel.cc",
         "zen_conv_kernel.cc",
-        "zen_kernel_utils.cc",
     ],
     hdrs = [
         "zen_conv_kernel.h",
-        "zen_conv_kernel_fused.h",
-        "zen_conv_kernel_util.h",
+        "zen_zendnnl_utils.h",
     ],
     copts = tf_copts(),
     linkstatic = 1,
@@ -83,8 +81,10 @@ cc_library(
     deps = [
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
+        ":zen_zendnnl_utils",
         "@com_google_absl//absl/container:inlined_vector",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",
     ],
     alwayslink = True,
 )
@@ -206,7 +206,7 @@ cc_library(
 # Enable the kernel as we add the support for it with ZenDNNL.
 ZEN_KERNELS = [
     ":zen_softmax_kernel",
-    # ":zen_conv2d_kernel",
+    ":zen_conv2d_kernel",
     ":zen_matmul_kernels",
     ":zen_pooling_kernels",
     # ":zen_fused_batchnorm_kernel",

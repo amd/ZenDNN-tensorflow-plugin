@@ -131,7 +131,7 @@ cc_library(
 # ALL ops temporarily disabled.
 # Enable the ops as we add the support for it with ZenDNNL.
 ZEN_OPS = [
-    # ":zen_conv2d_op",
+    ":zen_conv2d_op",
     ":zen_matmul_ops",
     ":zen_softmax_op",
     ":zen_pooling_ops",

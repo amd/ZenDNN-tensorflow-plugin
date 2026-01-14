@@ -28,7 +28,6 @@ limitations under the License.
 #include <vector>
 // TensorFlow plug-in headers
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/fused_eigen_output_kernels.h"
-#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_conv_kernel_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/bounds_check.h"
 #include "tensorflow_plugin/src/amd_cpu/util/common_shape_fns.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"

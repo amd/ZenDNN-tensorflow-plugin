@@ -20,7 +20,7 @@
 
 void RegisterZenOps() {
   RegisterZenSoftmaxOp();
-  // RegisterZenConv2DOps();
+  RegisterZenConv2DOps();
   RegisterZenMatMulOps();
   RegisterZenPoolingOps();
   // RegisterZenFusedBatchNormOps();

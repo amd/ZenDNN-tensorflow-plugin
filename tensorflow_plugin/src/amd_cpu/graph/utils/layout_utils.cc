@@ -167,10 +167,11 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
           fused_ops == std::vector<string>{"BiasAdd", "Relu6"} ||
           fused_ops == std::vector<string>{"BiasAdd", "LeakyRelu"} ||
           fused_ops == std::vector<string>{"BiasAdd", "Add"} ||
-          fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"} ||
-          fused_ops == std::vector<string>{"FusedBatchNorm"} ||
-          fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"} ||
-          fused_ops == std::vector<string>{"FusedBatchNorm", "LeakyRelu"});
+          fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"});
+  // TODO (plugin): Add back the fusion for Conv2D. Once it is supported.
+  // fused_ops == std::vector<string>{"FusedBatchNorm"} ||
+  // fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"} ||
+  // fused_ops == std::vector<string>{"FusedBatchNorm", "LeakyRelu"});
 }
 
 bool RewriteFusedMatMul(const utils::MutableNodeView& node_view) {

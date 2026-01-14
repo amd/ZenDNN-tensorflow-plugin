@@ -26,6 +26,7 @@ limitations under the License.
 // TensorFlow plug-in headers
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_conv_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_zendnnl_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
@@ -33,27 +34,197 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 
+// ZenDNNL Low Overhead API headers
+#include "lowoha_operators/conv/lowoha_conv.hpp"
+#include "lowoha_operators/conv/lowoha_conv_common.hpp"
+
 namespace amd_cpu_plugin {
 
-void ZenGemmConvolution2D(void* input_array, int batch_size, int channels,
-                          int height, int width, void* filter_array,
-                          int output_channels, int kernel_h, int kernel_w,
-                          float pad_t, float pad_l, float pad_b, float pad_r,
-                          int stride_h, int stride_w, void* bias_array,
-                          void* output_array, int out_height, int out_width,
-                          bool relu_fused, bool batchnorm_fused, bool add_fused,
-                          void* bn_scale, void* bn_mean, void* bn_offset,
-                          const float ops_alpha = 0.0f);
-
+// ZenDNNL Conv implementation using Low Overhead API (conv_direct).
 template <typename T>
-void ZenConvolution2DBiasOrRelu(
-    zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,
-    void* input_array, int batch_size, int channels, int height, int width,
-    void* filter_array, int output_channels, int kernel_h, int kernel_w,
-    float pad_t, float pad_l, float pad_b, float pad_r, int stride_h,
-    int stride_w, void* bias_array, void* output_array, int out_height,
-    int out_width, bool is_eager, bool reorder_before, bool reorder_after,
-    void* cached_filter_data_, void* context);
+bool TryExecuteZenDNNLConv2D(
+    OpKernelContext* context, const Tensor& input, const Tensor& filter,
+    const Tensor* bias, Tensor* output, const Conv2DDimensions& dimensions,
+    const Conv2DParameters& params,
+    FusedComputationType fusion_type = FusedComputationType::kUndefined,
+    const Tensor* addend = nullptr) {
+  try {
+    using namespace zendnnl::lowoha;
+    using namespace zendnnl::lowoha::conv;
+    using namespace zendnnl::common;
+
+    // Get pointers to TensorFlow tensor data.
+    T* input_data = const_cast<T*>(input.flat<T>().data());
+    T* filter_data = const_cast<T*>(filter.flat<T>().data());
+    T* output_data = output->flat<T>().data();
+    T* bias_data = bias ? const_cast<T*>(bias->flat<T>().data()) : nullptr;
+
+    // Setup conv_params structure for Low Overhead API.
+    conv_params conv_params;
+
+    conv_params.dims.batch = dimensions.batch;
+    conv_params.dims.in_height = dimensions.input_rows;
+    conv_params.dims.in_width = dimensions.input_cols;
+    conv_params.dims.in_channels = dimensions.in_depth;
+    conv_params.dims.filter_height = dimensions.filter_rows;
+    conv_params.dims.filter_width = dimensions.filter_cols;
+    conv_params.dims.out_channels = dimensions.out_depth;
+    conv_params.dims.out_height = dimensions.out_rows;
+    conv_params.dims.out_width = dimensions.out_cols;
+
+    conv_params.stride_h = dimensions.stride_rows;
+    conv_params.stride_w = dimensions.stride_cols;
+    conv_params.pad_top = dimensions.pad_rows_before;
+    conv_params.pad_left = dimensions.pad_cols_before;
+    conv_params.pad_bottom = dimensions.pad_rows_after;
+    conv_params.pad_right = dimensions.pad_cols_after;
+    // Check if dilations are available in params before accessing
+    if (params.dilations.size() > 2) {
+      conv_params.dilation_h = params.dilations[1];
+      conv_params.dilation_w = params.dilations[2];
+    } else {
+      // Default to no dilation if not specified
+      conv_params.dilation_h = 1;
+      conv_params.dilation_w = 1;
+    }
+    std::strncpy(conv_params.data_format, "NHWC", 8);
+
+    // Set data types
+    if (std::is_same<T, float>::value) {
+      conv_params.dtypes.input = data_type_t::f32;
+      conv_params.dtypes.filter = data_type_t::f32;
+      conv_params.dtypes.output = data_type_t::f32;
+      if (bias_data != nullptr) {
+        conv_params.dtypes.bias = data_type_t::f32;
+      }
+    } else if (std::is_same<T, Eigen::bfloat16>::value) {
+      conv_params.dtypes.input = data_type_t::bf16;
+      conv_params.dtypes.filter = data_type_t::bf16;
+      conv_params.dtypes.output = data_type_t::bf16;
+      if (bias_data != nullptr) {
+        conv_params.dtypes.bias = data_type_t::bf16;
+      }
+    } else {
+      LogZenDNNLInfo("Conv", "Unsupported data type");
+      return false;
+    }
+
+    // Add post-ops based on fusion type
+    using namespace zendnnl::ops;
+    using conv_postop = zendnnl::lowoha::conv::conv_postop;
+    switch (fusion_type) {
+      case FusedComputationType::kBiasAdd:
+        // BiasAdd is handled via bias parameter, no additional post-op needed
+        log_info("Conv2D ZenDNNL: BiasAdd fusion");
+        break;
+      case FusedComputationType::kBiasAddWithRelu:
+      case FusedComputationType::kRelu: {
+        log_info("Conv2D ZenDNNL: BiasAdd+Relu fusion");
+        conv_postop relu_po;
+        relu_po.po_type = post_op_type_t::relu;
+        relu_po.alpha = 0.0f;
+        relu_po.beta = 0.0f;
+        conv_params.postop_.push_back(relu_po);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithRelu6: {
+        log_info("Conv2D ZenDNNL: BiasAdd+Relu6 fusion");
+        conv_postop relu6_po;
+        relu6_po.po_type = post_op_type_t::clip;
+        relu6_po.alpha = 0.0f;
+        relu6_po.beta = 6.0f;
+        conv_params.postop_.push_back(relu6_po);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithLeakyRelu: {
+        log_info("Conv2D ZenDNNL: BiasAdd+LeakyRelu fusion");
+        conv_postop leaky_po;
+        leaky_po.po_type = post_op_type_t::leaky_relu;
+        leaky_po.alpha = 0.2f;  // Default LeakyRelu alpha, can be customized
+        leaky_po.beta = 0.0f;
+        conv_params.postop_.push_back(leaky_po);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithAdd: {
+        log_info("Conv2D ZenDNNL: BiasAdd+Add (residual) fusion");
+        if (!addend) {
+          LogZenDNNLInfo("Conv2D",
+                         "Binary add requested but no addend tensor provided");
+          return false;
+        }
+        // Binary add post-op
+        T* addend_data = const_cast<T*>(addend->flat<T>().data());
+        conv_postop add_po;
+        add_po.po_type = post_op_type_t::binary_add;
+        add_po.alpha = 1.0f;  // Scale for residual
+        add_po.buff = static_cast<void*>(addend_data);
+        add_po.dtype = (std::is_same<T, float>::value) ? data_type_t::f32
+                                                       : data_type_t::bf16;
+        conv_params.postop_.push_back(add_po);
+        break;
+      }
+      case FusedComputationType::kBiasAddWithAddAndRelu: {
+        log_info("Conv2D ZenDNNL: BiasAdd+Add+Relu fusion");
+        if (!addend) {
+          LogZenDNNLInfo(
+              "Conv2D",
+              "Binary add+relu requested but no addend tensor provided");
+          return false;
+        }
+        // Binary add post-op first
+        T* addend_data = const_cast<T*>(addend->flat<T>().data());
+        conv_postop add_po;
+        add_po.po_type = post_op_type_t::binary_add;
+        add_po.alpha = 1.0f;
+        add_po.buff = static_cast<void*>(addend_data);
+        add_po.dtype = (std::is_same<T, float>::value) ? data_type_t::f32
+                                                       : data_type_t::bf16;
+        conv_params.postop_.push_back(add_po);
+
+        // Then relu post-op
+        conv_postop relu_po;
+        relu_po.po_type = post_op_type_t::relu;
+        relu_po.alpha = 0.0f;
+        relu_po.beta = 0.0f;
+        conv_params.postop_.push_back(relu_po);
+        break;
+      }
+      default:
+        // No post-op or unsupported fusion type
+        break;
+    }
+
+    // Call ZenDNNL Low Overhead API - conv2d_direct
+    status_t status = conv_direct(input_data, filter_data, bias_data,
+                                  output_data, conv_params);
+
+    if (status != status_t::success) {
+      LogZenDNNLInfo("Conv2D", ("Execution failed with status " +
+                                std::to_string(static_cast<int>(status)))
+                                   .c_str());
+      return false;
+    }
+
+    return true;
+
+  } catch (const std::exception& e) {
+    LogZenDNNLFallback("Conv2D",
+                       ("Exception: " + std::string(e.what())).c_str());
+    return false;
+  }
+}
+
+// Specialized versions for float and bfloat16
+template bool TryExecuteZenDNNLConv2D<float>(OpKernelContext*, const Tensor&,
+                                             const Tensor&, const Tensor*,
+                                             Tensor*, const Conv2DDimensions&,
+                                             const Conv2DParameters&,
+                                             FusedComputationType,
+                                             const Tensor*);
+template bool TryExecuteZenDNNLConv2D<Eigen::bfloat16>(
+    OpKernelContext*, const Tensor&, const Tensor&, const Tensor*, Tensor*,
+    const Conv2DDimensions&, const Conv2DParameters&, FusedComputationType,
+    const Tensor*);
 
 template <typename T, bool pad_enabled = false, bool is_depthwise = false>
 class ZenConv2DOp : public OpKernel {
@@ -84,8 +255,6 @@ class ZenConv2DOp : public OpKernel {
 
     // Output tensor
     Tensor* output = nullptr;
-    zendnnEnv zen_env_obj = readEnv();
-    bool blocked_nhwc = zen_env_obj.zenConvAlgo == zenConvAlgoType::DIRECT1;
 
     OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
@@ -95,48 +264,38 @@ class ZenConv2DOp : public OpKernel {
 
     T* bias_arr = nullptr;
 
-    if (!(is_depthwise || blocked_nhwc)) {
+    if (!is_depthwise) {
       OP_REQUIRES(context, is_input_float,
                   errors::Unimplemented(
                       "ZenDNN GEMM path only supported for FP32 data type"));
     }
 
-    // Direct convolution.
-    primitive_attr conv_attr;
-    ZenExecutor* ex = ex->getInstance();
-    engine eng = ex->getEngine();
-    stream s = ex->getStream();
-    if (is_depthwise) {
-      ZenConvolution2DDepthwise<T>(
-          eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
-          dimensions.input_rows, dimensions.input_cols, filter_array,
-          dimensions.out_depth, dimensions.filter_rows, dimensions.filter_cols,
-          dimensions.pad_rows_before, dimensions.pad_cols_before,
-          dimensions.pad_rows_after, dimensions.pad_cols_after,
-          dimensions.stride_rows, dimensions.stride_cols, bias_arr,
-          output_array, dimensions.out_rows, dimensions.out_cols, false, false,
-          false, &(cached_filter_data_), context);
-    } else if (blocked_nhwc) {
-      ZenConvolution2DBiasOrRelu<T>(
-          eng, s, conv_attr, input_array, dimensions.batch, dimensions.in_depth,
-          dimensions.input_rows, dimensions.input_cols, filter_array,
-          dimensions.out_depth, dimensions.filter_rows, dimensions.filter_cols,
-          dimensions.pad_rows_before, dimensions.pad_cols_before,
-          dimensions.pad_rows_after, dimensions.pad_cols_after,
-          dimensions.stride_rows, dimensions.stride_cols, bias_arr,
-          output_array, dimensions.out_rows, dimensions.out_cols, false, false,
-          false, (&cached_filter_data_), context);
-    } else {
-      // GEMM based convolution.
-      ZenGemmConvolution2D(
-          input_array, dimensions.batch, dimensions.in_depth,
-          dimensions.input_rows, dimensions.input_cols, filter_array,
-          dimensions.out_depth, dimensions.filter_rows, dimensions.filter_cols,
-          dimensions.pad_rows_before, dimensions.pad_cols_before,
-          dimensions.pad_rows_after, dimensions.pad_cols_after,
-          dimensions.stride_rows, dimensions.stride_cols, bias_arr,
-          output_array, dimensions.out_rows, dimensions.out_cols, false, false,
-          false, nullptr, nullptr, nullptr);
+    if (!is_depthwise) {
+      // Skip depthwise for now - use existing ZenDNN implementation
+      const Tensor* bias_tensor = nullptr;
+      // TODO: Extract bias from context if available
+
+      bool zendnnl_success = TryExecuteZenDNNLConv2D<T>(
+          context, input, filter, bias_tensor, output, dimensions, params_,
+          FusedComputationType::kUndefined, nullptr);
+
+      if (zendnnl_success) {
+        LogZenDNNLSuccess("Conv2D");
+        return;
+      } else {
+        LogZenDNNLFallback("Conv2D", "failed");
+        // ZenDNNL execution failed, we MUST report error
+        // Output tensor was allocated but not filled with valid data
+        OP_REQUIRES(
+            context, false,
+            errors::Internal("ZenDNNL Conv2D execution failed. "
+                             "No fallback implementation available. "
+                             "Input shape: ",
+                             input_shape.DebugString(),
+                             ", Filter shape: ", filter_shape.DebugString(),
+                             ", Output shape: ", out_shape.DebugString()));
+        return;  // Unreachable, but explicit
+      }
     }
 
     // Old ZenDNN logging removed;

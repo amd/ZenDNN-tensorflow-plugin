@@ -38,12 +38,12 @@ namespace {
 
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
   static std::vector<ZenFormatInfo> rinfo{
-      // {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
+      {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
       // {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative",
       // CopyAttrsZenConv2D,
       //  RewriteSupportedDataType},
-      // {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
-      //  RewriteFusedConv2D},
+      {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
+       RewriteFusedConv2D},
       // {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
       //  CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
       {"MaxPool", "_ZenMaxPool", CopyAttrsAll, RewriteSupportedDataType},
