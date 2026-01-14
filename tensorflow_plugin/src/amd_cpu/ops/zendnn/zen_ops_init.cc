@@ -19,7 +19,7 @@
 #include "tensorflow_plugin/src/amd_cpu/ops/zendnn/zen_ops_init.h"
 
 void RegisterZenOps() {
-  // RegisterZenSoftmaxOp();
+  RegisterZenSoftmaxOp();
   // RegisterZenConv2DOps();
   RegisterZenMatMulOps();
   RegisterZenPoolingOps();

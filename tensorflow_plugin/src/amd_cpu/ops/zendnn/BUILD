@@ -133,8 +133,9 @@ cc_library(
 ZEN_OPS = [
     # ":zen_conv2d_op",
     ":zen_matmul_ops",
-    # ":zen_softmax_op",
+    ":zen_softmax_op",
     ":zen_pooling_ops",
+    # ":zen_pooling_ops",
     # ":zen_fused_batchnorm_ops",
     # ":zen_transpose_op",
     # ":zen_batch_matmul_ops",

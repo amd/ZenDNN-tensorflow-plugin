@@ -51,12 +51,15 @@ cc_library(
 cc_library(
     name = "zen_softmax_kernel",
     srcs = ["zen_softmax_kernel.cc"],
+    hdrs = ["zen_zendnnl_utils.h"],
     copts = tf_copts(),
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
         ":zen_kernel_common",
+        ":zen_zendnnl_utils",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",
     ],
     alwayslink = True,
 )
@@ -202,7 +205,7 @@ cc_library(
 # ALL kernels temporarily disabled.
 # Enable the kernel as we add the support for it with ZenDNNL.
 ZEN_KERNELS = [
-    # ":zen_softmax_kernel",
+    ":zen_softmax_kernel",
     # ":zen_conv2d_kernel",
     ":zen_matmul_kernels",
     ":zen_pooling_kernels",

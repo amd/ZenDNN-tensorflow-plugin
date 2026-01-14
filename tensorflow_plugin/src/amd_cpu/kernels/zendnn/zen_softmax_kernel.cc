@@ -18,9 +18,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <vector>
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_kernel_common.h"
+#include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_zendnnl_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_requires.h"
@@ -28,9 +28,73 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
-using zendnn::softmax_forward;
+// ZenDNNL Low Overhead API headers
+#include "lowoha_operators/softmax/lowoha_softmax.hpp"
+#include "lowoha_operators/softmax/lowoha_softmax_common.hpp"
+#include "lowoha_operators/softmax/lowoha_softmax_utils.hpp"
 
 namespace amd_cpu_plugin {
+
+// ZenDNNL Softmax implementation using Low Overhead API (softmax_direct).
+template <typename T>
+bool TryExecuteZenDNNLSoftmax(const Tensor& input, Tensor* output, int axis) {
+  try {
+    using namespace zendnnl::lowoha::softmax;
+    using namespace zendnnl::common;
+
+    // Get pointers to TensorFlow tensor data.
+    T* input_data = const_cast<T*>(input.flat<T>().data());
+    T* output_data = output->flat<T>().data();
+
+    const int input_dims = input.shape().dims();
+
+    // Validate number of dimensions
+    if (input_dims <= 0 || input_dims > SOFTMAX_MAX_NDIMS) {
+      return false;
+    }
+
+    // Setup softmax parameters
+    softmax_params params;
+    params.log_softmax = false;  // Regular softmax (not log-softmax)
+
+    // Set data types based on input type
+    if (std::is_same<T, float>::value) {
+      params.src_dt = data_type_t::f32;
+      params.dst_dt = data_type_t::f32;
+    } else if (std::is_same<T, Eigen::bfloat16>::value) {
+      params.src_dt = data_type_t::bf16;
+      params.dst_dt = data_type_t::bf16;
+    } else {
+      return false;
+    }
+
+    // Convert TensorFlow shape to uint64_t array
+    uint64_t shape[SOFTMAX_MAX_NDIMS];
+    for (int d = 0; d < input_dims; ++d) {
+      shape[d] = static_cast<uint64_t>(input.shape().dim_size(d));
+    }
+
+    // Use setup_softmax_shape from ZenDNN library to populate all params
+    // This calculates batch, axis_dim, inner_size, and stores original shape
+    status_t status = setup_softmax_shape(params, shape, input_dims, axis);
+    if (status != status_t::success) {
+      return false;
+    }
+
+    // Execute softmax using ZenDNNL Low Overhead API
+    status = softmax_direct(input_data, output_data, params);
+
+    return (status == status_t::success);
+
+  } catch (const std::exception& e) {
+    return false;
+  }
+}
+
+// Specialized versions for float and bfloat16
+template bool TryExecuteZenDNNLSoftmax<float>(const Tensor&, Tensor*, int);
+template bool TryExecuteZenDNNLSoftmax<Eigen::bfloat16>(const Tensor&, Tensor*,
+                                                        int);
 
 template <typename T>
 class ZenSoftmaxOp : public OpKernel {
@@ -48,23 +112,8 @@ class ZenSoftmaxOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
-    // Old ZenDNN logging removed;
-    ZenExecutor* ex = ex->getInstance();
-    engine eng = ex->getEngine();
-    stream s = ex->getStream();
-
-    std::vector<primitive> net;
-    std::vector<std::unordered_map<int, memory>> net_args;
-
     const Tensor& input = context->input(0);
     const int input_dims = input.shape().dims();
-    T* input_array = const_cast<T*>(input.template flat<T>().data());
-    memory::dims src_dims(input_dims);
-    for (int d = 0; d < input_dims; ++d) {
-      src_dims[d] = input.shape().dim_size(d);
-    }
-
-    bool is_input_float = std::is_same<T, float>::value;
 
     // Allocating memory for output tensor.
     // Output tensor shape is same as input.
@@ -72,67 +121,14 @@ class ZenSoftmaxOp : public OpKernel {
     Tensor* output = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
-    T* output_array = output->template flat<T>().data();
-    memory::dims output_dims = src_dims;
+    // Softmax axis is attached to logical dimensions (last dimension)
     int axis = -1;
 
-    memory::format_tag layout_type = memory::format_tag::any;
-    // We use axis to define on which dimension to do softmax. Softmax axis
-    // is attached to logical dimensions which always go in a specific
-    // order. For softmax it would be N, C, H, W.
-    // For a 4D Tensor with softmax axis = 1:
-    // {{<physical layout>N,C,H,W}, data_type::f32, format_tag::nhwc};
-    // For a 4D Tensor with softmax axis = 3:
-    // {{<physical layout>N,H,W,C}, data_type::f32, format_tag::nchw};
-    axis = input_dims - 1;
-    switch (input_dims) {
-      case 1:
-        layout_type = memory::format_tag::x;  // a
-        break;
-      case 2:
-        layout_type = memory::format_tag::nc;  // ab
-        break;
-      case 3:
-        layout_type = memory::format_tag::tnc;  // abc
-        break;
-      case 4:
-        layout_type = memory::format_tag::nchw;  // abcd
-        break;
-      case 5:
-        layout_type = memory::format_tag::abcde;  // abcde
-        break;
-      default:
-        OP_REQUIRES_OK(context,
-                       errors::Aborted("Input dims must be <= 5 and >=1"));
-    }
+    // Execute ZenDNNL softmax using Low Overhead API
+    bool zendnnl_success = TryExecuteZenDNNLSoftmax<T>(input, output, axis);
 
-    // Create softmax memory for src, dst.
-    using dt = memory::data_type;
-    auto dtype = (is_input_float) ? dt::f32 : dt::bf16;
-    memory src_memory =
-        memory({{src_dims}, dtype, layout_type}, eng, input_array);
-    memory dst_memory =
-        memory({{output_dims}, dtype, layout_type}, eng, output_array);
-
-    // Create memory descriptor for src.
-    memory::desc src_md = memory::desc({src_dims}, dtype, layout_type);
-
-    // Create forward and primitive descriptor for softmax op.
-    softmax_forward::desc softmax_fwd_desc =
-        softmax_forward::desc(prop_kind::forward_inference, src_md, axis);
-    softmax_forward::primitive_desc softmax_fwd_pd =
-        softmax_forward::primitive_desc(softmax_fwd_desc, eng);
-
-    auto softmax_fwd = softmax_forward(softmax_fwd_pd);
-    net.push_back(softmax_fwd);
-    net_args.push_back(
-        {{ZENDNN_ARG_SRC, src_memory}, {ZENDNN_ARG_DST, dst_memory}});
-    assert(net.size() == net_args.size() && "something is missing");
-    for (size_t i = 0; i < net.size(); ++i) {
-      net.at(i).execute(s, net_args.at(i));
-    }
-
-    // Old ZenDNN logging removed;
+    OP_REQUIRES(context, zendnnl_success,
+                errors::Internal("ZenDNNL Softmax execution failed"));
   }
 
  private:
@@ -146,6 +142,6 @@ class ZenSoftmaxOp : public OpKernel {
 
 TF_CALL_float(REGISTER_SOFTMAX_KERNELS);
 TF_CALL_bfloat16(REGISTER_SOFTMAX_KERNELS);
-#undef REGISTER_SOFT_MAX_KERNELS
+#undef REGISTER_SOFTMAX_KERNELS
 
 }  // namespace amd_cpu_plugin

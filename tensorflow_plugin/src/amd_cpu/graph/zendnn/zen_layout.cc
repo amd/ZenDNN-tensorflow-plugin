@@ -67,7 +67,7 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       // {"_FusedBatchNormEx", "_ZenFusedBatchNormEx", CopyAttrsAll,
       //  RewriteSupportedDataType},
       // {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
-      // {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
+      {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
       // {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
       //  RewriteSupportedDataType},
       // TODO(plugin): Disabling _ZenTranspose for this release (i.e., v1.0) as
