@@ -20,7 +20,7 @@
 #----------------------------------------------------------------------------
 #   Prerequisites:
 #   -An active conda environment.
-#   -Tensorflow v2.19 has to be installed.
+#   -Tensorflow v2.20.0 has to be installed.
 #
 #   This script does the following:
 #   -Configures the Build options for TensorFlow-ZenDNN Plug-in.
@@ -32,6 +32,7 @@
 
 # Configuring Build options.
 echo "Configure TensorFlow-ZenDNN Plug-in"
+bazel clean --expunge --async
 ./configure
 
 # Building the TensorFlow-ZenDNN Plug-in.
