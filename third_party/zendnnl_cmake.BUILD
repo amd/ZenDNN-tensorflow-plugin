@@ -23,7 +23,7 @@ cmake(
         "ZENDNNL_DEPENDS_JSON": "ON",
         "ZENDNNL_DEPENDS_AOCLDLP": "ON",  # Enabled: Deep Learning Performance library
         "ZENDNNL_DEPENDS_LIBXSMM": "ON",
-
+        "ZENDNNL_DEPENDS_FBGEMM": "ON",
         # ZenDNNL Library Build Options.
         "ZENDNNL_LIB_BUILD_ARCHIVE": "ON",
         "ZENDNNL_LIB_BUILD_SHARED": "OFF",
@@ -78,6 +78,9 @@ cmake(
         "libdnnl.a",
         "libxsmm.a",
         "libaocl-dlp.a",
+        "libfbgemm.a",
+        "libasmjit.a",
+        "libcpuinfo.a",
     ],
 
     # Copy all libraries and headers to the right locations.
@@ -140,6 +143,9 @@ cmake(
         # Copy LIBXSMM headers.
         copy_headers "$INSTALL_BASE/deps/libxsmm/include" "LIBXSMM"
 
+        # Copy FBGEMM headers.
+        copy_headers "$INSTALL_BASE/deps/fbgemm/include" "FBGEMM"
+
         # Copy OneDNN headers.
         copy_headers "$INSTALL_BASE/deps/onednn/include" "OneDNN"
 
@@ -192,6 +198,15 @@ cmake(
 
         # Copy LIBXSMM library.
         copy_lib "$INSTALL_BASE/deps/libxsmm/lib/libxsmm.a" "libxsmm.a" "LIBXSMM library"
+
+        # Copy FBGEMM library.
+        copy_lib "$INSTALL_BASE/deps/fbgemm/$LIB_DIR/libfbgemm.a" "libfbgemm.a" "FBGEMM library"
+
+        # Copy asmjit library (FBGEMM dependency).
+        copy_lib "$INSTALL_BASE/deps/fbgemm/$LIB_DIR/libasmjit.a" "libasmjit.a" "asmjit library"
+
+        # Copy cpuinfo library (FBGEMM dependency).
+        copy_lib "$INSTALL_BASE/deps/fbgemm/$LIB_DIR/libcpuinfo.a" "libcpuinfo.a" "cpuinfo library"
 
         echo "=== ZenDNNL Post-build completed successfully ==="
     """,
