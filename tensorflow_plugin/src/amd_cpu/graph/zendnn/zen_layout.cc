@@ -39,13 +39,12 @@ namespace {
 const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
   static std::vector<ZenFormatInfo> rinfo{
       {"Conv2D", "_ZenConv2D", CopyAttrsZenConv2D, RewriteSupportedDataType},
-      // {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative",
-      // CopyAttrsZenConv2D,
-      //  RewriteSupportedDataType},
+      {"DepthwiseConv2dNative", "_ZenDepthwiseConv2dNative", CopyAttrsZenConv2D,
+       RewriteSupportedDataType},
       {"_FusedConv2D", "_ZenFusedConv2D", CopyAttrsZenFusedConv2D,
        RewriteFusedConv2D},
-      // {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
-      //  CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
+      {"_FusedDepthwiseConv2dNative", "_ZenFusedDepthwiseConv2dNative",
+       CopyAttrsZenFusedConv2D, RewriteFusedConv2D},
       {"MaxPool", "_ZenMaxPool", CopyAttrsAll, RewriteSupportedDataType},
       {"AvgPool", "_ZenAvgPool", CopyAttrsAll, RewriteSupportedDataType},
       {"MatMul", "_ZenMatMul", CopyAttrsAll, RewriteSupportedDataType},
@@ -76,20 +75,6 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
       // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
       // {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
       //  RewriteSupportedDataType},
-      // {"QuantizedConv2DWithBiasAndReluAndRequantize",
-      //  "_ZenQuantizedConv2DWithBiasAndReluAndRequantize", CopyAttrsQCBR,
-      //  RewriteQuantize},
-      // {"QuantizedConv2DWithBiasAndRequantize",
-      //  "_ZenQuantizedConv2DWithBiasAndRequantize", CopyAttrsQuantizedConv2D,
-      //  RewriteQuantize},
-      // {"QuantizedConv2DWithBiasSumAndReluAndRequantize",
-      //  "_ZenQuantizedConv2DWithBiasSumAndReluAndRequantize", CopyAttrsQCBR,
-      //  RewriteQuantize},
-      // {"QuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
-      //  "_ZenQuantizedConv2DWithBiasSignedSumAndReluAndRequantize",
-      //  CopyAttrsQCBR, RewriteQuantize},
-      // {"QuantizedMaxPool", "_ZenQuantizedMaxPool", CopyAttrsAll,
-      //  RewriteQuantize},
   };
   return &rinfo;
 }

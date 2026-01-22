@@ -591,11 +591,6 @@ bool FindContractionWithBias(const RemapperContext& ctx, int node_index,
   // TODO(plugin): ZenDNN does not support double dtype currently.
   if (HasDataType(contraction_node_def, DT_DOUBLE)) return false;
 
-  // We do not yet have support for DepthWiseConv2D fusion.
-  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
-  // conversion is disabled in zen_layout.cc.
-  if (IsDepthwiseConv2dNative(*contraction_node_def)) return false;
-
   const ContractionWithBiasAdd pattern{contraction_node_view->node_index(),
                                        node_index, bias_port};
   // We successfully found a {Conv2D, MatMul}+BiasAdd pattern.
@@ -788,11 +783,6 @@ bool FindContractionWithBiasAndActivation(
   // We have not encountered any other Contraction + BiasAdd + {Sigmoid}
   // pattern.
   if (IsSigmoid(*node_def) && !IsMatMul(*contraction_def)) return false;
-
-  // We do not yet have support for DepthWiseConv2D fusion.
-  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
-  // conversion is disabled in zen_layout.cc.
-  if (IsDepthwiseConv2dNative(*contraction_def)) return false;
 
   // Verify the inter node has control fanin&fanout or not.
   if (HasControlFaninOrFanout(*bias_add_node_view)) {
@@ -1006,12 +996,11 @@ bool FindPadWithContraction(const RemapperContext& ctx, int node_index,
   // Root of the pattern must be a Conv or FusedConv.
   if (HasControlFaninOrFanout(*node_view)) return false;
 
-  // Root node must be (_Fused)Conv2D.
-  // We do not yet have support for DepthWiseConv2D fusion.
-  // The _FusedDepthwiseConv2dNative -> _ZenFusedDepthwiseConv2dNative
-  // conversion is disabled in zen_layout.cc.
+  // Root node must be (_Fused)Conv2D/(_Fused)DepthwiseConv2dNative.
   const auto* node_def = node_view->node();
-  const bool is_ok = IsConv2D(*node_def) || node_def->op() == kFusedConv2D;
+  const bool is_ok = IsConv2D(*node_def) || node_def->op() == kFusedConv2D ||
+                     IsDepthwiseConv2dNative(*node_def) ||
+                     node_def->op() == kFusedDepthwiseConv2dNative;
   if (!is_ok) {
     return false;
   }
@@ -1051,7 +1040,7 @@ bool FindPadWithContraction(const RemapperContext& ctx, int node_index,
 
   const PadWithContraction pattern{pad_node_view->node_index(), node_index};
 
-  // We successfully found a Pad + (_Fused)Conv2D pattern.
+  // We successfully found a Pad + (_Fused)Conv2D/DepthwiseConv2dNative pattern.
   *matched = pattern;
 
   return true;

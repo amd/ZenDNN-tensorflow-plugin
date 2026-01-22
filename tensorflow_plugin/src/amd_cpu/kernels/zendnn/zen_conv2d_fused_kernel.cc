@@ -44,10 +44,9 @@ bool TryExecuteZenDNNLConv2D(OpKernelContext *context, const Tensor &input,
                              Tensor *output, const Conv2DDimensions &dimensions,
                              const Conv2DParameters &params,
                              FusedComputationType fusion_type,
-                             const Tensor *addend);
+                             const Tensor *addend, bool is_depthwise = false);
 
-template <typename T, bool pad_enabled = false, bool is_depthwise = false,
-          bool is_sum = false>
+template <typename T, bool is_depthwise = false>
 class ZenFusedConv2DOp : public OpKernel {
  public:
   explicit ZenFusedConv2DOp(OpKernelConstruction *context) : OpKernel(context) {
@@ -90,8 +89,6 @@ class ZenFusedConv2DOp : public OpKernel {
     TensorShape input_shape = input.shape();
     TensorShape filter_shape = filter.shape();
 
-    const Tensor &dinput = is_sum ? context->input(6) : input;
-
     Conv2DDimensions dimensions;
     ConvUtil conv_util(context, params_, is_depthwise);
     conv_util.InitFwdDimensions(input_shape, filter_shape, &dimensions);
@@ -112,29 +109,33 @@ class ZenFusedConv2DOp : public OpKernel {
       OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
     }
 
-    if (!is_depthwise) {
-      // Extract bias tensor
-      const Tensor *bias = nullptr;
-      if (fused_computation_ != FusedComputationType::kRelu) {
-        bias = &context->input(2);  // BiasAdd is typically input(2)
-      }
+    // Extract bias tensor
+    const Tensor *bias = nullptr;
+    if (fused_computation_ != FusedComputationType::kRelu) {
+      bias = &context->input(2);  // BiasAdd is typically input(2)
+    }
 
-      // Extract addend tensor for residual connections
-      const Tensor *addend = nullptr;
-      if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
-          fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
-        addend = &context->input(3);  // Add tensor is input(3)
-      }
+    // Extract addend tensor for residual connections
+    const Tensor *addend = nullptr;
+    if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
+        fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
+      addend = &context->input(3);  // Add tensor is input(3)
+    }
 
-      bool zendnnl_success = TryExecuteZenDNNLConv2D<T>(
-          context, input, filter, bias, output, dimensions, params_,
-          fused_computation_, addend);
+    // Execute using ZenDNNL (supports both standard and depthwise)
+    bool zendnnl_success = TryExecuteZenDNNLConv2D<T>(
+        context, input, filter, bias, output, dimensions, params_,
+        fused_computation_, addend, is_depthwise);
 
-      if (zendnnl_success) {
-        LogZenDNNLSuccess("FusedConv2D");
+    if (zendnnl_success) {
+      if (is_depthwise) {
+        LogZenDNNLSuccess("FusedDepthwiseConv2D");
       } else {
-        LogZenDNNLFallback("FusedConv2D", "failed");
+        LogZenDNNLSuccess("FusedConv2D");
       }
+    } else {
+      LogZenDNNLFallback(is_depthwise ? "FusedDepthwiseConv2D" : "FusedConv2D",
+                         "failed");
     }
 
     // Old ZenDNN logging removed;
@@ -155,15 +156,11 @@ class ZenFusedConv2DOp : public OpKernel {
   REGISTER_KERNEL_BUILDER(Name("_ZenFusedDepthwiseConv2dNative")            \
                               .Device(DEVICE_CPU)                           \
                               .TypeConstraint<TYPE>("T"),                   \
-                          ZenFusedConv2DOp<TYPE, false, true, false>);
+                          ZenFusedConv2DOp<TYPE, true>);
 
 TF_CALL_float(REGISTER_FUSED_CONV2D_KERNELS);
 TF_CALL_bfloat16(REGISTER_FUSED_CONV2D_KERNELS);
 
 #undef REGISTER_FUSED_CONV2D_KERNELS
-
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenFusedConv2DSum").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenFusedConv2DOp<float, false, false, true>);
 
 }  // namespace amd_cpu_plugin

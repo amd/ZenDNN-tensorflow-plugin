@@ -47,7 +47,7 @@ bool TryExecuteZenDNNLConv2D(
     const Tensor* bias, Tensor* output, const Conv2DDimensions& dimensions,
     const Conv2DParameters& params,
     FusedComputationType fusion_type = FusedComputationType::kUndefined,
-    const Tensor* addend = nullptr) {
+    const Tensor* addend = nullptr, bool is_depthwise = false) {
   try {
     using namespace zendnnl::lowoha;
     using namespace zendnnl::lowoha::conv;
@@ -88,6 +88,28 @@ bool TryExecuteZenDNNLConv2D(
       conv_params.dilation_w = 1;
     }
     std::strncpy(conv_params.data_format, "NHWC", 8);
+
+    // Setup depthwise convolution parameters if applicable
+    if (is_depthwise) {
+      conv_params.depthwise.is_depthwise = true;
+      conv_params.depthwise.groups =
+          dimensions.in_depth;  // groups = in_channels for depthwise
+      // For depthwise: out_channels = in_channels * depth_multiplier
+      // So: depth_multiplier = out_channels / in_channels
+      if (dimensions.in_depth <= 0) {
+        LogZenDNNLInfo("Conv",
+                       "Invalid depthwise configuration: in_depth is less than "
+                       "or equal to zero");
+        return false;
+      }
+      conv_params.depthwise.depth_multiplier =
+          dimensions.out_depth / dimensions.in_depth;
+
+      log_info("DepthwiseConv2D: in_channels=", dimensions.in_depth,
+               ", out_channels=", dimensions.out_depth,
+               ", depth_multiplier=", conv_params.depthwise.depth_multiplier,
+               ", groups=", conv_params.depthwise.groups);
+    }
 
     // Set data types
     if (std::is_same<T, float>::value) {
@@ -220,13 +242,13 @@ template bool TryExecuteZenDNNLConv2D<float>(OpKernelContext*, const Tensor&,
                                              Tensor*, const Conv2DDimensions&,
                                              const Conv2DParameters&,
                                              FusedComputationType,
-                                             const Tensor*);
+                                             const Tensor*, bool);
 template bool TryExecuteZenDNNLConv2D<Eigen::bfloat16>(
     OpKernelContext*, const Tensor&, const Tensor&, const Tensor*, Tensor*,
     const Conv2DDimensions&, const Conv2DParameters&, FusedComputationType,
-    const Tensor*);
+    const Tensor*, bool);
 
-template <typename T, bool pad_enabled = false, bool is_depthwise = false>
+template <typename T, bool is_depthwise = false>
 class ZenConv2DOp : public OpKernel {
  public:
   explicit ZenConv2DOp(OpKernelConstruction* context) : OpKernel(context) {
@@ -264,38 +286,36 @@ class ZenConv2DOp : public OpKernel {
 
     T* bias_arr = nullptr;
 
-    if (!is_depthwise) {
-      OP_REQUIRES(context, is_input_float,
-                  errors::Unimplemented(
-                      "ZenDNN GEMM path only supported for FP32 data type"));
-    }
+    // Execute convolution using ZenDNNL (supports both standard and depthwise)
+    const Tensor* bias_tensor = nullptr;
+    // TODO: Extract bias from context if available
 
-    if (!is_depthwise) {
-      // Skip depthwise for now - use existing ZenDNN implementation
-      const Tensor* bias_tensor = nullptr;
-      // TODO: Extract bias from context if available
+    bool zendnnl_success = TryExecuteZenDNNLConv2D<T>(
+        context, input, filter, bias_tensor, output, dimensions, params_,
+        FusedComputationType::kUndefined, nullptr, is_depthwise);
 
-      bool zendnnl_success = TryExecuteZenDNNLConv2D<T>(
-          context, input, filter, bias_tensor, output, dimensions, params_,
-          FusedComputationType::kUndefined, nullptr);
-
-      if (zendnnl_success) {
-        LogZenDNNLSuccess("Conv2D");
-        return;
+    if (zendnnl_success) {
+      if (is_depthwise) {
+        LogZenDNNLSuccess("DepthwiseConv2D");
       } else {
-        LogZenDNNLFallback("Conv2D", "failed");
-        // ZenDNNL execution failed, we MUST report error
-        // Output tensor was allocated but not filled with valid data
-        OP_REQUIRES(
-            context, false,
-            errors::Internal("ZenDNNL Conv2D execution failed. "
-                             "No fallback implementation available. "
-                             "Input shape: ",
-                             input_shape.DebugString(),
-                             ", Filter shape: ", filter_shape.DebugString(),
-                             ", Output shape: ", out_shape.DebugString()));
-        return;  // Unreachable, but explicit
+        LogZenDNNLSuccess("Conv2D");
       }
+      return;
+    } else {
+      LogZenDNNLFallback(is_depthwise ? "DepthwiseConv2D" : "Conv2D", "failed");
+      // ZenDNNL execution failed, we MUST report error
+      // Output tensor was allocated but not filled with valid data
+      OP_REQUIRES(
+          context, false,
+          errors::Internal(is_depthwise
+                               ? "ZenDNNL DepthwiseConv2D execution failed. "
+                               : "ZenDNNL Conv2D execution failed. ",
+                           "No fallback implementation available. "
+                           "Input shape: ",
+                           input_shape.DebugString(),
+                           ", Filter shape: ", filter_shape.DebugString(),
+                           ", Output shape: ", out_shape.DebugString()));
+      return;  // Unreachable, but explicit
     }
 
     // Old ZenDNN logging removed;
@@ -313,7 +333,7 @@ class ZenConv2DOp : public OpKernel {
   REGISTER_KERNEL_BUILDER(Name("_ZenDepthwiseConv2dNative")            \
                               .Device(DEVICE_CPU)                      \
                               .TypeConstraint<TYPE>("T"),              \
-                          ZenConv2DOp<TYPE, false, true>);
+                          ZenConv2DOp<TYPE, true>);
 
 TF_CALL_float(REGISTER_CONV2D_KERNELS);
 TF_CALL_bfloat16(REGISTER_CONV2D_KERNELS);
