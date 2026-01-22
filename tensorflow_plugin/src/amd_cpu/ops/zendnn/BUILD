@@ -138,7 +138,7 @@ ZEN_OPS = [
     # ":zen_pooling_ops",
     # ":zen_fused_batchnorm_ops",
     # ":zen_transpose_op",
-    # ":zen_batch_matmul_ops",
+    ":zen_batch_matmul_ops",
     # ":zen_reshape_op",
     # ":zen_cwise_ops",
 ]

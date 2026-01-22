@@ -113,6 +113,10 @@ cc_library(
 cc_library(
     name = "zen_batch_matmul_kernels",
     srcs = ["zen_batch_matmul_kernel.cc"],
+    hdrs = [
+        "zen_batch_matmul_util.h",
+        "zen_zendnnl_utils.h",
+    ],
     copts = tf_copts(),
     linkstatic = 1,
     visibility = ["//visibility:public"],
@@ -120,7 +124,9 @@ cc_library(
         ":fill_functor",
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
+        ":zen_zendnnl_utils",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",
     ],
     alwayslink = True,
 )
@@ -211,7 +217,7 @@ ZEN_KERNELS = [
     ":zen_pooling_kernels",
     # ":zen_fused_batchnorm_kernel",
     # ":zen_transpose_kernel",
-    # ":zen_batch_matmul_kernels",
+    ":zen_batch_matmul_kernels",
     # ":zen_reshape_kernel",
     # ":zen_cwise_ops_common_kernel",
 ]

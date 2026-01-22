@@ -1787,7 +1787,11 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   // ZenDNN is not optimized for all shapes with regard to binary-post ops
   // fusion. Allow limited cases only for now that are optimized, (i)
   // multiplicand is scalar, (ii) BatchMatmulV2 output is 4D tensor, and (iii)
-  // addend is 4D tensor with second dim_size = 1.
+  // addend is 4D tensor with first and second dim_size = 1.
+
+  // Currently ZenDNN supports binary-post ops fusion for addend tensor with 2D
+  // only.
+  // TODO(plugin): Enable this when ZenDNN supports 3D and 4D addend tensor.
   if (!found_op_type_match) return false;
   if (!ctx->inferred_graph_properties) {
     Status s = ctx->graph_properties.InferStatically(
@@ -1821,7 +1825,9 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
       addend_node_def->name(), &addend_props));
   auto addend_shape = addend_props[0].shape();
-  if (!(Rank(addend_shape) == 4 && addend_shape.dim(1).size() == 1)) {
+  // Only support addend with shape [1, 1, M, N]
+  if (!(Rank(addend_shape) == 4 && addend_shape.dim(0).size() == 1 &&
+        addend_shape.dim(1).size() == 1)) {
     return false;
   }
   input_node_names->clear();
@@ -2906,13 +2912,13 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // }
 
       // Remap BatchMatMul + Mul into the _FusedBatchMatMul.
-      // ContractionWithMul contract_with_mul;
-      // if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
-      //   // Old ZenDNN logging removed;
-      //   AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
-      //                           &nodes_to_delete);
-      //   continue;
-      // }
+      ContractionWithMul contract_with_mul;
+      if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
+        // Old ZenDNN logging removed;
+        AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
+                                &nodes_to_delete);
+        continue;
+      }
 
       // Remap MatMul + BiasAdd + gelu-subgraph.
       std::map<string, int> matched_nodes_map;
@@ -2930,30 +2936,29 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       }
 
       // Remap BatchMatMul + Mul + AddV2 into the _FusedBatchMatMul.
-      // matched_nodes_map.clear();
-      // remove_node_indices.clear();
-      // std::vector<string> input_node_names;
-      // input_node_names.clear();
-      // if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
-      //                          &remove_node_indices, &input_node_names)) {
-      //   // Old ZenDNN logging removed;
-      //   TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
-      //       &ctx, matched_nodes_map, remove_node_indices, input_node_names,
-      //       &invalidated_nodes, &nodes_to_delete));
-      //   continue;
-      // }
+      matched_nodes_map.clear();
+      remove_node_indices.clear();
+      std::vector<string> input_node_names;
+      input_node_names.clear();
+      if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
+                               &remove_node_indices, &input_node_names)) {
+        // Old ZenDNN logging removed;
+        TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
+            &ctx, matched_nodes_map, remove_node_indices, input_node_names,
+            &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
 
-      // Remap BatchMatMul + BiadAdd + Activation into the _FusedBatchMatMul.
-      // BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
-      // if (FindBatchMatMulBiasAddActivation(ctx, i,
-      //                                      &batchmatmul_biasadd_activation))
-      //                                      {
-      //   // Old ZenDNN logging removed;
-      //   TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
-      //       &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
-      //       &nodes_to_delete));
-      //   continue;
-      // }
+      // Remap BatchMatMul + BiasAdd + Activation into the _FusedBatchMatMul.
+      BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
+      if (FindBatchMatMulBiasAddActivation(ctx, i,
+                                           &batchmatmul_biasadd_activation)) {
+        // Old ZenDNN logging removed;
+        TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
+            &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
+            &nodes_to_delete));
+        continue;
+      }
 
       // Remap Pad + (_Fused)Conv2D to (_Fused)Conv2D.
       PadWithContraction pad_conv;

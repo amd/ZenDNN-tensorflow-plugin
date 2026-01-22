@@ -25,7 +25,7 @@ void RegisterZenSoftmaxOp();
 void RegisterZenPoolingOps();
 // void RegisterZenFusedBatchNormOps();
 // void RegisterZenTransposeOps();
-// void RegisterZenBatchMatMulOps();
+void RegisterZenBatchMatMulOps();
 // void RegisterZenReshapeOp();
 // void RegisterZenCwiseOps();
 void RegisterZenOps();
