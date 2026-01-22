@@ -224,12 +224,14 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
       // TODO: Currently handling 2D matrices only (Batch_A = 1, Batch_B = 1 as
       // per lowoha_common.hpp default constructor). For future 3D matrix
       // support, batch parameters must be properly configured.
+      // TODO: If there is accuracy issue, then we need to set is_weights_const
+      // to false.
       auto status = matmul_direct(
           'r' /* row-major */, transpose_a, transpose_b, static_cast<int>(m),
           static_cast<int>(n), static_cast<int>(k), 1.0f /* alpha */,
           static_cast<const void *>(a_data), lda,
           static_cast<const void *>(b_data), ldb, bias_ptr, 0.0f /* beta */,
-          static_cast<void *>(output_data), ldc, false /* is_weights_const */,
+          static_cast<void *>(output_data), ldc, true /* is_weights_const */,
           batch_params, params);
 
       if (status != zendnnl::error_handling::status_t::success) {
