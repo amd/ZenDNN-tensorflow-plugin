@@ -68,11 +68,23 @@ genrule(
 )
 
 # Bazel doesn't accept .txt as an input, rename the ldscript to .inc to workaround.
+# We also need to strip out conditional exports that require features not enabled in this build:
+# - USE_DEBUGGER symbols (__kmp_debugging, __kmp_omp_debug_struct_info)
+# - USE_ITT_BUILD symbols (various __kmp_* and ITT symbols)
+# - KMP_USE_MONITOR symbols (__kmp_launch_monitor, __kmp_reap_monitor)
+# - OMPT symbols (ompt_start_tool)
+# - Stats symbols (__kmp_reset_stats)
 genrule(
     name = "ldscript",
     srcs = ["runtime/src/exports_so.txt"],
     outs = ["exports_so.inc"],
-    cmd = "cp $(location runtime/src/exports_so.txt) $@",
+    cmd = """sed -e '/^#if USE_DEBUGGER/,/^#endif.*USE_DEBUGGER/d' \
+                 -e '/^#if USE_ITT_BUILD/,/^#endif.*USE_ITT_BUILD/d' \
+                 -e '/^#if KMP_USE_MONITOR/,/^#endif/d' \
+                 -e '/ompt_start_tool/d' \
+                 -e '/__kmp_reset_stats/d' \
+                 -e '/__kmp_launch_worker/d' \
+                 $(location runtime/src/exports_so.txt) > $@""",
 )
 
 genrule(
