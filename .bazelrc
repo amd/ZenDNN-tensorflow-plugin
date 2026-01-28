@@ -39,3 +39,13 @@ build --experimental_ui_max_stdouterr_bytes=-1
 #controls number of parallel jobs for ZenDNN CMake library only
 #ZenDNN builds BLIS and this setting doesn't effect BLIS
 build --define=CPU_COUNT=24
+
+# Enable disk cache for faster subsequent builds
+# Uncomment and set an absolute path to enable disk caching
+# Example: build --disk_cache=/tmp/bazel-disk-cache
+# Or set via command line: bazel build --disk_cache=/path/to/cache ...
+# Enable remote cache if available (optional, uncomment if you have a remote cache server)
+# build --remote_cache=http://your-cache-server:port
+
+# Ensure deterministic builds for better caching
+build --stamp=false

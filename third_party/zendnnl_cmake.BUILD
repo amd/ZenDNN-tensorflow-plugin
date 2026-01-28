@@ -2,17 +2,56 @@
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 # Export all source files for the cmake rule.
+# Exclude build artifacts, git files, and other non-source files to improve caching.
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**/*"]),
+    srcs = glob(
+        ["**/*"],
+        exclude = [
+            # Build artifacts
+            "**/build/**",
+            "**/BUILD*",
+            "**/CMakeCache.txt",
+            "**/CMakeFiles/**",
+            "**/*.o",
+            "**/*.a",
+            "**/*.so",
+            "**/*.dylib",
+            "**/*.dll",
+            "**/*.exe",
+            "**/.cmake/**",
+            "**/install/**",
+            # Version control
+            "**/.git/**",
+            "**/.gitignore",
+            "**/.gitattributes",
+            # IDE files
+            "**/.vscode/**",
+            "**/.idea/**",
+            "**/*.swp",
+            "**/*.swo",
+            "**/*~",
+            # Temporary files
+            "**/*.tmp",
+            "**/*.log",
+            "**/.DS_Store",
+            "**/Thumbs.db",
+        ],
+    ),
     visibility = ["//visibility:public"],
 )
 
 # Build ZenDNNL using cmake rule.
 cmake(
     name = "zendnnl_lib",
+    # Use Ninja generator for faster builds and better caching
+    # Ninja is faster than Make and handles parallel builds better
+    generate_args = ["-GNinja"],
+    # Enable parallel builds - Ninja will auto-detect CPU cores by default
     build_args = [
-        "-j1",  # Use single-threaded to avoid make jobserver issues.
+        # Ninja auto-detects cores if no -j flag is provided
+        # Uncomment the line below to explicitly set parallel jobs:
+        # "-j$(CPU_COUNT)",  # Use CPU_COUNT from .bazelrc
     ],
     install = True,
     cache_entries = {
@@ -41,6 +80,10 @@ cmake(
         "CMAKE_CXX_STANDARD": "17",
         "CMAKE_CXX_EXTENSIONS": "OFF",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        # Use Ninja generator for faster builds
+        "CMAKE_GENERATOR": "Ninja",
+        # Improve caching by using deterministic build paths
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",  # Disable to avoid non-deterministic outputs
 
         # Override CMAKE_INSTALL_PREFIX.
         "CMAKE_INSTALL_PREFIX": "$INSTALLDIR",
@@ -55,12 +98,12 @@ cmake(
         "CXXFLAGS": "-fopenmp -std=c++17",
         "CFLAGS": "-fopenmp",
         "LDFLAGS": "-lgomp",
-        "MAKEFLAGS": "",
-        "MFLAGS": "",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
         "CC": "gcc",
         "CXX": "g++",
+        # Ensure deterministic builds
+        "SOURCE_DATE_EPOCH": "0",
     },
     lib_source = ":all_srcs",
 
