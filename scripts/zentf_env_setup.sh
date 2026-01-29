@@ -66,7 +66,16 @@ fi
 # 5: onednn
 # 6: libxsmm (LOA only)
 # auto: auto_tuner (LOA only)
-export ZENDNNL_MATMUL_ALGO=2
+#
+# For FP32 and direct BF16 models: use ZENDNNL_MATMUL_ALGO=1
+# For AMP models (when TF_ZENDNN_PLUGIN_BF16=1): strictly use ZENDNNL_MATMUL_ALGO=4 or 5 only
+if [ "$TF_ZENDNN_PLUGIN_BF16" = "1" ]; then
+    # AMP models: use 5 (or 4) as per recommendations
+    export ZENDNNL_MATMUL_ALGO=5
+else
+    # FP32 and direct BF16 models: use 1 as default
+    export ZENDNNL_MATMUL_ALGO=1
+fi
 echo "ZENDNNL_MATMUL_ALGO=$ZENDNNL_MATMUL_ALGO"
 export USE_ZENDNN_MATMUL_DIRECT=1
 echo "USE_ZENDNN_MATMUL_DIRECT=$USE_ZENDNN_MATMUL_DIRECT"
