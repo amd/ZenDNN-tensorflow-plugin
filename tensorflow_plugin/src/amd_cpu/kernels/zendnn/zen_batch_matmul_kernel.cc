@@ -48,7 +48,8 @@ bool TryExecuteZenDNNLBatchMatmul(
     OpKernelContext *context, const Tensor &lhs, const Tensor &rhs,
     const Tensor *bias, Tensor *output, bool adj_x, bool adj_y, bool v2_bcast,
     FusedComputationType fusion_type, const Tensor *mul_tensor = nullptr,
-    const Tensor *add_tensor = nullptr, bool use_direct_api = true) {
+    const Tensor *add_tensor = nullptr, bool use_direct_api = true,
+    bool is_cache_weight = true) {
   // Set API name for consistent logging
   const char *api_name =
       use_direct_api ? "BatchMatMulLOA" : "BatchMatMulRegular";
@@ -408,12 +409,13 @@ bool TryExecuteZenDNNLBatchMatmul(
       int ldb = adj_y ? K : N;
       int ldc = N;
 
-      status_t status = matmul_direct('r', adj_x, adj_y, M, N, K, alpha,
-                                      static_cast<const void *>(lhs_data), lda,
-                                      static_cast<const void *>(rhs_data), ldb,
-                                      static_cast<const void *>(bias_data),
-                                      0.0f, static_cast<void *>(output_data),
-                                      ldc, false, batch_params, params);
+      status_t status =
+          matmul_direct('r', adj_x, adj_y, M, N, K, alpha,
+                        static_cast<const void *>(lhs_data), lda,
+                        static_cast<const void *>(rhs_data), ldb,
+                        static_cast<const void *>(bias_data), 0.0f,
+                        static_cast<void *>(output_data), ldc, is_cache_weight,
+                        batch_params, params);
 
       if (status == status_t::success) {
         LogZenDNNLSuccess(api_name);
@@ -654,11 +656,11 @@ bool TryExecuteZenDNNLBatchMatmul(
 template bool TryExecuteZenDNNLBatchMatmul<float>(
     OpKernelContext *, const Tensor &, const Tensor &, const Tensor *, Tensor *,
     bool, bool, bool, FusedComputationType, const Tensor *, const Tensor *,
-    bool);
+    bool, bool);
 template bool TryExecuteZenDNNLBatchMatmul<Eigen::bfloat16>(
     OpKernelContext *, const Tensor &, const Tensor &, const Tensor *, Tensor *,
     bool, bool, bool, FusedComputationType, const Tensor *, const Tensor *,
-    bool);
+    bool, bool);
 
 // The second parameter v2_bcast is set to true if we are using V2 otherwise we
 // set it to false.
@@ -793,7 +795,8 @@ class ZenBatchMatMulOp : public OpKernel {
 
     bool zendnnl_success = TryExecuteZenDNNLBatchMatmul<Scalar>(
         context, lhs, rhs, bias, output, adj_x_, adj_y_, v2_bcast,
-        fused_computation_, mul_tensor, add_tensor, use_direct_api);
+        fused_computation_, mul_tensor, add_tensor, use_direct_api,
+        is_cache_weight_);
 
     OP_REQUIRES(context, zendnnl_success,
                 errors::Internal("ZenDNNL BatchMatMul execution failed"));
