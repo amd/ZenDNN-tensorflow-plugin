@@ -70,8 +70,9 @@ bool TryExecuteZenDNNLSoftmax(const Tensor& input, Tensor* output, int axis) {
 
     // Convert TensorFlow shape to uint64_t array
     uint64_t shape[SOFTMAX_MAX_NDIMS];
+    auto input_dim_sizes = input.shape().dim_sizes();
     for (int d = 0; d < input_dims; ++d) {
-      shape[d] = static_cast<uint64_t>(input.shape().dim_size(d));
+      shape[d] = static_cast<uint64_t>(input_dim_sizes[d]);
     }
 
     // Use setup_softmax_shape from ZenDNN library to populate all params
