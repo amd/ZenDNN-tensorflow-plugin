@@ -217,8 +217,11 @@ bool TryExecuteZenDNNLConv2D(
     }
 
     // Call ZenDNNL Low Overhead API - conv2d_direct
-    status_t status = conv_direct(input_data, filter_data, bias_data,
-                                  output_data, conv_params);
+    // TODO: If there is accuracy issue, then we need to set is_weights_const
+    // to false.
+    status_t status =
+        conv_direct(input_data, filter_data, bias_data, output_data,
+                    true /* is_weights_const */, conv_params);
 
     if (status != status_t::success) {
       LogZenDNNLInfo("Conv2D", ("Execution failed with status " +
