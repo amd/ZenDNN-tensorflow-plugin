@@ -78,8 +78,8 @@ jobs:
       blis_release_version: 'AOCL-Sep2025-b1'
       zendnn_release_hash: 'c59bf50d2a425d36416ea63bf6cdc1670422f20a49baf4b3af83d0b4854aeaa9'
       zendnn_release_version: 'zendnn-2025-WW50'
-      zendnnl_release_hash: 'c3d6a376bf755e1600f6723ca8a25920692d13d2db02618a319799616fcfa25d'
-      zendnnl_release_version: 'r5.2_rc1'
+      zendnnl_release_hash: 'be35d9202cabe1d75c57c0832fd049587655571d0b92c98a0036819ad0dd2c97'
+      zendnnl_release_version: 'r5.2_rc2'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '0' }}
       TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '1' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '0' }}
@@ -490,8 +490,8 @@ jobs:
       blis_release_version: 'AOCL-Sep2025-b1'
       zendnn_release_hash: 'c59bf50d2a425d36416ea63bf6cdc1670422f20a49baf4b3af83d0b4854aeaa9'
       zendnn_release_version: 'zendnn-2025-WW50'
-      zendnnl_release_hash: 'c3d6a376bf755e1600f6723ca8a25920692d13d2db02618a319799616fcfa25d'
-      zendnnl_release_version: 'r5.2_rc1'
+      zendnnl_release_hash: 'be35d9202cabe1d75c57c0832fd049587655571d0b92c98a0036819ad0dd2c97'
+      zendnnl_release_version: 'r5.2_rc2'
       TF_PLUGIN_USE_LOCAL_ZENDNN: ${{ github.event.inputs.zentf_use_local_zendnn || github.event.client_payload.zentf_use_local_zendnn || '0' }}
       TF_PLUGIN_USE_LOCAL_ZENDNNL: ${{ github.event.inputs.zentf_use_local_zendnnl || github.event.client_payload.zentf_use_local_zendnnl || '1' }}
       TF_PLUGIN_USE_LOCAL_BLIS: ${{ github.event.inputs.zentf_use_local_blis || github.event.client_payload.zentf_use_local_blis || '0' }}
