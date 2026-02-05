@@ -88,10 +88,57 @@ function prepare_src() {
   cp tensorflow_plugin/tools/pip_package/MANIFEST.in ${TMPDIR}
   cp tensorflow_plugin/tools/pip_package/DESCRIPTION.md ${TMPDIR}
   cp tensorflow_plugin/tools/pip_package/setup.py ${TMPDIR}
-  # my_plugin_dir should be the same with _MY_PLUGIN_PATH in setup.py
-  mkdir -p ${TMPDIR}/my_plugin_dir
-  cp -r tensorflow_plugin/python/ ${TMPDIR}/my_plugin_dir
-  touch ${TMPDIR}/my_plugin_dir/__init__.py
+  # zentf directory should be the same with _MY_PLUGIN_PATH in setup.py
+  mkdir -p ${TMPDIR}/zentf
+  # Copy all files from tensorflow_plugin/python/ to zentf/
+  cp tensorflow_plugin/python/__init__.py ${TMPDIR}/zentf/
+  cp tensorflow_plugin/python/test.py ${TMPDIR}/zentf/ 2>/dev/null || true
+
+  # Extract zentf commit hash (strip newlines to avoid syntax errors)
+  ZENTF_COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null | tr -d '\n\r' || echo "unknown")
+
+  # Extract ZenDNN/ZenDNNL version from workspace.bzl
+  # Try multiple patterns to handle both original and local build modified workspace.bzl:
+  # 1. Original: strip_prefix = "ZenDNN-zendnn-2026-WW03" -> extract "zendnn-2026-WW03"
+  # 2. Local build: URL contains zendnnl_<commit>.tar.gz -> extract commit hash
+  ZENDNN_VERSION=$(grep -oP 'strip_prefix = "ZenDNN-\K[^"]+' tensorflow_plugin/workspace.bzl 2>/dev/null | head -1 | tr -d '\n\r')
+  if [ -z "$ZENDNN_VERSION" ]; then
+    # Try to extract commit hash from local build URL pattern: zendnnl_<commit>.tar.gz
+    ZENDNN_VERSION=$(grep -oE 'zendnnl_[a-f0-9]+\.tar\.gz' tensorflow_plugin/workspace.bzl 2>/dev/null | head -1 | sed 's/zendnnl_//' | sed 's/\.tar\.gz//' | tr -d '\n\r')
+  fi
+  if [ -z "$ZENDNN_VERSION" ]; then
+    ZENDNN_VERSION="unknown"
+  fi
+
+  # Get TensorFlow version (strip newlines)
+  TF_VERSION=$("${PYTHON_BIN_PATH:-python}" -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null | tr -d '\n\r' || echo "unknown")
+
+  # Generate _build_info.py with version information using echo to avoid heredoc issues
+  echo $(date) : "=== Generating _build_info.py"
+  {
+    echo '# ******************************************************************************'
+    echo '# Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.'
+    echo '#'
+    echo '# Licensed under the Apache License, Version 2.0 (the "License");'
+    echo '# you may not use this file except in compliance with the License.'
+    echo '# You may obtain a copy of the License at'
+    echo '#'
+    echo '#     http://www.apache.org/licenses/LICENSE-2.0'
+    echo '#'
+    echo '# Unless required by applicable law or agreed to in writing, software'
+    echo '# distributed under the License is distributed on an "AS IS" BASIS,'
+    echo '# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.'
+    echo '# See the License for the specific language governing permissions and'
+    echo '# limitations under the License.'
+    echo '#'
+    echo '# ******************************************************************************'
+    echo ''
+    echo '# Auto-generated build information - DO NOT EDIT'
+    echo "__zentf_commit__ = \"${ZENTF_COMMIT_HASH}\""
+    echo "__zendnn_version__ = \"${ZENDNN_VERSION}\""
+    echo "__tf_version__ = \"${TF_VERSION}\""
+  } > ${TMPDIR}/zentf/_build_info.py
+
   if [ -d ${TMPDIR}/tensorflow_plugin ] ; then
     mv ${TMPDIR}/tensorflow_plugin/* ${TMPDIR}/tensorflow-plugins
   fi
