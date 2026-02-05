@@ -176,23 +176,24 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
           params.postop_.push_back(gelu_op);
           break;
         }
-        case FusedComputationType::kBiasAddWithAdd: {
-          if (addend) {
-            matmul_post_op add_op;
-            add_op.po_type = post_op_type_t::binary_add;
-            add_op.buff = const_cast<void *>(
-                static_cast<const void *>(addend->flat<T>().data()));
-            add_op.dtype = dtypes.dst;
-            add_op.dims = {static_cast<int64_t>(m), static_cast<int64_t>(n)};
-            add_op.alpha = 1.0f;
-            params.postop_.push_back(add_op);
-          } else {
-            LogZenDNNLInfo(
-                api_name, "Binary add requested but no addend tensor provided");
-            return false;
-          }
-          break;
-        }
+        // case FusedComputationType::kBiasAddWithAdd: {
+        //   if (addend) {
+        //     matmul_post_op add_op;
+        //     add_op.po_type = post_op_type_t::binary_add;
+        //     add_op.buff = const_cast<void *>(
+        //         static_cast<const void *>(addend->flat<T>().data()));
+        //     add_op.dtype = dtypes.dst;
+        //     add_op.dims = {static_cast<int64_t>(m), static_cast<int64_t>(n)};
+        //     add_op.alpha = 1.0f;
+        //     params.postop_.push_back(add_op);
+        //   } else {
+        //     LogZenDNNLInfo(
+        //         api_name, "Binary add requested but no addend tensor
+        //         provided");
+        //     return false;
+        //   }
+        //   break;
+        // }
         case FusedComputationType::kBiasAddWithAddAndRelu: {
           if (addend) {
             matmul_post_op add_op;
@@ -325,29 +326,30 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
           matmul_context.set_post_op(gelu_post_op);
           break;
         }
-        case FusedComputationType::kBiasAddWithAdd: {
-          if (addend) {
-            T *addend_data = const_cast<T *>(addend->flat<T>().data());
-            uint64_t addend_buffer_size = addend->NumElements() * sizeof(T);
+        // case FusedComputationType::kBiasAddWithAdd: {
+        //   if (addend) {
+        //     T *addend_data = const_cast<T *>(addend->flat<T>().data());
+        //     uint64_t addend_buffer_size = addend->NumElements() * sizeof(T);
 
-            addend_tensor.set_size({m, n})
-                .set_data_type(dt)
-                .set_storage(static_cast<void *>(addend_data),
-                             addend_buffer_size)
-                .set_name("binary_add_tensor_0")
-                .create();
+        //     addend_tensor.set_size({m, n})
+        //         .set_data_type(dt)
+        //         .set_storage(static_cast<void *>(addend_data),
+        //                      addend_buffer_size)
+        //         .set_name("binary_add_tensor_0")
+        //         .create();
 
-            binary_add_params_t add_params{1.0f, "binary_add_tensor_0"};
-            post_op_t add_post_op(add_params);
-            matmul_context.set_post_op(add_post_op);
-            matmul_context.set_param("addend", addend_tensor);
-          } else {
-            LogZenDNNLInfo(
-                api_name, "Binary add requested but no addend tensor provided");
-            return false;
-          }
-          break;
-        }
+        //     binary_add_params_t add_params{1.0f, "binary_add_tensor_0"};
+        //     post_op_t add_post_op(add_params);
+        //     matmul_context.set_post_op(add_post_op);
+        //     matmul_context.set_param("addend", addend_tensor);
+        //   } else {
+        //     LogZenDNNLInfo(
+        //         api_name, "Binary add requested but no addend tensor
+        //         provided");
+        //     return false;
+        //   }
+        //   break;
+        // }
         case FusedComputationType::kBiasAddWithAddAndRelu: {
           if (addend) {
             T *addend_data = const_cast<T *>(addend->flat<T>().data());
@@ -453,7 +455,7 @@ class ZenMatMulOp : public OpKernel {
       using FCT = FusedComputationType;
       patterns = {
           {FCT::kBiasAdd, {"BiasAdd"}},
-          {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
+          // {FCT::kBiasAddWithAdd, {"BiasAdd", "Add"}},
           {FCT::kBiasAddWithRelu, {"BiasAdd", "Relu"}},
           {FCT::kBiasAddWithSigmoid, {"BiasAdd", "Sigmoid"}},
           {FCT::kBiasAddWithTanh, {"BiasAdd", "Tanh"}},

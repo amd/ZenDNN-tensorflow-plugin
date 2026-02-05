@@ -2135,6 +2135,11 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   // ZenDNN only supports fusion for Conv and MatMul.
   DCHECK(IsConvOrMatMul(contraction));
 
+  // Disable MatMul+BiasAdd+Add fusion (keep Conv2D+BiasAdd+Add enabled).
+  if (IsMatMul(contraction)) {
+    return OkStatus();
+  }
+
   // Old ZenDNN logging removed;
 
   NodeDef fused_node;
