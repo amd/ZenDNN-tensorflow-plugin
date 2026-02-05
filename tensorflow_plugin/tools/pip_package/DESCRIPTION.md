@@ -6,7 +6,7 @@ This upgrade includes support for a Java interface to zentf through TensorFlow-J
 
 zentf 5.2.0 includes enhancements for bfloat16 performance, primarily by leveraging microkernels and operators from the ZenDNN 5.2.0 library. These operators are designed to better leverage the EPYC microarchitecture and cache hierarchy.
 
-The zentf 5.2.0 plugin works seamlessly with TensorFlow versions from 2.19 to 2.16, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.2.0 plugin works seamlessly with TensorFlow version 2.20.0, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 

@@ -70,8 +70,8 @@ fi
 # For FP32 and direct BF16 models: use ZENDNNL_MATMUL_ALGO=1
 # For AMP models (when TF_ZENDNN_PLUGIN_BF16=1): strictly use ZENDNNL_MATMUL_ALGO=4 or 5 only
 if [ "$TF_ZENDNN_PLUGIN_BF16" = "1" ]; then
-    # AMP models: use 5 (or 4) as per recommendations
-    export ZENDNNL_MATMUL_ALGO=5
+    # AMP models: use 4 as per recommendations
+    export ZENDNNL_MATMUL_ALGO=4
 else
     # FP32 and direct BF16 models: use 1 as default
     export ZENDNNL_MATMUL_ALGO=1

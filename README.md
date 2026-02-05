@@ -41,7 +41,7 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 | [TensorFlow](https://www.tensorflow.org/) | 2.20.0 |
 
 # Installation Guide
->Note: Binary release isn't available for the main branch, so it must be built from source. To install a pre-built binary, please follow the installation steps from the latest release branch.
+>**Note:** Binary release isn't available for the main branch, so it must be built from source. To install a pre-built binary, please follow the installation steps from the latest release branch.
 
 This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder.
 ## Prerequisite
@@ -50,10 +50,33 @@ This section explains how to use the Python interface. For Java and C++ interfac
   $ conda create -n tf-v2.20.0-zentf-main-env python=3.10 -y
   $ conda activate tf-v2.20.0-zentf-main-env
   ```
-  Note: Python 3.10 used here for example.
+  > **Note:** Python 3.10 used here for example.
 * Install TensorFlow v2.20.0
   ```
   $ pip install tensorflow==2.20.0
+  ```
+## Install from binaries.
+
+### 1. Install wheel file using pip:
+```
+$ pip install zentf
+```
+### 2. Install zentf using release package.
+
+* Download the package and the user-guide from [AMD developer portal](https://www.amd.com/en/developer/zendnn.html).
+
+* Run the following commands to unzip the package and install the binary.
+  > **Note:** We are taking an example for release package with Python version 3.10.
+
+  ```
+  $ unzip ZENTF_v5.1.0_Python_v3.10.zip
+  $ cd ZENTF_v5.1.0_Python_v3.10/
+  $ pip install zentf-5.1.0-cp310-cp310-manylinux_2_28_x86_64.whl
+  ```
+
+* To use the recommended environment settings, execute :
+  ```
+  $ source scripts/zentf_env_setup.sh
   ```
 
 ## Build and install from source.
@@ -64,14 +87,17 @@ $ cd ZenDNN-tensorflow-plugin/
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
->Note: Configure & Build Tensorflow-ZenDNN Plug-in manually by following the steps [3-6].
 
+>**Notes:**
+>* ```export ZENDNNL_MANYLINUX_BUILD=1``` is needed for build from source for RHEL/FEDORA/Almalinux/CentOS OS families.
+>* Configure & Build Tensorflow-ZenDNN Plug-in manually by following the steps [3-6].
+ 
 ```
 The setup script will configure & build and install Tensorflow-ZenDNN Plug-in. It will also set the necessary environment variables of ZenDNN execution. However, these variables should be verified empirically.
 
 ZenDNN-tensorflow-plugin$ source scripts/zentf_setup.sh
 ```
-> Note: Build from source on main branch will generate the binary as zentf-5.2.0-cp310-cp310-linux_x86_64.whl
+>**Note:** Build from source on main branch will generate the binary as zentf-5.2.0-cp310-cp310-linux_x86_64.whl
 
 ### 3. Configure the build options:
 ```
@@ -100,8 +126,8 @@ ZenDNN-tensorflow-plugin$ bazel build  -c opt //tensorflow_plugin/tools/pip_pack
 ### 5. Generate python wheel file:
 ```
 ZenDNN-tensorflow-plugin$ bazel-bin/tensorflow_plugin/tools/pip_package/build_pip_package .
-  Note: It will generate and save python wheel file for TensorFlow-ZenDNN Plug-in into the current directory (i.e., ZenDNN-tensorflow-plugin/).
 ```
+>**Note:** It will generate and save python wheel file for TensorFlow-ZenDNN Plug-in into the current directory (i.e., ZenDNN-tensorflow-plugin/).
 
 ### 6. Install wheel file using pip:
 ```
@@ -115,7 +141,7 @@ ZenDNN-tensorflow-plugin$ pip install zentf-5.2.0-cp310-cp310-linux_x86_64.whl
 $ export TF_ENABLE_ZENDNN_OPTS=1
 $ export TF_ENABLE_ONEDNN_OPTS=0
 ```
-Note: To disable ZenDNN optimizations in your inference execution, you can set the corresponding ZenDNN environment variable `export TF_ENABLE_ZENDNN_OPTS=0`
+>**Note:** To disable ZenDNN optimizations in your inference execution, you can set the corresponding ZenDNN environment variable `export TF_ENABLE_ZENDNN_OPTS=0`
 
 ## Execute sample kernel:
 ```
