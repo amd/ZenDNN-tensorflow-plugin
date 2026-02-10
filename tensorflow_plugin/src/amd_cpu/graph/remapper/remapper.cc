@@ -153,36 +153,6 @@ struct ContractionWithBiasAddAndActivation {
   int bias_port = kMissingIndex;
 };
 
-// Contraction node followed by a FusedBatchNorm.
-struct ContractionWithBatchNorm {
-  ContractionWithBatchNorm() = default;
-  ContractionWithBatchNorm(int contraction, int fused_batch_norm,
-                           float epsilon = 0.0)
-      : contraction(contraction),
-        fused_batch_norm(fused_batch_norm),
-        epsilon(epsilon) {}
-
-  int contraction = kMissingIndex;
-  int fused_batch_norm = kMissingIndex;
-  float epsilon = 0.0;
-};
-
-// Contraction node followed by a FusedBatchNorm and Activation.
-struct ContractionWithBatchNormAndActivation {
-  ContractionWithBatchNormAndActivation() = default;
-  ContractionWithBatchNormAndActivation(int contraction, int fused_batch_norm,
-                                        int activation, float epsilon = 0.0)
-      : contraction(contraction),
-        fused_batch_norm(fused_batch_norm),
-        activation(activation),
-        epsilon(epsilon) {}
-
-  int contraction = kMissingIndex;
-  int fused_batch_norm = kMissingIndex;
-  int activation = kMissingIndex;
-  float epsilon = 0.0;
-};
-
 // Contraction node followed by a BiasAdd and Add.
 struct ContractionWithBiasAddAndAdd {
   ContractionWithBiasAddAndAdd() = default;
@@ -857,93 +827,6 @@ bool FindFusedBatchNormEx(const RemapperContext& ctx, int node_index,
   }
 
   return false;
-}
-
-bool FindConv2DWithBatchNorm(const RemapperContext& ctx, int node_index,
-                             ContractionWithBatchNorm* matched) {
-  const auto* node_view = ctx.graph_view.GetNode(node_index);
-  const auto* node_def = node_view->node();
-
-  // Fusion type is not supported for BF16 path because of the lack of API
-  // support from ZenDNN.
-  // TODO(zendnn) : Add the API support from ZenDNN library.
-  if (HasDataType(node_def, DT_BFLOAT16)) return false;
-
-  // Root of the pattern must be a FusedBatchNorm.
-  if (!IsFusedBatchNorm(*node_def)) return false;
-
-  // Check that batch normalization is in inference mode.
-  const auto* training_attr = node_view->GetAttr(kIsTraining);
-  if (training_attr != nullptr && training_attr->b()) return false;
-
-  // Check that only 0th output is consumed by other nodes.
-  // TODO(plugin): Forward controls for patterns with control dependencies.
-  if (HasControlFaninOrFanout(*node_view) ||
-      !node_view->GetRegularFanout(1).empty() ||  // batch_mean
-      !node_view->GetRegularFanout(2).empty() ||  // batch_variance
-      !node_view->GetRegularFanout(3).empty() ||  // reserve_space_1
-      !node_view->GetRegularFanout(4).empty())    // reserve_space_2
-    return false;
-
-  // Input to the FusedBatchNorm must be a Conv2D.
-  if (node_view->NumRegularFanins() < 1) return false;
-  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
-  const auto* conv2d_node_view = regular_fanin_0.node_view();
-  const auto* conv2d_node_def = conv2d_node_view->node();
-
-  // TODO(plugin) : Verify and add checks for CPU compatible data type and
-  // data format if necessary.
-  if (!IsConv2D(*conv2d_node_def) || !NodeIsOnCpu(conv2d_node_def) ||
-      !HaveSameDataType(node_def, conv2d_node_def) ||
-      HasControlFaninOrFanout(*conv2d_node_view) ||
-      !HasAtMostOneFanoutAtPort0(*conv2d_node_view) ||
-      IsInPreserveSet(ctx, conv2d_node_def))
-    return false;
-
-  // We successfully found a Conv2D+FusedBatchNorm pattern.
-  matched->contraction = conv2d_node_view->node_index();
-  matched->fused_batch_norm = node_index;
-  if (!TryGetNodeAttr(*node_def, "epsilon", &matched->epsilon)) return false;
-
-  return true;
-}
-
-bool FindConv2DWithBatchNormAndActivation(
-    const RemapperContext& ctx, int node_index,
-    ContractionWithBatchNormAndActivation* matched) {
-  const auto* node_view = ctx.graph_view.GetNode(node_index);
-  const auto* node_def = node_view->node();
-
-  // TODO(plugin): Forward controls for patterns with control dependencies.
-  if (HasControlFaninOrFanout(*node_view)) return false;
-
-  // Root of the pattern must be an activation node.
-  if (!IsSupportedActivation(*node_def)) return false;
-
-  // And input to the activation node must match Conv2DWithBatchNorm pattern.
-  if (node_view->NumRegularFanins() < 1) return false;
-  const auto& regular_fanin_0 = node_view->GetRegularFanin(0);
-  const auto* batch_norm_node_view = regular_fanin_0.node_view();
-
-  ContractionWithBatchNorm base;
-  if (!FindConv2DWithBatchNorm(ctx, batch_norm_node_view->node_index(), &base))
-    return false;
-
-  const auto* fused_batch_norm_node_view =
-      ctx.graph_view.GetNode(base.fused_batch_norm);
-  const auto* fused_batch_norm_node_def = fused_batch_norm_node_view->node();
-  if (!HasAtMostOneFanoutAtPort0(*fused_batch_norm_node_view) ||
-      !HaveSameDataType(node_def, fused_batch_norm_node_def) ||
-      IsInPreserveSet(ctx, fused_batch_norm_node_def))
-    return false;
-
-  // We successfully found a Conv2D+FusedBatchNorm+Activation pattern.
-  matched->contraction = base.contraction;
-  matched->fused_batch_norm = base.fused_batch_norm;
-  matched->activation = node_index;
-  matched->epsilon = base.epsilon;
-
-  return true;
 }
 
 bool FindContractionWithBiasAndAddActivation(
@@ -2398,89 +2281,6 @@ Status AddFusedContractionNode(
   return OkStatus();
 }
 
-Status AddFusedConv2DNode(RemapperContext* ctx,
-                          const ContractionWithBatchNorm& matched,
-                          std::vector<bool>* invalidated_nodes,
-                          std::vector<bool>* nodes_to_delete) {
-  const GraphDef* graph = ctx->graph_view.graph();
-  const NodeDef& contraction = graph->node(matched.contraction);
-  DCHECK(IsConv2D(contraction)) << "Only Conv2D supported for now";
-  const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  zendnnl::error_handling::apilog_info(
-      "Remapper: Fusing Conv2D (", contraction.name(), ") with FusedBatchNorm");
-
-  NodeDef fused_node;
-  fused_node.set_name(fused_batch_norm.name());
-  fused_node.set_op(kFusedConv2D);
-  fused_node.set_device(contraction.device());
-  fused_node.add_input(contraction.input(0));       // 0: input
-  fused_node.add_input(contraction.input(1));       // 1: filter
-  fused_node.add_input(fused_batch_norm.input(1));  // 2: scale
-  fused_node.add_input(fused_batch_norm.input(2));  // 3: offset
-  fused_node.add_input(fused_batch_norm.input(3));  // 4: mean
-  fused_node.add_input(fused_batch_norm.input(4));  // 5: variance
-
-  AddInputShapesAttr(*ctx, matched.contraction);
-  CopyConv2DAttributes(contraction, &fused_node);
-  SetFusedOpAttributes(&fused_node, {"FusedBatchNorm"},
-                       /*num_args=*/4, /*epsilon=*/matched.epsilon);
-
-  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
-  Status status;
-  mutation->AddNode(std::move(fused_node), &status);
-  TF_RETURN_IF_ERROR(status);
-  TF_RETURN_IF_ERROR(mutation->Apply());
-
-  (*invalidated_nodes)[matched.fused_batch_norm] = true;
-  (*nodes_to_delete)[matched.contraction] = true;
-
-  return OkStatus();
-}
-
-Status AddFusedConv2DNode(RemapperContext* ctx,
-                          const ContractionWithBatchNormAndActivation& matched,
-                          std::vector<bool>* invalidated_nodes,
-                          std::vector<bool>* nodes_to_delete) {
-  const GraphDef* graph = ctx->graph_view.graph();
-  const NodeDef& contraction = graph->node(matched.contraction);
-
-  DCHECK(IsConv2D(contraction)) << "Only Conv2D supported for now";
-
-  const NodeDef& activation = graph->node(matched.activation);
-  const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  zendnnl::error_handling::apilog_info(
-      "Remapper: Fusing Conv2D (", contraction.name(),
-      ") with FusedBatchNorm and ", activation.op());
-
-  NodeDef fused_node;
-  fused_node.set_name(activation.name());
-  fused_node.set_op(kFusedConv2D);
-  fused_node.set_device(contraction.device());
-  fused_node.add_input(contraction.input(0));       // 0: input
-  fused_node.add_input(contraction.input(1));       // 1: filter
-  fused_node.add_input(fused_batch_norm.input(1));  // 2: scale
-  fused_node.add_input(fused_batch_norm.input(2));  // 3: offset
-  fused_node.add_input(fused_batch_norm.input(3));  // 4: mean
-  fused_node.add_input(fused_batch_norm.input(4));  // 5: variance
-
-  AddInputShapesAttr(*ctx, matched.contraction);
-  CopyConv2DAttributes(contraction, &fused_node, &activation);
-  SetFusedOpAttributes(&fused_node, {"FusedBatchNorm", activation.op()},
-                       /*num_args=*/4, /*epsilon=*/matched.epsilon);
-
-  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
-  Status status;
-  mutation->AddNode(std::move(fused_node), &status);
-  TF_RETURN_IF_ERROR(status);
-  TF_RETURN_IF_ERROR(mutation->Apply());
-
-  (*invalidated_nodes)[matched.activation] = true;
-  (*nodes_to_delete)[matched.contraction] = true;
-  (*nodes_to_delete)[matched.fused_batch_norm] = true;
-
-  return OkStatus();
-}
-
 Status AddFusedBatchNormExNode(RemapperContext* ctx,
                                const FusedBatchNormEx& matched,
                                std::vector<bool>* invalidated_nodes,
@@ -2938,29 +2738,9 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
         continue;
       }
 
-      // Remap Conv2D+FusedBatchNorm into the _FusedConv2D.
-      // ContractionWithBatchNorm contract_with_batch_norm;
-      // if (FindConv2DWithBatchNorm(ctx, i, &contract_with_batch_norm)) {
-      //   // Old ZenDNN logging removed;
-      //   TF_RETURN_IF_ERROR(AddFusedConv2DNode(&ctx, contract_with_batch_norm,
-      //                                         &invalidated_nodes,
-      //                                         &nodes_to_delete));
-      //   continue;
-      // }
-
-      // Remap Conv2D+FusedBatchNorm+Activation into the _FusedConv2D.
-      // ContractionWithBatchNormAndActivation
-      //     contract_with_batch_norm_and_activation;
-      // if (FindConv2DWithBatchNormAndActivation(
-      //         ctx, i, &contract_with_batch_norm_and_activation)) {
-      //   // Old ZenDNN logging removed;
-      //   TF_RETURN_IF_ERROR(
-      //       AddFusedConv2DNode(&ctx, contract_with_batch_norm_and_activation,
-      //                          &invalidated_nodes, &nodes_to_delete));
-      //   continue;
-      // }
-
-      // Remap FusedBatchNorm+<Activation> into _FusedBatchNormEx.
+      // TODO(plugin): Add the support for _ZenFusedBatchNormEx once we get
+      // support from ZenDNN library. Remap FusedBatchNorm+<Activation> into
+      // _FusedBatchNormEx.
       // FusedBatchNormEx fused_batch_norm_ex;
       // if (FindFusedBatchNormEx(ctx, i, &fused_batch_norm_ex)) {
       //   // Old ZenDNN logging removed;

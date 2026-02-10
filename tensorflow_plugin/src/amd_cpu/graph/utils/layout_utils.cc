@@ -20,9 +20,7 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/layout_utils.h"
 
-#include <regex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
@@ -31,80 +29,6 @@ limitations under the License.
 
 namespace amd_cpu_plugin {
 namespace graph {
-
-//////////////////////////////////////////////////////////////////////////
-// Rewrite functions for Quantized ops.
-//////////////////////////////////////////////////////////////////////////
-void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
-                              NodeDef* new_node) {
-  CopyAttrsAll(orig_node_view, new_node);
-
-  // Get all attributes from old node.
-  const NodeDef* orig_node_def = orig_node_view->node();
-  DataType out_type;
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "out_type", &out_type));
-
-  // Add attributes to new node.
-  auto* new_attr = new_node->mutable_attr();
-
-  // TODO(plugin): avoid hardcode "NHWC" for QuantizedConv2D.
-  string data_format("NHWC");
-  SetAttrValue(data_format, &(*new_attr)["data_format"]);
-
-  // Tbias is only valid for quantized op meeting 2 requirements:
-  // 1. fused with BiasAdd.
-  // 2. fused with Requantize or Dequantize.
-  DataType Tbias;
-  if (TryGetNodeAttr(*orig_node_def, "Tbias", &Tbias)) {
-    SetAttrValue(Tbias, &(*new_attr)["Tbias"]);
-  }
-}
-
-void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
-                   NodeDef* new_node) {
-  DataType Tinput, Tfilter, out_type, Tbias, Tsummand;
-  bool reorder_after = false, reorder_before = false;
-  string padding;
-  string data_format("NHWC");
-
-  std::vector<int32> strides, dilations, padding_list;
-  const NodeDef* orig_node_def = orig_node_view->node();
-  bool has_padding_list = HasNodeAttr(*orig_node_def, "padding_list");
-
-  // Get all attributes from old node.
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tinput", &Tinput));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tfilter", &Tfilter));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tbias", &Tbias));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "strides", &strides));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "padding", &padding));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "out_type", &out_type));
-  TF_CHECK_OK(GetNodeAttr(*orig_node_def, "dilations", &dilations));
-  if (has_padding_list) {
-    TF_CHECK_OK(GetNodeAttr(*orig_node_def, "padding_list", &padding_list));
-  }
-
-  auto* new_attr = new_node->mutable_attr();
-
-  // Add attributes to new node.
-  SetAttrValue(Tinput, &(*new_attr)["Tinput"]);
-  SetAttrValue(Tfilter, &(*new_attr)["Tfilter"]);
-  SetAttrValue(out_type, &(*new_attr)["out_type"]);
-  SetAttrValue(padding, &(*new_attr)["padding"]);
-  SetAttrValue(strides, &(*new_attr)["strides"]);
-  SetAttrValue(Tbias, &(*new_attr)["Tbias"]);
-  SetAttrValue(dilations, &(*new_attr)["dilations"]);
-  SetAttrValue(data_format, &(*new_attr)["data_format"]);
-  SetAttrValue(reorder_before, &(*new_attr)["reorder_before"]);
-  SetAttrValue(reorder_after, &(*new_attr)["reorder_after"]);
-  if (has_padding_list) {
-    SetAttrValue(padding_list, &(*new_attr)["padding_list"]);
-  }
-
-  if (HasNodeAttr(*orig_node_def, "Tsummand")) {
-    TF_CHECK_OK(GetNodeAttr(*orig_node_def, "Tsummand", &Tsummand));
-    SetAttrValue(Tsummand, &(*new_attr)["Tsummand"]);
-  }
-}
 
 void UpdateZenOpAttrs(const utils::MutableNodeView* orig_node_view,
                       NodeDef* new_node) {
@@ -135,24 +59,13 @@ bool AlwaysRewrite(const utils::MutableNodeView& node_view) { return true; }
 
 bool RewriteSupportedDataType(const utils::MutableNodeView& node_view) {
   const NodeDef& node_def = *(node_view.node());
-  const string& op_name = node_def.op();
   DataType T;
   AttrSlice attr_list(node_def);
   if (!TryGetNodeAttr(attr_list, "T", &T)) {
     return false;
   }
 
-  return IsLayoutRewriteSupportedDataType(op_name, T);
-}
-
-bool RewriteQuantize(const utils::MutableNodeView& node_view) {
-  const NodeDef& node_def = *(node_view.node());
-  DataType Tinput;
-  GetNodeAttr(node_def, "Tinput", &Tinput);
-  if (Tinput == DT_QUINT8 || Tinput == DT_QINT8) {
-    return true;
-  }
-  return false;
+  return IsLayoutRewriteSupportedDataType(T);
 }
 
 bool RewriteFusedConv2D(const utils::MutableNodeView& node_view) {
@@ -346,44 +259,13 @@ void CopyAttrsZenBatchMatMul(const utils::MutableNodeView* orig_node_view,
 
   CopyAllAttrs(*(orig_node_view->node()), new_node);
 
+  // TODO (plugin) : Currently, true for all the cases. This has to be logically
+  // set i.e., const weight - true, non-const weight - false.
   AddNodeAttr("is_cache_weight", true, new_node);
-
-  // Add the is_cache_weight Attribute.
-  auto* new_attr = new_node->mutable_attr();
-
-  NodeDef& node_def = *(orig_node_view->node());
-  for (const string& input : node_def.input()) {
-    // The non-constant weights for BatchMatMul are found in the
-    // attention block, so setting is_cache_weight=false for it.
-    // This will work only when weight is non constant and op name
-    // contains 'attention'.
-    // TODO (plugin) : Currently, this is based on the pattern observed
-    // in the models. This has to be generalized for all the cases.
-    if (regex_search(input, std::regex("attention"))) {
-      SetAttrValue(false, &(*new_attr)["is_cache_weight"]);
-    }
-  }
 }
 
-bool IsLayoutRewriteSupportedDataType(const string& op_name,
-                                      const DataType& T) {
-  if (op_name == "Reshape" || op_name == "Transpose") {
-    return (T == DT_INT32) || (T == DT_INT64) || (T == DT_COMPLEX64) ||
-           (T == DT_COMPLEX128) || (T == DT_FLOAT);
-  } else if (op_name == "InvertPermutation") {
-    return (T == DT_INT32) || (T == DT_INT64);
-  } else if (op_name == "ConjugateTranspose") {
-    return (T == DT_COMPLEX64) || (T == DT_COMPLEX128);
-  } else if (op_name == "Mul" || op_name == "Sub" ||
-             op_name == "SquaredDifference" || op_name == "Add" ||
-             op_name == "AddV2" || op_name == "Maximum") {
-    return (T == DT_FLOAT);
-  } else if (op_name == "FusedBatchNorm" || op_name == "FusedBatchNormV2" ||
-             op_name == "FusedBatchNormV3" || op_name == "_FusedBatchNormEx") {
-    return (T == DT_FLOAT);
-  } else {
-    return (T == DataType::DT_FLOAT || T == DataType::DT_BFLOAT16);
-  }
+bool IsLayoutRewriteSupportedDataType(const DataType& T) {
+  return (T == DataType::DT_FLOAT || T == DataType::DT_BFLOAT16);
 }
 
 OpDef GetOpDef(const NodeDef& node_def) {

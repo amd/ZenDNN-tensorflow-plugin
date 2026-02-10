@@ -167,63 +167,13 @@ cc_library(
     alwayslink = True,
 )
 
-cc_library(
-    name = "zen_transpose_kernel",
-    srcs = ["zen_transpose_kernel.cc"],
-    hdrs = ["zen_transpose_functor.h"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":zen_kernel_common",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "zen_reshape_kernel",
-    srcs = ["zen_reshape_kernel.cc"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":zen_kernel_common",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "zen_cwise_ops_common_kernel",
-    srcs = ["zen_cwise_ops_common_kernel.cc"],
-    hdrs = ["zen_cwise_ops_common.h"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":fill_functor",
-        ":zen_kernel_common",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-# ALL kernels temporarily disabled.
-# Enable the kernel as we add the support for it with ZenDNNL.
 ZEN_KERNELS = [
     ":zen_softmax_kernel",
     ":zen_conv2d_kernel",
     ":zen_matmul_kernels",
     ":zen_pooling_kernels",
     # ":zen_fused_batchnorm_kernel",
-    # ":zen_transpose_kernel",
     ":zen_batch_matmul_kernels",
-    # ":zen_reshape_kernel",
-    # ":zen_cwise_ops_common_kernel",
 ]
 
 cc_library(

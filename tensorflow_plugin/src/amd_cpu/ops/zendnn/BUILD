@@ -92,64 +92,13 @@ cc_library(
     alwayslink = True,
 )
 
-cc_library(
-    name = "zen_transpose_op",
-    srcs = ["zen_transpose_op.cc"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":shape_inference_fns",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@local_config_tf//:tf_header_lib",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "zen_cwise_ops",
-    srcs = ["zen_cwise_ops.cc"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":shape_inference_fns",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@local_config_tf//:tf_header_lib",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "zen_reshape_op",
-    srcs = ["zen_reshape_op.cc"],
-    copts = tf_copts(),
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":shape_inference_fns",
-        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
-        "@local_config_tf//:tf_header_lib",
-        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
-    ],
-    alwayslink = True,
-)
-
-# ALL ops temporarily disabled.
-# Enable the ops as we add the support for it with ZenDNNL.
 ZEN_OPS = [
     ":zen_conv2d_op",
     ":zen_matmul_ops",
     ":zen_softmax_op",
     ":zen_pooling_ops",
-    # ":zen_pooling_ops",
     # ":zen_fused_batchnorm_ops",
-    # ":zen_transpose_op",
     ":zen_batch_matmul_ops",
-    # ":zen_reshape_op",
-    # ":zen_cwise_ops",
 ]
 
 cc_library(

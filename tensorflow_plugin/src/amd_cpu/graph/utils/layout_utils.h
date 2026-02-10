@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -44,9 +44,6 @@ bool RewriteFusedConv2D(const utils::MutableNodeView& node_view);
 // FusedMatMul is rewritten only for a limited number of fused post-ops.
 bool RewriteFusedMatMul(const utils::MutableNodeView& node_view);
 
-// Returns true if the rewite is supported for the quantize data type.
-bool RewriteQuantize(const utils::MutableNodeView& node_view);
-
 //////////////////////////////////////////////////////////////////////////
 // Op-specific functions to copy attributes from old node to new node.
 //////////////////////////////////////////////////////////////////////////
@@ -56,14 +53,8 @@ bool RewriteQuantize(const utils::MutableNodeView& node_view);
 void CopyAttrsAll(const utils::MutableNodeView* orig_node_view,
                   NodeDef* new_node);
 
-void CopyAttrsQCBR(const utils::MutableNodeView* orig_node_view,
-                   NodeDef* new_node);
-
 void UpdateZenOpAttrs(const utils::MutableNodeView* orig_node_view,
                       NodeDef* new_node);
-
-void CopyAttrsQuantizedConv2D(const utils::MutableNodeView* orig_node_view,
-                              NodeDef* new_node);
 
 void CopyAttrsZenConv2D(const utils::MutableNodeView* orig_node_view,
                         NodeDef* new_node);
@@ -81,8 +72,8 @@ void CopyAttrsZenBatchMatMul(const utils::MutableNodeView* orig_node_view,
 // Copy all zen specific attributes.
 void CopyZenAttrs(const NodeDef& orig_node, NodeDef* new_node);
 
-// Returns true if rewite of "op_name" is supported with data type "T".
-bool IsLayoutRewriteSupportedDataType(const string& op_name, const DataType& T);
+// Returns true if rewrite is supported for the data type "T".
+bool IsLayoutRewriteSupportedDataType(const DataType& T);
 
 // Sub function to copy attrs from original node to new node.
 void CopyAllAttrs(const NodeDef& orig_node, NodeDef* new_node);

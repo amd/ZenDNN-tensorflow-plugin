@@ -58,25 +58,11 @@ const std::vector<ZenFormatInfo>* GetZenFormatInfo() {
        RewriteSupportedDataType},
       {"_FusedBatchMatMulV2", "_ZenFusedBatchMatMulV2", CopyAttrsZenBatchMatMul,
        RewriteSupportedDataType},
-      // We are not supporting BLOCKED format execution.
-      // {"FusedBatchNorm", "_ZenFusedBatchNorm", CopyAttrsAll,
-      //  RewriteSupportedDataType},
-      // {"FusedBatchNormV2", "_ZenFusedBatchNormV2", CopyAttrsAll,
-      //  RewriteSupportedDataType},
-      // {"FusedBatchNormV3", "_ZenFusedBatchNormV3", CopyAttrsAll,
-      //  RewriteSupportedDataType},
+      // TODO(plugin): Add the support for _ZenFusedBatchNormEx once we get
+      // support from ZenDNN library.
       // {"_FusedBatchNormEx", "_ZenFusedBatchNormEx", CopyAttrsAll,
       //  RewriteSupportedDataType},
-      // {"Reshape", "_ZenReshape", CopyAttrsAll, RewriteSupportedDataType},
       {"Softmax", "_ZenSoftmax", CopyAttrsAll, RewriteSupportedDataType},
-      // {"InvertPermutation", "_ZenInvertPermutation", CopyAttrsAll,
-      //  RewriteSupportedDataType},
-      // TODO(plugin): Disabling _ZenTranspose for this release (i.e., v1.0) as
-      // we are observing performance drop with it. Find the solution for it and
-      // enable the below rewrite.
-      // {"Transpose", "_ZenTranspose", CopyAttrsAll, RewriteSupportedDataType},
-      // {"ConjugateTranspose", "_ZenConjugateTranspose", CopyAttrsAll,
-      //  RewriteSupportedDataType},
   };
   return &rinfo;
 }
