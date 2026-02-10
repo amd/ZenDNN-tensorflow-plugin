@@ -1789,7 +1789,8 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   // ZenDNN is not optimized for all shapes with regard to binary-post ops
   // fusion. Allow limited cases only for now that are optimized, (i)
   // multiplicand is scalar, (ii) BatchMatmulV2 output is 4D tensor, and (iii)
-  // addend is 4D tensor with first and second dim_size = 1.
+  // addend is 4D tensor with shape same as BatchMatmulV2 output since
+  // broadcasting is not supported.
 
   // Currently ZenDNN supports binary-post ops fusion for addend tensor with 2D
   // only.
@@ -1816,21 +1817,37 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   DCHECK(IsAnyBatchMatMul(*batch_matmul_node_def));  // Expected BatchMatMul op.
   if (!NodeIsOnCpu(batch_matmul_node_def)) return false;
 
-  std::vector<OpInfo_TensorProperties> batch_matmul_props;
+  std::vector<OpInfo_TensorProperties> batch_matmul_props, input_props,
+      addend_props;
   TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
       batch_matmul_node_def->name(), &batch_matmul_props));
   if (Rank(batch_matmul_props[0].shape()) != 4) return false;
 
-  std::vector<OpInfo_TensorProperties> addend_props;
-  NodeDef* addend_node_def =
-      ctx->graph_view.GetNode(matched_nodes_map->at("addend"))->node();
-  TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
-      addend_node_def->name(), &addend_props));
-  auto addend_shape = addend_props[0].shape();
-  // Only support addend with shape [1, 1, M, N]
-  if (!(Rank(addend_shape) == 4 && addend_shape.dim(0).size() == 1 &&
-        addend_shape.dim(1).size() == 1)) {
+  TF_ABORT_IF_ERROR(ctx->graph_properties.GetInputProperties(
+      batch_matmul_node_def->name(), &input_props));
+  if (input_props.size() < 2 || Rank(input_props[0].shape()) != 4 ||
+      Rank(input_props[1].shape()) != 4)
     return false;
+
+  auto& lhs_shape = input_props[0].shape();
+  auto& rhs_shape = input_props[1].shape();
+  if (lhs_shape.dim(0).size() * lhs_shape.dim(1).size() !=
+      rhs_shape.dim(0).size() * rhs_shape.dim(1).size())
+    return false;
+
+  // Validate addend shape since broadcasting is not supported
+  NodeDef* addend_node_def = nullptr;
+  if (matched_nodes_map->find("addend") != matched_nodes_map->end()) {
+    addend_node_def =
+        ctx->graph_view.GetNode(matched_nodes_map->at("addend"))->node();
+    TF_ABORT_IF_ERROR(ctx->graph_properties.GetOutputProperties(
+        addend_node_def->name(), &addend_props));
+    auto& addend_shape = addend_props[0].shape();
+    if (Rank(addend_shape) != 4 ||
+        addend_shape.dim(0).size() * addend_shape.dim(1).size() !=
+            batch_matmul_props[0].shape().dim(0).size() *
+                batch_matmul_props[0].shape().dim(1).size())
+      return false;
   }
   input_node_names->clear();
   input_node_names->resize(4);
@@ -1843,7 +1860,11 @@ bool FindFusedBatchMatMul(RemapperContext* ctx, int node_index,
   }
   input_node_names->at(1) = batch_matmul_node_def->input(1);
   input_node_names->at(2) = multiplicand_node_def->name();
-  input_node_names->at(3) = addend_node_def->name();
+  if (addend_node_def != nullptr) {
+    input_node_names->at(3) = addend_node_def->name();
+  } else {
+    return false;  // Add fusion requires addend
+  }
   return found_op_type_match;
 }
 

@@ -362,32 +362,44 @@ bool TryExecuteZenDNNLBatchMatmul(
         case FusedComputationType::kBinaryMulAdd: {
           if (mul_tensor && add_tensor) {
             // Validate tensors per remapper constraints:
-            // 1. multiplicand must be scalar (NumCoefficients == 1)
-            // 2. addend must be 4D with shape [1, 1, M, N]
+            // 1. multiplicand must be scalar (NumElements == 1)
+            // 2. addend must be 4D with shape [b1, b2, M, N] where b1*b2
+            // matches output batch
             if (mul_tensor->NumElements() != 1) {
               LogZenDNNLInfo(api_name, "Binary mul tensor must be scalar");
               return false;
             }
 
-            // Remapper enforces: addend rank == 4 && dim(0) == 1 && dim(1) == 1
-            if (add_tensor->dims() != 4 || add_tensor->dim_size(0) != 1 ||
-                add_tensor->dim_size(1) != 1) {
-              LogZenDNNLInfo(api_name,
-                             "Binary add tensor must have shape [1, 1, M, N], "
-                             "actual shape");
+            // Remapper enforces: addend rank == 4 && batch dimensions match
+            // output
+            if (add_tensor->dims() != 4) {
+              LogZenDNNLInfo(api_name, "Binary add tensor must be 4D");
+              return false;
+            }
+
+            // Calculate batch dimensions: output is 4D [b1, b2, M, N]
+            int64 output_batch = output->dim_size(0) * output->dim_size(1);
+            int64 addend_batch =
+                add_tensor->dim_size(0) * add_tensor->dim_size(1);
+            if (addend_batch != output_batch) {
+              LogZenDNNLInfo(
+                  api_name,
+                  "Binary add tensor batch dimensions must match output batch");
               return false;
             }
 
             // Scalar multiplication via alpha
             alpha = static_cast<float>(mul_tensor->flat<T>()(0));
 
-            // Binary add post-op - extract last 2 dims from [1, 1, M, N]
+            // Binary add post-op - reshape 4D [b1, b2, M, N] to 3D [b1*b2, M,
+            // N]
             matmul_post_op add_postop;
             add_postop.po_type = post_op_type_t::binary_add;
             add_postop.dtype = dt;
             add_postop.buff = const_cast<T *>(add_tensor->flat<T>().data());
-            add_postop.dims = {add_tensor->dim_size(2),
-                               add_tensor->dim_size(3)};
+            add_postop.dims = {static_cast<int64_t>(addend_batch),
+                               static_cast<int64_t>(add_tensor->dim_size(2)),
+                               static_cast<int64_t>(add_tensor->dim_size(3))};
 
             params.postop_.push_back(add_postop);
           }
@@ -551,19 +563,29 @@ bool TryExecuteZenDNNLBatchMatmul(
         // Binary multiply + add post-ops.
         if (mul_tensor && add_tensor) {
           // Validate tensors per remapper constraints:
-          // 1. multiplicand must be scalar (NumCoefficients == 1)
-          // 2. addend must be 4D with shape [1, 1, M, N]
+          // 1. multiplicand must be scalar (NumElements == 1)
+          // 2. addend must be 4D with shape [b1, b2, M, N] where b1*b2 matches
+          // output batch
           if (mul_tensor->NumElements() != 1) {
             LogZenDNNLInfo(api_name, "Binary mul tensor must be scalar");
             return false;
           }
 
-          // Remapper enforces: addend rank == 4 && dim(0) == 1 && dim(1) == 1
-          if (add_tensor->dims() != 4 || add_tensor->dim_size(0) != 1 ||
-              add_tensor->dim_size(1) != 1) {
-            LogZenDNNLInfo(api_name,
-                           "Binary add tensor must have shape [1, 1, M, N], "
-                           "actual shape");
+          // Remapper enforces: addend rank == 4 && batch dimensions match
+          // output
+          if (add_tensor->dims() != 4) {
+            LogZenDNNLInfo(api_name, "Binary add tensor must be 4D");
+            return false;
+          }
+
+          // Calculate batch dimensions: output is 4D [b1, b2, M, N]
+          int64 output_batch = output->dim_size(0) * output->dim_size(1);
+          int64 addend_batch =
+              add_tensor->dim_size(0) * add_tensor->dim_size(1);
+          if (addend_batch != output_batch) {
+            LogZenDNNLInfo(
+                api_name,
+                "Binary add tensor batch dimensions must match output batch");
             return false;
           }
 
@@ -571,11 +593,12 @@ bool TryExecuteZenDNNLBatchMatmul(
           alpha = static_cast<float>(mul_tensor->flat<T>()(0));
           matmul_context.set_alpha(alpha);
 
-          // Handle add post-op - extract last 2 dims from [1, 1, M, N]
+          // Handle add post-op - reshape 4D [b1, b2, M, N] to 3D [b1*b2, M, N]
           T *add_data = const_cast<T *>(add_tensor->flat<T>().data());
           uint64_t add_buffer_size = add_tensor->NumElements() * sizeof(T);
 
           std::vector<uint64_t> add_dims = {
+              static_cast<uint64_t>(addend_batch),
               static_cast<uint64_t>(add_tensor->dim_size(2)),
               static_cast<uint64_t>(add_tensor->dim_size(3))};
 
