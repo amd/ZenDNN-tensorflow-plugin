@@ -61,7 +61,7 @@ cmake(
         "ZENDNNL_DEPENDS_AOCLUTILS": "ON",
         "ZENDNNL_DEPENDS_JSON": "ON",
         "ZENDNNL_DEPENDS_AOCLDLP": "ON",  # Enabled: Deep Learning Performance library
-        "ZENDNNL_DEPENDS_LIBXSMM": "ON",
+        "ZENDNNL_DEPENDS_LIBXSMM": "OFF",
         "ZENDNNL_DEPENDS_FBGEMM": "ON",
         # ZenDNNL Library Build Options.
         "ZENDNNL_LIB_BUILD_ARCHIVE": "ON",
@@ -119,7 +119,6 @@ cmake(
         "libaoclutils.a",
         "libau_cpuid.a",
         "libdnnl.a",
-        "libxsmm.a",
         "libaocl-dlp.a",
         "libfbgemm.a",
         "libasmjit.a",
@@ -183,9 +182,6 @@ cmake(
         # Copy AOCL DLP headers.
         copy_headers "$INSTALL_BASE/deps/aocldlp/include" "AOCL DLP"
 
-        # Copy LIBXSMM headers.
-        copy_headers "$INSTALL_BASE/deps/libxsmm/include" "LIBXSMM"
-
         # Copy FBGEMM headers.
         copy_headers "$INSTALL_BASE/deps/fbgemm/include" "FBGEMM"
 
@@ -238,9 +234,6 @@ cmake(
 
         # Copy AOCL DLP library.
         copy_lib "$INSTALL_BASE/deps/aocldlp/lib/libaocl-dlp.a" "libaocl-dlp.a" "AOCL DLP library"
-
-        # Copy LIBXSMM library.
-        copy_lib "$INSTALL_BASE/deps/libxsmm/lib/libxsmm.a" "libxsmm.a" "LIBXSMM library"
 
         # Copy FBGEMM library.
         copy_lib "$INSTALL_BASE/deps/fbgemm/$LIB_DIR/libfbgemm.a" "libfbgemm.a" "FBGEMM library"
