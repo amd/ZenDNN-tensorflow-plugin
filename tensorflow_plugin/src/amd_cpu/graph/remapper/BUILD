@@ -14,6 +14,7 @@ cc_library(
         "//tensorflow_plugin/src/amd_cpu/graph/utils:layout_utils",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:pattern_utils",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:symbolic_shapes",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )

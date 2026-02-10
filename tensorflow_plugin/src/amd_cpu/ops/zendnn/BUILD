@@ -12,6 +12,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -26,6 +27,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -40,6 +42,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -54,6 +57,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -68,6 +72,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -82,6 +87,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -96,6 +102,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -110,6 +117,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -124,6 +132,7 @@ cc_library(
         ":shape_inference_fns",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )

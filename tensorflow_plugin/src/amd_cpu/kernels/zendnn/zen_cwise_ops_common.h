@@ -34,6 +34,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -353,7 +355,7 @@ class ZenBinaryOp : public ZenBinaryOpShared {
                           DataTypeToEnum<Tin>::v()) {}
 
   void Compute(OpKernelContext* ctx) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Executing ZenBinaryOp Compute");
 
     // 'state': Shared helper not dependent on T to reduce code size
     ZenBinaryOpState state(ctx, op_name, false, false);
@@ -435,7 +437,7 @@ class ZenBinaryOp : public ZenBinaryOpShared {
       SetComputeError(ctx);
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("ZenBinaryOp Compute completed");
   }
 };
 

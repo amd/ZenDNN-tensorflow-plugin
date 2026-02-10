@@ -23,6 +23,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_view.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -42,7 +44,9 @@ bool Is1D(const TensorShapeProto& proto) {
   auto tensor_shape = TensorShape(proto);
 
   for (int i = 0; i < tensor_shape.dims(); ++i) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Is1D: Checking dimension ", i,
+                                         " with size ",
+                                         tensor_shape.dim_size(i));
   }
   return (tensor_shape.dims() == 1);
 }

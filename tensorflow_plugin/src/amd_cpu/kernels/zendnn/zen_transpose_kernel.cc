@@ -29,6 +29,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -52,7 +54,8 @@ class ZenTransposeOp : public OpKernel {
   // REQUIRES: input.dims() == perm.size().
   // REQUIRES: perm is a permutation.
   void Compute(OpKernelContext *context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenTranspose Compute, is_conjugate=", is_conjugate);
 
     const Tensor &input = context->input(0);
     const Tensor &perm = context->input(1);
@@ -119,7 +122,7 @@ class ZenTransposeOp : public OpKernel {
                                   context, input, permutation, output));
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("_ZenTranspose Compute completed");
   }
 };
 
@@ -136,7 +139,8 @@ class ZenInvertPermutationOp : public OpKernel {
       : OpKernel(context) {}
 
   void Compute(OpKernelContext *context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenInvertPermutation Compute");
 
     const Tensor &input = context->input(0);
     OP_REQUIRES(
@@ -165,7 +169,8 @@ class ZenInvertPermutationOp : public OpKernel {
       Tout(d) = i;
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "_ZenInvertPermutation Compute completed");
   }
 };
 

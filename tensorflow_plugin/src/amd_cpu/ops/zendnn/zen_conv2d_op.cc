@@ -23,6 +23,8 @@
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -56,9 +58,10 @@ void RegisterZenConv2D() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenConv2D: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenConv2D");
   }
   TF_DeleteStatus(status);
 }
@@ -93,9 +96,11 @@ void RegisterZenDepthwiseConv2dNative() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenDepthwiseConv2dNative: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenDepthwiseConv2dNative");
   }
   TF_DeleteStatus(status);
 }
@@ -136,9 +141,12 @@ void RegisterZenFusedDepthwiseConv2dNative() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedDepthwiseConv2dNative: ",
+        TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenFusedDepthwiseConv2dNative");
   }
   TF_DeleteStatus(status);
 }
@@ -179,9 +187,10 @@ void RegisterZenFusedConv2D() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedConv2D: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedConv2D");
   }
   TF_DeleteStatus(status);
 }

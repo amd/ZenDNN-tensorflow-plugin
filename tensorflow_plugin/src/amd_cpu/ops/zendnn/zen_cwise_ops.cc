@@ -23,6 +23,8 @@
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -46,9 +48,10 @@ void RegisterZenAdd() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenAdd: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenAdd");
   }
   TF_DeleteStatus(status);
 }
@@ -73,9 +76,10 @@ void RegisterZenAddV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenAddV2: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenAddV2");
   }
   TF_DeleteStatus(status);
 }
@@ -100,9 +104,10 @@ void RegisterZenSub() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenSub: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenSub");
   }
   TF_DeleteStatus(status);
 }
@@ -127,9 +132,10 @@ void RegisterZenMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenMul: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenMul");
   }
   TF_DeleteStatus(status);
 }
@@ -154,9 +160,10 @@ void RegisterZenMaximum() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenMaximum: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenMaximum");
   }
   TF_DeleteStatus(status);
 }
@@ -182,9 +189,11 @@ void RegisterZenSquaredDifference() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenSquaredDifference: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenSquaredDifference");
   }
   TF_DeleteStatus(status);
 }

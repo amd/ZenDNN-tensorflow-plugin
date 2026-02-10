@@ -27,6 +27,8 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 using zendnn::matmul;
 using zendnn::primitive_attr;
@@ -386,7 +388,8 @@ void zendnn_direct_kernel(const Tensor &a, const Tensor &b, const Tensor *bias,
 
   // Check if any of the pointers is null.
   if (a_ptr == nullptr || b_ptr == nullptr || c_ptr == nullptr) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "MatMul: null pointer detected for input/output tensors");
     return;
   }
 

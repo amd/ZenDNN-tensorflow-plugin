@@ -23,6 +23,8 @@
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -60,9 +62,10 @@ void RegisterZenFusedBatchNorm() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedBatchNorm: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedBatchNorm");
   }
   TF_DeleteStatus(status);
 }
@@ -102,9 +105,10 @@ void RegisterZenFusedBatchNormV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedBatchNormV2: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedBatchNormV2");
   }
   TF_DeleteStatus(status);
 }
@@ -145,9 +149,10 @@ void RegisterZenFusedBatchNormV3() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedBatchNormV3: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedBatchNormV3");
   }
   TF_DeleteStatus(status);
 }
@@ -192,9 +197,10 @@ void RegisterZenFusedBatchNormEx() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedBatchNormEx: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedBatchNormEx");
   }
   TF_DeleteStatus(status);
 }

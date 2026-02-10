@@ -36,6 +36,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -102,7 +104,8 @@ class ConvUtil {
       dimensions->stride_rows = stride_rows;
       dimensions->stride_cols = stride_cols;
     } else if (strides_.size() == 5) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Conv3D stride configuration not supported");
     }
   }
 
@@ -117,7 +120,8 @@ class ConvUtil {
       dimensions->dilation_rows = dilations_rows;
       dimensions->dilation_cols = dilations_cols;
     } else if (dilations_.size() == 5) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Conv3D dilation configuration not supported");
     }
   }
 
@@ -160,7 +164,8 @@ class ConvUtil {
       dimensions->input_cols = input_cols;
 
     } else if (strides_.size() == 5) {  // NCDHW format for Conv3D
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Conv3D input dimension configuration not supported");
     }
 #undef CHECK_BOUNDS
   }
@@ -217,7 +222,8 @@ class ConvUtil {
         dimensions->filter_cols = filter_cols;
       }
     } else {  // Conv3D
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Conv3D filter dimension configuration not supported");
     }
   }
 
@@ -240,7 +246,8 @@ class ConvUtil {
       Padding padding_type;
       if (pad_enabled) {  // false by choice
         padding_type = Padding::EXPLICIT;
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Using explicit padding configuration");
       } else {
         padding_type = padding_;
         if (padding_type == Padding::EXPLICIT) {
@@ -262,7 +269,8 @@ class ConvUtil {
                          dimensions->dilation_cols, dimensions->stride_cols,
                          padding_type, &out_cols, &pad_left, &pad_right));
     } else {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Conv3D output and pad dimension configuration not supported");
     }
 
     dimensions->out_rows = out_rows;

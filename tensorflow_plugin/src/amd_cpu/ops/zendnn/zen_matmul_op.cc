@@ -23,6 +23,8 @@
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -56,9 +58,10 @@ void RegisterZenMatMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenMatMul: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenMatMul");
   }
   TF_DeleteStatus(status);
 }
@@ -92,9 +95,10 @@ void RegisterZenFusedMatMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedMatMul: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenFusedMatMul");
   }
   TF_DeleteStatus(status);
 }
@@ -125,9 +129,11 @@ void RegisterZenMatMulBiasAddGelu() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenMatMulBiasAddGelu: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenMatMulBiasAddGelu");
   }
   TF_DeleteStatus(status);
 }
@@ -152,9 +158,10 @@ void RegisterMatMulBiasAddGelu() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register MatMulBiasAddGelu: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: MatMulBiasAddGelu");
   }
   TF_DeleteStatus(status);
 }

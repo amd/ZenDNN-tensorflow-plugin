@@ -51,7 +51,7 @@ bool TryExecuteZenDNNLBatchMatmul(
     const Tensor *add_tensor = nullptr, bool use_direct_api = true) {
   // Set API name for consistent logging
   const char *api_name =
-      use_direct_api ? "BatchMatMulLOA" : "BatchMatMulRegular";
+      use_direct_api ? "_ZenBatchMatMul(Direct)" : "_ZenBatchMatMul";
 
   // Validation: support 3D tensors and 4D tensors
   const auto ndims_lhs = lhs.shape().dims();
@@ -796,7 +796,7 @@ class ZenBatchMatMulOp : public OpKernel {
         fused_computation_, mul_tensor, add_tensor, use_direct_api);
 
     OP_REQUIRES(context, zendnnl_success,
-                errors::Internal("ZenDNNL BatchMatMul execution failed"));
+                errors::Internal("_ZenBatchMatMul execution failed"));
   }
 
  private:

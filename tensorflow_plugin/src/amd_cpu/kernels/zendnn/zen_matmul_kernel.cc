@@ -35,6 +35,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
 #include "zendnnl.hpp"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -56,7 +58,7 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
 
     // Check which API path to use.
     const bool use_direct_api = IsZenDnnMatmulDirectEnabled();
-    const char *api_name = use_direct_api ? "MatMulDirect" : "MatMul";
+    const char *api_name = use_direct_api ? "_ZenMatMul(Direct)" : "_ZenMatMul";
 
     // Get tensor dimensions.
     auto a_shape = a.shape();
@@ -420,11 +422,11 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
     return true;
 
   } catch (const zendnnl::error_handling::exception_t &e) {
-    LogZenDNNLFallback("MatMul",
+    LogZenDNNLFallback("_ZenMatMul",
                        ("ZenDNNL exception: " + std::string(e.what())).c_str());
     return false;
   } catch (const std::exception &e) {
-    LogZenDNNLFallback("MatMul",
+    LogZenDNNLFallback("_ZenMatMul",
                        ("Exception: " + std::string(e.what())).c_str());
     return false;
   }
@@ -471,7 +473,9 @@ class ZenMatMulOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenMatMul Compute, transpose_a=", transpose_a_,
+        ", transpose_b=", transpose_b_, ", is_fused=", is_fused);
 
     const Tensor &a = context->input(0);
     const Tensor &b = context->input(1);
@@ -553,19 +557,19 @@ class ZenMatMulOp : public OpKernel {
         TryExecuteZenDNNLMatMul<T>(context, a, b, bias, out, transpose_a_,
                                    transpose_b_, fused_computation_, addend);
     if (zendnnl_success) {
-      LogZenDNNLSuccess("MatMul");
+      LogZenDNNLSuccess("_ZenMatMul");
     } else {
-      LogZenDNNLFallback("MatMul", "failed");
+      LogZenDNNLFallback("_ZenMatMul", "failed");
     }
 
     // If ZenDNNL execution failed, report error.
     if (!zendnnl_success) {
       OP_REQUIRES_OK(
-          context, errors::Internal("ZenDNNL MatMul execution failed. Old "
+          context, errors::Internal("_ZenMatMul execution failed. Old "
                                     "ZenDNN fallback path has been removed."));
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("_ZenMatMul Compute completed");
   }
 
  private:

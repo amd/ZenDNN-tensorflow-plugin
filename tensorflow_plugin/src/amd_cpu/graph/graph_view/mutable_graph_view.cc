@@ -33,6 +33,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/errors.h"
 #include "tensorflow_plugin/src/amd_cpu/util/gtl/map_util.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 #include "tensorflow_plugin/src/amd_cpu/util/node_def_util.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_id.h"
 
@@ -699,7 +701,9 @@ Status MutableGraphView::UpdateFanouts(absl::string_view from_node_name,
 
 Status MutableGraphView::UpdateFanoutsInternal(NodeDef* from_node,
                                                NodeDef* to_node) {
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "MutableGraphView: Updating fanouts from ", from_node->name(), " to ",
+      to_node->name());
   if (from_node == to_node) {
     return OkStatus();
   }
@@ -1488,8 +1492,9 @@ Status MutableGraphView::CheckNodesCanBeDeleted(
   };
 
   if (!missing_nodes.empty()) {
-    VLOG(2) << absl::Substitute("Attempting to delete missing node(s) [$0].",
-                                sort_and_sample(&missing_nodes));
+    zendnnl::error_handling::apilog_info(
+        "Attempting to delete missing node(s) [",
+        sort_and_sample(&missing_nodes), "].");
   }
   if (!nodes_with_fanouts.empty()) {
     std::vector<string> input_node_names(nodes_to_delete.begin(),

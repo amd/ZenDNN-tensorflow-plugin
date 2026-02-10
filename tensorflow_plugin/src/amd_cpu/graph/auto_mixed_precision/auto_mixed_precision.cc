@@ -49,6 +49,9 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
+
 namespace amd_cpu_plugin {
 namespace graph {
 namespace {
@@ -88,7 +91,8 @@ Status GetAutoMixedPrecisionMode(const char* device_name,
     *model = AutoMixedPrecisionMode::CPU_BFLOAT16;
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: AutoMixedPrecision mode set to ",
+                                       mode_type);
   return OkStatus();
 }
 
@@ -269,7 +273,7 @@ Status GraphTypeTopologyView::InitializeFromGraph(
         const string error_message = strings::StrCat(
             "Non-existent input ", input, " in node ", node_type.node->name());
         if (skip_invalid_edges_) {
-          // Old ZenDNN logging removed;
+          zendnnl::error_handling::apilog_warning("AMP: ", error_message);
         } else {
           return errors::InvalidArgument(error_message);
         }
@@ -319,7 +323,7 @@ Status GraphTypeTopologyView::AddEphemeralEdges(
       const string error_message =
           strings::StrCat("Non-existent src node: ", edge.src.node->name());
       if (skip_invalid_edges_) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_warning("AMP: ", error_message);
       } else {
         return errors::InvalidArgument(error_message);
       }
@@ -332,7 +336,7 @@ Status GraphTypeTopologyView::AddEphemeralEdges(
       const string error_message =
           strings::StrCat("Non-existent dst node: ", edge.dst.node->name());
       if (skip_invalid_edges_) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_warning("AMP: ", error_message);
       } else {
         return errors::InvalidArgument(error_message);
       }
@@ -593,7 +597,8 @@ Status ValidateLists(const gtl::FlatSet<string>& allow_list,
   for (const auto& s : counts) {
     if (counts.count(s) > 1) {
       duplicates = true;
-      LOG(ERROR) << "Op present in multiple lists: " << s;
+      zendnnl::error_handling::apilog_error("Op present in multiple lists: ",
+                                            s);
     }
   }
   if (duplicates) {
@@ -625,6 +630,7 @@ class AutoMixedPrecisionImpl {
         return absl::make_unique<AutoMixedPrecisionListsCPU>();
       default:
         CHECK(false) << "Unsupported ZEN AMP mode";
+        return nullptr;  // Unreachable, silences -Wreturn-type
     }
   }
   void LogSkippedNode(const NodeDef& node) const;
@@ -748,6 +754,8 @@ bool AutoMixedPrecisionImpl::NodeHasF16KernelForTypeAttr(
 
 void AutoMixedPrecisionImpl::LogSkippedNode(const NodeDef& node) const {
   MustPreserve(node);
+  zendnnl::error_handling::apilog_verbose("AMP: Skipping node ", node.name(),
+                                          " (", node.op(), ")");
 }
 
 bool AutoMixedPrecisionImpl::MustPreserve(const NodeDef& node) const {
@@ -819,11 +827,15 @@ void AutoMixedPrecisionImpl::ConvertBatchNormOpsToV2() {
     if (!ShouldProcess(*node)) continue;
     bool changed = false;
     if (node->op() == "FusedBatchNorm") {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "AMP: Converting ", node->name(),
+          " FusedBatchNorm -> FusedBatchNormV2");
       node->set_op("FusedBatchNormV2");
       changed = true;
     } else if (node->op() == "FusedBatchNormGrad") {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "AMP: Converting ", node->name(),
+          " FusedBatchNormGrad -> FusedBatchNormGradV2");
       node->set_op("FusedBatchNormGradV2");
       changed = true;
     }
@@ -859,7 +871,7 @@ Status AutoMixedPrecisionImpl::Optimize() {
   TF_RETURN_IF_ERROR(ValidateLists(f16_allowlist_, f16_denylist_,
                                    f16_inferlist_, f16_clearlist_));
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: Identifying nodes to process");
   for (const NodeDef& node : graph_->node()) {
     bool should_process =
         (mode_ == AutoMixedPrecisionMode::CPU_BFLOAT16)
@@ -872,13 +884,14 @@ Status AutoMixedPrecisionImpl::Optimize() {
     }
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: Converting BatchNorm ops to V2");
   ConvertBatchNormOpsToV2();
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: Initializing node type map");
   TF_RETURN_IF_ERROR(node_type_map_.Init(*graph_));
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Initializing graph type topology view");
   TF_RETURN_IF_ERROR(
       graph_type_view_.InitializeFromGraph(*graph_, node_type_map_));
 
@@ -889,10 +902,12 @@ Status AutoMixedPrecisionImpl::Optimize() {
                                                    &deny_set);
   std::vector<NodeTypeIdEdge> ephemeral_edges;
   for (const auto& cluster : tensor_list_clusters) {
-    // Old ZenDNN logging removed;
-    // for (const NodeDef* node : cluster) {
-    // Old ZenDNN logging removed;
-    // }
+    zendnnl::error_handling::apilog_verbose(
+        "AMP: Processing TensorList cluster with ", cluster.size(), " nodes");
+    for (const NodeDef* node : cluster) {
+      zendnnl::error_handling::apilog_verbose(
+          "AMP:   Cluster node: ", node->name(), " (", node->op(), ")");
+    }
     FindTensorListImplicitFloat32Edges(cluster, &ephemeral_edges);
   }
   TF_RETURN_IF_ERROR(graph_type_view_.AddEphemeralEdges(ephemeral_edges));
@@ -927,54 +942,70 @@ Status AutoMixedPrecisionImpl::Optimize() {
   //    affecting numerical stability.
 
   absl::flat_hash_set<int> allow_set;
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Adding allowlist ops to allow_set");
   AddAllowlistOps(&allow_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: allow_set size after AddAllowlistOps: ", allow_set.size());
 
   if (allow_set.empty()) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "AMP: No ops in allow_set, skipping AMP optimization");
     return OkStatus();
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Propagating deny forward through clear and infer");
   PropagateDenyFwdThroughClearAndInfer(&deny_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: deny_set size: ", deny_set.size());
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Forcing color match between TensorList ops");
   for (const auto& cluster : tensor_list_clusters) {
     ForceColorMatchBetweenTensorListOps(cluster, &allow_set, &deny_set);
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Adding clear/infer to allow if between allow");
   AddClearAndInferToAllowIfBetweenAllow(deny_set, &allow_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: allow_set size: ",
+                                       allow_set.size());
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Adding infer to allow if follow allow");
   AddInferToAllowIfFollowAllow(deny_set, &allow_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: allow_set size: ",
+                                       allow_set.size());
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: Propagating allow through clear");
   PropagateAllowThroughClear(deny_set, &allow_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: allow_set size: ",
+                                       allow_set.size());
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Removing FP32-only ops from allow_set");
   RemoveAllowsetWithFp32(&allow_set);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: allow_set size: ",
+                                       allow_set.size());
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Final color match between TensorList ops");
   for (const auto& cluster : tensor_list_clusters) {
     ForceColorMatchBetweenTensorListOps(cluster, &allow_set, &deny_set);
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Forcing color match on recurrent edges");
   TF_RETURN_IF_ERROR(ForceColorMatchOnRecurrentEdges(&allow_set));
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Making casts allow if all outputs allow");
   MakeCastsAllowIfAllOutputsAllow(&allow_set);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "AMP: Changing type attrs and adding casts");
   TF_RETURN_IF_ERROR(ChangeTypeAttrsAndAddCasts(allow_set));
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("AMP: Optimization complete");
 
   return OkStatus();
 }
@@ -1097,7 +1128,9 @@ void AutoMixedPrecisionImpl::FindTensorListImplicitFloat32Edges(
             CHECK(item_fp32)  // Crash OK
                 << "No float32 type attribute found for " << item.node->op()
                 << " node " << item.node->name();
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_verbose(
+                "AMP: Adding implicit edge from ", item.node->name(), " to ",
+                root.node->name());
             implicit_fp32_edges->emplace_back(*item_fp32, *root_fp32);
           }
         }));
@@ -1113,9 +1146,11 @@ void AutoMixedPrecisionImpl::AddAllowlistOps(
     bool force_allow = force_all_f16_ && CanForceFP16(*root.node);
     if (f16_allowlist_.count(root.node->op()) || force_allow) {
       bool inserted = allow_set->insert(root_idx).second;
-      // if (inserted) {
-      // Old ZenDNN logging removed;
-      // }
+      if (inserted) {
+        zendnnl::error_handling::apilog_verbose(
+            "AMP: Adding allowlist op to allow_set: ", root.node->name(), " (",
+            root.node->op(), ")");
+      }
     }
   }
 }
@@ -1166,7 +1201,9 @@ void AutoMixedPrecisionImpl::PropagateDenyFwdThroughClearAndInfer(
           bool inserted = deny_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_verbose(
+                "AMP: Adding to deny_set: ", item.node->name(), " (",
+                item.node->op(), ")");
           }
         }));
   }
@@ -1220,7 +1257,9 @@ void AutoMixedPrecisionImpl::AddClearAndInferToAllowIfBetweenAllow(
           bool inserted = allow_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_verbose(
+                "AMP: Adding clear/infer between allow to allow_set: ",
+                item.node->name(), " (", item.node->op(), ")");
           }
         }));
   }
@@ -1258,7 +1297,9 @@ void AutoMixedPrecisionImpl::PropagateAllowThroughClear(
           bool inserted = allow_set->insert(idx).second;
           if (inserted) {
             const NodeTypeId& item = *graph_type_view_.GetNode(idx);
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_verbose(
+                "AMP: Propagating allow through clear to: ", item.node->name(),
+                " (", item.node->op(), ")");
           }
         }));
   }
@@ -1289,7 +1330,9 @@ void AutoMixedPrecisionImpl::AddInferToAllowIfFollowAllow(
     if (has_allow_fanin) {
       bool inserted = allow_set->insert(item_idx).second;
       if (inserted) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_verbose(
+            "AMP: Adding infer following allow to allow_set: ",
+            item.node->name(), " (", item.node->op(), ")");
       }
     }
   }
@@ -1306,7 +1349,9 @@ void AutoMixedPrecisionImpl::RemoveAllowsetWithFp32(
         (!SupportsF16(root))) {
       auto erased = allow_set->erase(root_idx);
       if (erased) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_verbose(
+            "AMP: Removing FP32-only op from allow_set: ", root.node->name(),
+            " (", root.node->op(), ")");
       }
     }
   }
@@ -1353,15 +1398,20 @@ Status AutoMixedPrecisionImpl::ForceColorMatchOnRecurrentEdges(
       if (any_merge_is_not_allow) {
         for (int merge_idx : merge_idxs) {
           if (allow_set->erase(merge_idx)) {
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_verbose(
+                "AMP: Removing Merge from allow_set for recurrent edge match");
           }
         }
         if (allow_set->erase(nextiter_idx)) {
-          // Old ZenDNN logging removed;
+          zendnnl::error_handling::apilog_verbose(
+              "AMP: Removing NextIteration from allow_set for recurrent edge "
+              "match");
         }
       } else {
         if (allow_set->insert(nextiter_idx).second) {
-          // Old ZenDNN logging removed;
+          zendnnl::error_handling::apilog_verbose(
+              "AMP: Adding NextIteration to allow_set for recurrent edge "
+              "match");
         }
       }
     }
@@ -1398,7 +1448,9 @@ void AutoMixedPrecisionImpl::ForceColorMatchBetweenTensorListOps(
   if (!any_deny && !any_allow) return;
   for (int node_type_idx : node_type_idxs) {
     const NodeTypeId& node_type = *graph_type_view_.GetNode(node_type_idx);
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_verbose(
+        "AMP: Forcing color match for TensorList op: ", node_type.node->name(),
+        " (", node_type.node->op(), ") -> ", any_deny ? "deny" : "allow");
     if (any_deny) {
       allow_set->erase(node_type_idx);
       deny_set->insert(node_type_idx);
@@ -1489,7 +1541,9 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
       if (!IsFloat32(*graph_type_view_.GetNode(node_type_idx))) continue;
       bool src_is_allow = allow_set.count(node_type_idx);
       if (src_is_allow) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_verbose("AMP: Changing type attr for ",
+                                                node->name(), " (", node->op(),
+                                                ") to bfloat16");
         if (!SetDataType(node, type_attr, target_dtype_)) {
           return errors::Internal("Failed to set type attribute");
         }
@@ -1516,7 +1570,9 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
           if (src_is_allow != dst_is_allow) {
             if (!added_cast_node) {
               bool to_f16 = dst_is_allow;
-              // Old ZenDNN logging removed;
+              zendnnl::error_handling::apilog_verbose(
+                  "AMP: Adding cast node for ", src.node->name(), " -> ",
+                  to_f16 ? "bfloat16" : "float32");
               added_cast_node = graph_view_.AddNode(
                   BuildCastNode(src, to_f16, src.node->device()));
               if (to_f16 && !IsConstant(*node) && !IsVariable(*node) &&
@@ -1533,10 +1589,13 @@ Status AutoMixedPrecisionImpl::ChangeTypeAttrsAndAddCasts(
   }
 
   const char* type_str = "bfloat16";
-  LOG(INFO) << "Converted " << num_nodes_changed << "/" << num_nodes_preop
-            << " nodes to " << type_str << " precision using "
-            << num_nonvar_casts_to_f16 << " cast(s) to " << type_str
-            << " (excluding Const and Variable casts)";
+  zendnnl::error_handling::apilog_info(
+      "Converted ", num_nodes_changed, "/", num_nodes_preop, " nodes to ",
+      type_str, " precision using ", num_nonvar_casts_to_f16, " cast(s) to ",
+      type_str, " (excluding Const and Variable casts)");
+  zendnnl::error_handling::apilog_info(
+      "AMP: Converted ", num_nodes_changed, " nodes to ", type_str, ", added ",
+      num_nonvar_casts_to_f16, " casts to ", type_str);
   return OkStatus();
 }
 
@@ -1556,7 +1615,8 @@ Status RunAutoMixedPrecision(const char* device_name, const GrapplerItem& item,
   if (!status.ok()) {
     // Restore the original graph.
     *output = graph_def;
-    LOG(WARNING) << " graph optimizer FAILED: " << status.ToString();
+    zendnnl::error_handling::apilog_warning(" graph optimizer FAILED: ",
+                                            status.ToString());
   }
   return status;
 }

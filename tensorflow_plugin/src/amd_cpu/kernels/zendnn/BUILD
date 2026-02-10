@@ -162,6 +162,7 @@ cc_library(
         ":fused_eigen_output_kernels",
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -176,6 +177,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -189,6 +191,7 @@ cc_library(
     deps = [
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -204,6 +207,7 @@ cc_library(
         ":fill_functor",
         ":zen_kernel_common",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )

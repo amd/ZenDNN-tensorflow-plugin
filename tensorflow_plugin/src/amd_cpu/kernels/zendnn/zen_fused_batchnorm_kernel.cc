@@ -22,6 +22,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_fused_batchnorm_kernel.h"
 
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -71,7 +73,8 @@ class ZenFusedBatchNormOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenFusedBatchNorm Compute, is_training=", is_training_);
 
     const size_t kSrcIndex = 0;       // Index of src input tensor.
     const size_t kScaleIndex = 1;     // Index of scale tensor.
@@ -264,7 +267,8 @@ class ZenFusedBatchNormOp : public OpKernel {
       std::memcpy(batch_variance_data, variance_data, depth_ * sizeof(U));
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "_ZenFusedBatchNorm Compute completed");
   }
 
  private:

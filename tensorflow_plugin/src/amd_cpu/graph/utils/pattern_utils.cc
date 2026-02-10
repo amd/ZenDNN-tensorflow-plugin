@@ -26,6 +26,8 @@ limitations under the License.
 #include <utility>
 
 #include "absl/container/flat_hash_set.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -108,16 +110,20 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
   // fanins, we can continue to the matching.
   if (node_view->NumControllingFanins() > 0 &&
       (fanin_checking || pattern.node_status != NodeStatus::kRemain)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Pattern: Node has control fanins, skipping");
     return false;
   }
 
   if (node_view->NumControlledFanouts() > 0) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Pattern: Node has control fanouts, skipping");
     return false;
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "Pattern: Matching node ", node_view->node()->name(), " (",
+      node_view->node()->op(), ") against pattern ", pattern.op);
 
   bool op_type_matched = false;
   if (pattern.op == "*") {
@@ -138,7 +144,8 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
     }
   }
   if (op_type_matched) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Pattern: Op type matched for node ",
+                                         node_view->node()->name());
     // If op type matches and current node is visited first time, insert current
     // node to node_label_to_index_ map with the current label as the key.
     // Multiple occurances of same label in the pattern syntax indicates that
@@ -154,18 +161,20 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
         remove_node_indices_.insert(node_view->node_index());
       }
     } else if (node_label_to_index_[label] != node_view->node_index()) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Pattern: Label constraint mismatch for ", pattern.label);
       auto name1 =
           graph_view_->GetNode(node_label_to_index_[label])->node()->name();
       auto name2 = node_view->node()->name();
-      // Old ZenDNN logging removed;
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info("Pattern: Expected node ", name1,
+                                           " but found ", name2);
       return false;  // label constraint could not be satisfied.
     } else {
       DCHECK(node_label_to_index_[label] == node_view->node_index());
     }
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Pattern: Op type mismatch for node ",
+                                         node_view->node()->name());
     return false;
   }
   // Current root of the pattern syntax is matched with the current node.
@@ -178,7 +187,7 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::DoesOpTypePatternMatch(
     auto graph_children = node_view->GetRegularFanins();
     auto num_children = graph_children.size();
     if (!has_n_inputs && num_children != pattern.children.size()) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info("Pattern: Children count mismatch");
       return false;
     } else {
       // A pattern is a graph that we would like to match with a subgraph of
@@ -253,7 +262,8 @@ bool SubGraphMatcher<MatchingDirection::kFollowInputs>::GetMatchedNodes(
       *matched_nodes_map = this->node_label_to_index_;
       *remove_node_indices = this->remove_node_indices_;
     } else {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "Pattern: Match found but nodes are not safe to remove");
     }
   } else {
     found_match = false;

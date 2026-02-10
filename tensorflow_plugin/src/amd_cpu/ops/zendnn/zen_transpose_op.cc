@@ -21,6 +21,8 @@
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/ops/zendnn/shape_inference_fns.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -46,9 +48,10 @@ void RegisterZenTranspose() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenTranspose: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenTranspose");
   }
   TF_DeleteStatus(status);
 }
@@ -75,9 +78,11 @@ void RegisterZenConjugateTranspose() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenConjugateTranspose: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenConjugateTranspose");
   }
   TF_DeleteStatus(status);
 }
@@ -102,9 +107,11 @@ void RegisterZenInvertPermutation() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenInvertPermutation: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenInvertPermutation");
   }
   TF_DeleteStatus(status);
 }

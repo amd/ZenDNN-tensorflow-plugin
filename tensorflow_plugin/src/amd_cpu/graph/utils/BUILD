@@ -83,6 +83,7 @@ cc_library(
     deps = [
         ":graph_view",
         ":op_types",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
 )
 
@@ -111,6 +112,7 @@ cc_library(
         "@com_google_absl//absl/container:node_hash_map",
         "@local_config_tf//:protos_all",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
     alwayslink = True,
 )
@@ -129,6 +131,7 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
 )
 
@@ -140,6 +143,7 @@ cc_library(
     deps = [
         ":graph_view",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ],
 )
 

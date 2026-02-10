@@ -16,6 +16,7 @@ cc_library(
         "//tensorflow_plugin/src/amd_cpu/graph/utils:layout_utils",
         "//tensorflow_plugin/src/amd_cpu/graph/utils:node_type_attr_map",
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
     ] + tf_protobuf_deps(),
     alwayslink = True,
 )

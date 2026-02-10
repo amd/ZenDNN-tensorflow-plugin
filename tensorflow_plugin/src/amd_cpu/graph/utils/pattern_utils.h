@@ -30,6 +30,8 @@ limitations under the License.
 
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/graph_view.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -257,7 +259,8 @@ class SubGraphMatcher {
       for (const auto& fanouts : fanouts_by_ports) {
         for (const auto& fanout : fanouts) {
           if (!matched_node_indices_.count(fanout.node_index())) {
-            // Old ZenDNN logging removed;
+            zendnnl::error_handling::apilog_info(
+                "Pattern: Node has unmatched fanout, not safe to remove");
             return false;
           }
         }

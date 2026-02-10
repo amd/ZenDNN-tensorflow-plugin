@@ -216,7 +216,8 @@ class ZenPoolOp : public OpKernel {
         padding_w_right);
 
     OP_REQUIRES(context, zendnnl_success,
-                errors::Internal("ZenDNNL Pooling execution failed"));
+                errors::Internal(is_maxpool ? "_ZenMaxPool" : "_ZenAvgPool",
+                                 " execution failed"));
   }
 
  private:

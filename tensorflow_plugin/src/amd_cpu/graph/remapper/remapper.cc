@@ -28,6 +28,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/op_types.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/pattern_utils.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/symbolic_shapes.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -2085,7 +2087,9 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   const GraphDef* graph = ctx->graph_view.graph();
   const NodeDef& contraction = graph->node(matched.contraction);
   const NodeDef& bias_add = graph->node(matched.bias_add);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing ", contraction.op(),
+                                       " (", contraction.name(),
+                                       ") with BiasAdd");
 
   NodeDef fused_node;
   fused_node.set_name(bias_add.name());
@@ -2140,7 +2144,9 @@ Status AddFusedContractionNode(RemapperContext* ctx,
     return OkStatus();
   }
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing ", contraction.op(),
+                                       " (", contraction.name(),
+                                       ") with BiasAdd and Add");
 
   NodeDef fused_node;
   fused_node.set_name(add.name());
@@ -2187,7 +2193,9 @@ Status AddFusedContractionNode(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& activation = graph->node(matched.activation);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing ", contraction.op(),
+                                       " (", contraction.name(),
+                                       ") with BiasAdd and ", activation.op());
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2234,7 +2242,9 @@ Status AddFusedMatMulSigmoidNode(RemapperContext* ctx,
   const NodeDef& activation = graph->node(matched.activation);  // Sigmoid.
 
   // Log the fusion operation.
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing ", contraction.op(),
+                                       " (", contraction.name(),
+                                       ") with Sigmoid activation");
 
   // Create the new fused node.
   NodeDef fused_node;
@@ -2278,7 +2288,9 @@ Status AddFusedContractionNode(RemapperContext* ctx,
   const NodeDef& contraction = graph->node(matched.contraction);
   const NodeDef& activation = graph->node(matched.activation);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing ", contraction.op(),
+                                       " (", contraction.name(), ") with ",
+                                       activation.op());
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2318,7 +2330,9 @@ Status AddFusedContractionNode(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& add = graph->node(matched.add);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Fusing ", contraction.op(), " (", contraction.name(),
+      ") with BiasAdd, Add and ", activation.op());
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2371,7 +2385,8 @@ Status AddFusedConv2DNode(RemapperContext* ctx,
   const NodeDef& contraction = graph->node(matched.contraction);
   DCHECK(IsConv2D(contraction)) << "Only Conv2D supported for now";
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Fusing Conv2D (", contraction.name(), ") with FusedBatchNorm");
 
   NodeDef fused_node;
   fused_node.set_name(fused_batch_norm.name());
@@ -2412,7 +2427,9 @@ Status AddFusedConv2DNode(RemapperContext* ctx,
 
   const NodeDef& activation = graph->node(matched.activation);
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Fusing Conv2D (", contraction.name(),
+      ") with FusedBatchNorm and ", activation.op());
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2451,7 +2468,9 @@ Status AddFusedBatchNormExNode(RemapperContext* ctx,
   const NodeDef& fused_batch_norm = graph->node(matched.fused_batch_norm);
   const NodeDef& activation = graph->node(matched.activation);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing FusedBatchNorm (",
+                                       fused_batch_norm.name(), ") with ",
+                                       activation.op());
 
   // Replace FusedBatchNorm with _FusedBatchNormEx + Activation.
   NodeDef fused_op;
@@ -2677,7 +2696,9 @@ Status AddFusedBatchMatMulBiasAddActivation(
   const NodeDef& bias_add = graph->node(matched.bias_add);
   const NodeDef& activation = graph->node(matched.activation);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Fusing BatchMatMul (",
+                                       batch_matmul.name(),
+                                       ") with BiasAdd and ", activation.op());
 
   NodeDef fused_node;
   fused_node.set_name(activation.name());
@@ -2763,7 +2784,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
   std::vector<bool> invalidated_nodes(num_nodes);
   std::vector<bool> nodes_to_delete(num_nodes);
 
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info("Remapper: Running optimization on ",
+                                       num_nodes, " nodes");
 
   // Infer statically first and only once.
   ctx.GetGraphProperties();
@@ -2794,7 +2816,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
     if (is_visited) {
       if (invalidated_nodes[i] && last_op != node_def->op()) {
         // Recheck current node to find more possible fusion.
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info("Remapper: Rechecking node ",
+                                             node_def->name(), " for fusion");
         last_op = node_def->op();
       } else {
         // Iterate to next node and reset all flags.
@@ -2812,12 +2835,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
     if (nodes_to_delete[i]) {
       continue;
     }
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Remapper: Processing node ",
+                                         node_def->name(), " (", node_def->op(),
+                                         ")");
     {
       // Keras Dense layer fwd fusion.
       KerasDenseLayerFwd keras_dense_layer_fwd;
       if (FindKerasDenseLayerFwd(ctx, i, &keras_dense_layer_fwd)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found Keras Dense layer forward fusion");
         TF_ABORT_IF_ERROR(AddKerasDenseLayerFwd(
             &ctx, keras_dense_layer_fwd, &invalidated_nodes, &nodes_to_delete));
         continue;
@@ -2827,7 +2853,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAndAddActivation contract_with_bias_and_add_activation;
       if (FindContractionWithBiasAndAddActivation(
               ctx, i, &contract_with_bias_and_add_activation)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithBiasAndAddActivation");
         TF_ABORT_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_add_activation,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2837,7 +2864,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap MatMul+Relu into the _FusedMatMul.
       ContractionWithActivation contract_with_activation;
       if (FindContractionWithActivation(ctx, i, &contract_with_activation)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithActivation");
         AddFusedContractionNode(&ctx, contract_with_activation,
                                 &invalidated_nodes, &nodes_to_delete);
         continue;
@@ -2846,7 +2874,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap _FusedMatMul{MatMul + BiasAdd} + Sigmoid into the _FusedMatMul.
       ContractionWithActivation contract_with_sigmoid;
       if (FindContractionWithSigmoid(ctx, i, &contract_with_sigmoid)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithSigmoid");
         AddFusedMatMulSigmoidNode(&ctx, contract_with_sigmoid,
                                   &invalidated_nodes, &nodes_to_delete);
         continue;
@@ -2856,7 +2885,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAddAndAdd contract_with_bias_and_add;
       if (FindContractionWithBiasAddAndAdd(ctx, i,
                                            &contract_with_bias_and_add)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithBiasAddAndAdd");
         TF_ABORT_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_add,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2867,7 +2897,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // _Fused{Conv2D,DepthwiseConv2dNative,MatMul}.
       ContractionWithBiasAdd contract_with_bias;
       if (FindContractionWithBias(ctx, i, &contract_with_bias)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithBias");
         TF_ABORT_IF_ERROR(AddFusedContractionNode(
             &ctx, contract_with_bias, &invalidated_nodes, &nodes_to_delete));
         continue;
@@ -2878,7 +2909,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       ContractionWithBiasAddAndActivation contract_with_bias_and_activation;
       if (FindContractionWithBiasAndActivation(
               ctx, i, &contract_with_bias_and_activation)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithBiasAndActivation");
         TF_RETURN_IF_ERROR(
             AddFusedContractionNode(&ctx, contract_with_bias_and_activation,
                                     &invalidated_nodes, &nodes_to_delete));
@@ -2919,7 +2951,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap BatchMatMul + Mul into the _FusedBatchMatMul.
       ContractionWithMul contract_with_mul;
       if (FindContractionWithMul(ctx, i, &contract_with_mul)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found ContractionWithMul");
         AddFusedContractionNode(&ctx, contract_with_mul, &invalidated_nodes,
                                 &nodes_to_delete);
         continue;
@@ -2933,7 +2966,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       if (FindMatMulBiasAddAndGelu(&ctx, i, &matched_nodes_map,
                                    &remove_node_indices, &is_gelu_approximate,
                                    &expand_dims)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found MatMulBiasAddAndGelu");
         TF_ABORT_IF_ERROR(AddFusedMatMulBiasAddAndGelu(
             &ctx, matched_nodes_map, remove_node_indices, &invalidated_nodes,
             &nodes_to_delete, is_gelu_approximate, expand_dims));
@@ -2947,7 +2981,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       input_node_names.clear();
       if (FindFusedBatchMatMul(&ctx, i, &matched_nodes_map,
                                &remove_node_indices, &input_node_names)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found FusedBatchMatMul");
         TF_RETURN_IF_ERROR(AddFusedBatchMatMul(
             &ctx, matched_nodes_map, remove_node_indices, input_node_names,
             &invalidated_nodes, &nodes_to_delete));
@@ -2958,7 +2993,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       BatchMatMulWithBiasAddAndActivation batchmatmul_biasadd_activation;
       if (FindBatchMatMulBiasAddActivation(ctx, i,
                                            &batchmatmul_biasadd_activation)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found BatchMatMulBiasAddActivation");
         TF_RETURN_IF_ERROR(AddFusedBatchMatMulBiasAddActivation(
             &ctx, batchmatmul_biasadd_activation, &invalidated_nodes,
             &nodes_to_delete));
@@ -2968,7 +3004,8 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       // Remap Pad + (_Fused)Conv2D to (_Fused)Conv2D.
       PadWithContraction pad_conv;
       if (FindPadWithContraction(ctx, i, &pad_conv)) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found PadWithContraction");
         TF_ABORT_IF_ERROR(AddPadWithContractionNode(
             &ctx, pad_conv, &invalidated_nodes, &nodes_to_delete));
         continue;

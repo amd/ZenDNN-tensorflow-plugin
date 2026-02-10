@@ -31,6 +31,9 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/util.h"
 
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
+
 namespace amd_cpu_plugin {
 namespace graph {
 
@@ -153,7 +156,9 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
   // Skip nodes that were invalidated.
   int num_nodes = multable_graph_def.node_size();
 
-  // Old ZenDNN logging removed;
+  // Log graph optimization start
+  zendnnl::error_handling::apilog_info("ZenLayout: Running optimization on ",
+                                       num_nodes, " nodes");
 
   for (int node_index = num_nodes - 1; node_index >= 0; --node_index) {
     const auto* node_view = ctx.graph_view.GetNode(node_index);
@@ -169,9 +174,15 @@ Status RunZenLayout(const char* device_name, const GrapplerItem& item,
       // const string& op_name = node_def->op();
 
       if (RewriteNode(&ctx, node_index, ri, node_map) == OkStatus()) {
-        // Old ZenDNN logging removed;
+        // Log successful rewrite
+        zendnnl::error_handling::apilog_info("ZenLayout: Rewritten ", op_name,
+                                             " (", node_def->name(), ") -> ",
+                                             ri->new_name);
       } else {
-        // Old ZenDNN logging removed;
+        // Log failed rewrite
+        zendnnl::error_handling::apilog_warning("ZenLayout: Failed to rewrite ",
+                                                op_name, " (", node_def->name(),
+                                                ")");
       }
     }
   }

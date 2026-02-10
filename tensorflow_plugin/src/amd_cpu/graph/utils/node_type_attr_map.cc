@@ -24,6 +24,8 @@ limitations under the License.
 #include "tensorflow/core/framework/op_def.pb.h"
 #include "tensorflow_plugin/src/amd_cpu/graph/utils/utils.h"
 #include "tensorflow_plugin/src/amd_cpu/util/op_def_util.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -248,7 +250,8 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
       // TODO(plugin): remove this workaround, once stock-tf supports "dtype"
       // attribute for "QuantizeV2" op
       if (node.op() == "QuantizeV2" && attr_name == "dtype") {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "NodeTypeAttrMap: Skipping dtype attr for QuantizeV2");
         continue;
       }
 
@@ -258,7 +261,8 @@ Status NodeTypeAttrMap::AddNode(const NodeDef& node) {
           ((node.op() == "QuantizedMaxPool" ||
             node.op() == "QuantizedConcatV2") &&
            attr_name == "out_type")) {
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "NodeTypeAttrMap: Skipping misadded attribute ", attr_name);
         continue;
       }
 

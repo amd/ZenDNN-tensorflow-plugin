@@ -38,6 +38,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/op_kernel.h"
 #include "tensorflow_plugin/src/amd_cpu/util/strcat.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -129,7 +131,8 @@ Status CreateWritableFile(const string& dirname, const string& name,
   }
 
   if (dir.empty()) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Graph dump: DUMP_GRAPH_PREFIX not specified");
     return errors::InvalidArgument("DUMP_GRAPH_PREFIX not specified");
   }
 
@@ -186,7 +189,8 @@ string DumpGraphDefToFile(const string& name, GraphDef const& graph_def,
     return StrCat("(failed to dump Graph to '", filepath,
                   "': ", status.ToString(), ")");
   }
-  // Old ZenDNN logging removed;
+  zendnnl::error_handling::apilog_info(
+      "Graph dump: Successfully dumped graph to ", filepath);
   return filepath;
 }
 
@@ -391,7 +395,8 @@ NodeDef* GetTailOfChain(const NodeDef& source, const NodeMap& node_map,
     }
     next = node_map.GetNode(current->input(0));
     if (next == nullptr) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info(
+          "GetTailOfChain: Node not found for input ", current->input(0));
     }
   }
   return const_cast<NodeDef*>(current);

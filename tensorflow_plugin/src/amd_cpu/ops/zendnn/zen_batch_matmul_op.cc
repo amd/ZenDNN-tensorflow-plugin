@@ -17,9 +17,12 @@
 
 // TensorFlow C API headers.
 #include "tensorflow/c/ops.h"
+#include "tensorflow/c/tf_status.h"
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/ops/zendnn/shape_inference_fns.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -49,9 +52,10 @@ void RegisterZenBatchMatMul() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenBatchMatMul: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenBatchMatMul");
   }
   TF_DeleteStatus(status);
 }
@@ -82,9 +86,10 @@ void RegisterZenBatchMatMulV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenBatchMatMulV2: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenBatchMatMulV2");
   }
   TF_DeleteStatus(status);
 }
@@ -116,9 +121,11 @@ void RegisterZenFusedBatchMatMulV2() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error(
+        "Failed to register _ZenFusedBatchMatMulV2: ", TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Registered op: _ZenFusedBatchMatMulV2");
   }
   TF_DeleteStatus(status);
 }

@@ -37,6 +37,8 @@ limitations under the License.
 // ZenDNNL Low Overhead API headers
 #include "lowoha_operators/conv/lowoha_conv.hpp"
 #include "lowoha_operators/conv/lowoha_conv_common.hpp"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -97,7 +99,7 @@ bool TryExecuteZenDNNLConv2D(
       // For depthwise: out_channels = in_channels * depth_multiplier
       // So: depth_multiplier = out_channels / in_channels
       if (dimensions.in_depth <= 0) {
-        LogZenDNNLInfo("Conv",
+        LogZenDNNLInfo("_ZenConv2D",
                        "Invalid depthwise configuration: in_depth is less than "
                        "or equal to zero");
         return false;
@@ -105,7 +107,7 @@ bool TryExecuteZenDNNLConv2D(
       conv_params.depthwise.depth_multiplier =
           dimensions.out_depth / dimensions.in_depth;
 
-      log_info("DepthwiseConv2D: in_channels=", dimensions.in_depth,
+      log_info("_ZenDepthwiseConv2d: in_channels=", dimensions.in_depth,
                ", out_channels=", dimensions.out_depth,
                ", depth_multiplier=", conv_params.depthwise.depth_multiplier,
                ", groups=", conv_params.depthwise.groups);
@@ -127,7 +129,7 @@ bool TryExecuteZenDNNLConv2D(
         conv_params.dtypes.bias = data_type_t::bf16;
       }
     } else {
-      LogZenDNNLInfo("Conv", "Unsupported data type");
+      LogZenDNNLInfo("_ZenConv2D", "Unsupported data type");
       return false;
     }
 
@@ -137,11 +139,11 @@ bool TryExecuteZenDNNLConv2D(
     switch (fusion_type) {
       case FusedComputationType::kBiasAdd:
         // BiasAdd is handled via bias parameter, no additional post-op needed
-        log_info("Conv2D ZenDNNL: BiasAdd fusion");
+        log_info("_ZenConv2D: BiasAdd fusion");
         break;
       case FusedComputationType::kBiasAddWithRelu:
       case FusedComputationType::kRelu: {
-        log_info("Conv2D ZenDNNL: BiasAdd+Relu fusion");
+        log_info("_ZenConv2D: BiasAdd+Relu fusion");
         conv_postop relu_po;
         relu_po.po_type = post_op_type_t::relu;
         relu_po.alpha = 0.0f;
@@ -150,7 +152,7 @@ bool TryExecuteZenDNNLConv2D(
         break;
       }
       case FusedComputationType::kBiasAddWithRelu6: {
-        log_info("Conv2D ZenDNNL: BiasAdd+Relu6 fusion");
+        log_info("_ZenConv2D: BiasAdd+Relu6 fusion");
         conv_postop relu6_po;
         relu6_po.po_type = post_op_type_t::clip;
         relu6_po.alpha = 0.0f;
@@ -159,7 +161,7 @@ bool TryExecuteZenDNNLConv2D(
         break;
       }
       case FusedComputationType::kBiasAddWithLeakyRelu: {
-        log_info("Conv2D ZenDNNL: BiasAdd+LeakyRelu fusion");
+        log_info("_ZenConv2D: BiasAdd+LeakyRelu fusion");
         conv_postop leaky_po;
         leaky_po.po_type = post_op_type_t::leaky_relu;
         leaky_po.alpha = 0.2f;  // Default LeakyRelu alpha, can be customized
@@ -168,9 +170,9 @@ bool TryExecuteZenDNNLConv2D(
         break;
       }
       case FusedComputationType::kBiasAddWithAdd: {
-        log_info("Conv2D ZenDNNL: BiasAdd+Add (residual) fusion");
+        log_info("_ZenConv2D: BiasAdd+Add (residual) fusion");
         if (!addend) {
-          LogZenDNNLInfo("Conv2D",
+          LogZenDNNLInfo("_ZenConv2D",
                          "Binary add requested but no addend tensor provided");
           return false;
         }
@@ -186,10 +188,10 @@ bool TryExecuteZenDNNLConv2D(
         break;
       }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
-        log_info("Conv2D ZenDNNL: BiasAdd+Add+Relu fusion");
+        log_info("_ZenConv2D: BiasAdd+Add+Relu fusion");
         if (!addend) {
           LogZenDNNLInfo(
-              "Conv2D",
+              "_ZenConv2D",
               "Binary add+relu requested but no addend tensor provided");
           return false;
         }
@@ -224,16 +226,16 @@ bool TryExecuteZenDNNLConv2D(
                     true /* is_weights_const */, conv_params);
 
     if (status != status_t::success) {
-      LogZenDNNLInfo("Conv2D", ("Execution failed with status " +
-                                std::to_string(static_cast<int>(status)))
-                                   .c_str());
+      LogZenDNNLInfo("_ZenConv2D", ("Execution failed with status " +
+                                    std::to_string(static_cast<int>(status)))
+                                       .c_str());
       return false;
     }
 
     return true;
 
   } catch (const std::exception& e) {
-    LogZenDNNLFallback("Conv2D",
+    LogZenDNNLFallback("_ZenConv2D",
                        ("Exception: " + std::string(e.what())).c_str());
     return false;
   }
@@ -262,7 +264,8 @@ class ZenConv2DOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenConv2D Compute, is_depthwise=", is_depthwise);
 
     const Tensor& input = context->input(0);
     const Tensor& filter = context->input(1);
@@ -299,20 +302,21 @@ class ZenConv2DOp : public OpKernel {
 
     if (zendnnl_success) {
       if (is_depthwise) {
-        LogZenDNNLSuccess("DepthwiseConv2D");
+        LogZenDNNLSuccess("_ZenDepthwiseConv2dNative");
       } else {
-        LogZenDNNLSuccess("Conv2D");
+        LogZenDNNLSuccess("_ZenConv2D");
       }
       return;
     } else {
-      LogZenDNNLFallback(is_depthwise ? "DepthwiseConv2D" : "Conv2D", "failed");
+      LogZenDNNLFallback(
+          is_depthwise ? "_ZenDepthwiseConv2dNative" : "_ZenConv2D", "failed");
       // ZenDNNL execution failed, we MUST report error
       // Output tensor was allocated but not filled with valid data
       OP_REQUIRES(
           context, false,
           errors::Internal(is_depthwise
-                               ? "ZenDNNL DepthwiseConv2D execution failed. "
-                               : "ZenDNNL Conv2D execution failed. ",
+                               ? "_ZenDepthwiseConv2dNative execution failed. "
+                               : "_ZenConv2D execution failed. ",
                            "No fallback implementation available. "
                            "Input shape: ",
                            input_shape.DebugString(),
@@ -321,7 +325,7 @@ class ZenConv2DOp : public OpKernel {
       return;  // Unreachable, but explicit
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("_ZenConv2D Compute completed");
   }
 
  protected:

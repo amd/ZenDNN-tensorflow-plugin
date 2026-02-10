@@ -129,7 +129,7 @@ class ZenSoftmaxOp : public OpKernel {
     bool zendnnl_success = TryExecuteZenDNNLSoftmax<T>(input, output, axis);
 
     OP_REQUIRES(context, zendnnl_success,
-                errors::Internal("ZenDNNL Softmax execution failed"));
+                errors::Internal("_ZenSoftmax execution failed"));
   }
 
  private:

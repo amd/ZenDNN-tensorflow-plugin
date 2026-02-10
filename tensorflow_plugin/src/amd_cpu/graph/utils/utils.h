@@ -44,6 +44,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_id.h"
 #include "tensorflow_plugin/src/amd_cpu/util/types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 namespace graph {
@@ -125,7 +127,7 @@ class NodeMapInternal {
   // invalid if graph is changed.
   explicit NodeMapInternal(GraphDefT* graph) {
     if (graph == nullptr) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info("NodeMapInternal: Graph is null");
       return;
     }
     nodes_.reserve(graph->node_size());
@@ -137,7 +139,8 @@ class NodeMapInternal {
       // Check that the graph doesn't contain multiple nodes with the same name.
       if (!rslt.second) {
         // The first node found with a given name becomes the canonical.
-        // Old ZenDNN logging removed;
+        zendnnl::error_handling::apilog_info(
+            "NodeMapInternal: Duplicate node name found: ", node_name);
       }
       NodeDefT* canonical = rslt.second ? node : rslt.first->second;
       for (const auto& input : node->input()) {
@@ -193,7 +196,8 @@ class NodeMapInternal {
     const string node_name = NodeName(name);
     auto it = nodes_.find(node_name);
     if (it == nodes_.end()) {
-      // Old ZenDNN logging removed;
+      zendnnl::error_handling::apilog_info("NodeMapInternal: Node not found: ",
+                                           node_name);
       return nullptr;
     }
     return it->second;

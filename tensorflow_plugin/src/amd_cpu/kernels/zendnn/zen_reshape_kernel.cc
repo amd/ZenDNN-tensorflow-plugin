@@ -30,6 +30,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -39,7 +41,7 @@ class ZenReshapeOp : public OpKernel {
   explicit ZenReshapeOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Executing _ZenReshape Compute");
 
     const Tensor& input = context->input(0);
     const Tensor& sizes = context->input(1);
@@ -111,7 +113,7 @@ class ZenReshapeOp : public OpKernel {
     CHECK(output.CopyFrom(input, shape));
     context->set_output(0, output);
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("_ZenReshape Compute completed");
   }
 
  private:

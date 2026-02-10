@@ -33,6 +33,8 @@ limitations under the License.
 #include "tensorflow_plugin/src/amd_cpu/util/padding.h"
 #include "tensorflow_plugin/src/amd_cpu/util/register_types.h"
 #include "tensorflow_plugin/src/amd_cpu/util/tensor_format.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -82,7 +84,8 @@ class ZenFusedConv2DOp : public OpKernel {
   }
 
   void Compute(OpKernelContext *context) override {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info(
+        "Executing _ZenFusedConv2D Compute, is_depthwise=", is_depthwise);
 
     const Tensor &input = context->input(0);
     const Tensor &filter = context->input(1);
@@ -129,16 +132,17 @@ class ZenFusedConv2DOp : public OpKernel {
 
     if (zendnnl_success) {
       if (is_depthwise) {
-        LogZenDNNLSuccess("FusedDepthwiseConv2D");
+        LogZenDNNLSuccess("_ZenFusedDepthwiseConv2dNative");
       } else {
-        LogZenDNNLSuccess("FusedConv2D");
+        LogZenDNNLSuccess("_ZenFusedConv2D");
       }
     } else {
-      LogZenDNNLFallback(is_depthwise ? "FusedDepthwiseConv2D" : "FusedConv2D",
-                         "failed");
+      LogZenDNNLFallback(
+          is_depthwise ? "_ZenFusedDepthwiseConv2dNative" : "_ZenFusedConv2D",
+          "failed");
     }
 
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("_ZenFusedConv2D Compute completed");
   }
 
  private:

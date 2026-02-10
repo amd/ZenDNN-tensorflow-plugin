@@ -63,6 +63,7 @@ cmake(
         "ZENDNNL_DEPENDS_AOCLDLP": "ON",  # Enabled: Deep Learning Performance library
         "ZENDNNL_DEPENDS_LIBXSMM": "OFF",
         "ZENDNNL_DEPENDS_FBGEMM": "ON",
+
         # ZenDNNL Library Build Options.
         "ZENDNNL_LIB_BUILD_ARCHIVE": "ON",
         "ZENDNNL_LIB_BUILD_SHARED": "OFF",
@@ -188,32 +189,6 @@ cmake(
         # Copy OneDNN headers.
         copy_headers "$INSTALL_BASE/deps/onednn/include" "OneDNN"
 
-        # TODO(plugin): Improve and simplify the following copy operation.
-        # Copy operators directory with full structure (includes matmul/aocl_dlp/).
-        OPERATORS_SRC="$INSTALL_BASE/zendnnl/include/operators"
-        if [ -d "$OPERATORS_SRC" ]; then
-            mkdir -p "$INSTALLDIR/zendnnl/include/operators"
-            cp -r "$OPERATORS_SRC"/* "$INSTALLDIR/zendnnl/include/operators/"
-            echo "Operators headers copied (preserving directory structure)"
-        else
-            echo "ERROR: Operators headers not found at $OPERATORS_SRC"
-            exit 1
-        fi
-
-        # WORKAROUND: Copy lowoha_common.hpp from source tree if missing
-        # (CMake FILE_SET bug - file is declared as public but not installed)
-        LOWOHA_COMMON_INSTALLED="$INSTALLDIR/zendnnl/include/lowoha_operators/matmul/lowoha_common.hpp"
-        if [ ! -f "$LOWOHA_COMMON_INSTALLED" ]; then
-            LOWOHA_COMMON_SRC="$EXT_BUILD_ROOT/external/zendnnl_repo/zendnnl/src/lowoha_operators/matmul/lowoha_common.hpp"
-            if [ -f "$LOWOHA_COMMON_SRC" ]; then
-                cp "$LOWOHA_COMMON_SRC" "$LOWOHA_COMMON_INSTALLED"
-                echo "lowoha_common.hpp copied from source (CMake install workaround)"
-            else
-                echo "ERROR: lowoha_common.hpp not found in source at $LOWOHA_COMMON_SRC"
-                exit 1
-            fi
-        fi
-
         # === REQUIRED DEPENDENCY LIBRARIES ===
 
         echo "DEBUG: ZENDNNL_MANYLINUX_BUILD=${ZENDNNL_MANYLINUX_BUILD:-unset}"
@@ -243,6 +218,33 @@ cmake(
 
         # Copy cpuinfo library (FBGEMM dependency).
         copy_lib "$INSTALL_BASE/deps/fbgemm/$LIB_DIR/libcpuinfo.a" "libcpuinfo.a" "cpuinfo library"
+
+        # === INTERNAL HEADERS FOR LOGGING ===
+        # Copy ZenDNNL internal common headers to enable logging in ZenTF
+        echo "Copying ZenDNNL internal common headers for logging..."
+
+        # Find the source directory (cmake foreign_cc places sources here)
+        SOURCE_DIR="$EXT_BUILD_ROOT/external/zendnnl/zendnnl/src/common"
+
+        # Create the common subdirectory in include path
+        mkdir -p "$INSTALLDIR/zendnnl/include/common"
+
+        # Copy all internal common headers
+        if [ -d "$SOURCE_DIR" ]; then
+            cp "$SOURCE_DIR"/*.hpp "$INSTALLDIR/zendnnl/include/common/" 2>/dev/null || true
+            echo "ZenDNNL internal common headers copied"
+        else
+            # Try alternative path (source may be at different location)
+            ALT_SOURCE_DIR="$BUILD_DIR/../zendnnl/src/common"
+            if [ -d "$ALT_SOURCE_DIR" ]; then
+                cp "$ALT_SOURCE_DIR"/*.hpp "$INSTALLDIR/zendnnl/include/common/" 2>/dev/null || true
+                echo "ZenDNNL internal common headers copied (from alt path)"
+            else
+                echo "WARNING: ZenDNNL internal common headers not found, logging may not work"
+                echo "  Tried: $SOURCE_DIR"
+                echo "  Tried: $ALT_SOURCE_DIR"
+            fi
+        fi
 
         echo "=== ZenDNNL Post-build completed successfully ==="
     """,

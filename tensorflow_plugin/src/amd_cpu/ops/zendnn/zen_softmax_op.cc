@@ -21,6 +21,8 @@
 // TensorFlow plug-in headers.
 #include "tensorflow_plugin/src/amd_cpu/ops/zendnn/shape_inference_fns.h"
 #include "tensorflow_plugin/src/amd_cpu/util/zen_utils.h"
+// ZenDNNL logging support
+#include "common/zendnnl_global.hpp"
 
 namespace amd_cpu_plugin {
 
@@ -45,9 +47,10 @@ void RegisterZenSoftmax() {
 
   TF_RegisterOpDefinition(op_builder, status);
   if (TF_OK != TF_GetCode(status)) {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_error("Failed to register _ZenSoftmax: ",
+                                          TF_Message(status));
   } else {
-    // Old ZenDNN logging removed;
+    zendnnl::error_handling::apilog_info("Registered op: _ZenSoftmax");
   }
   TF_DeleteStatus(status);
 }
