@@ -28,8 +28,6 @@
 # specifies the interface. If the first argument is not specified then the
 # default environment settings will work for Python/C++.
 
-interface="$1"
-
 # Enable TensorFlow-ZenDNN Plug-in.
 export TF_ENABLE_ZENDNN_OPTS=1
 echo "TF_ENABLE_ZENDNN_OPTS=$TF_ENABLE_ZENDNN_OPTS"
@@ -39,21 +37,6 @@ echo "TF_ENABLE_ONEDNN_OPTS=$TF_ENABLE_ONEDNN_OPTS"
 # Setting ZenDNN Environment variables.
 echo "Setting ZenDNN Environment variables."
 echo "The following settings gave us the best results. However, these details should be verified by the user empirically."
-
-if [ "$interface" = "java" ]; then
-    export KMP_BLOCKTIME=1
-    export KMP_TPAUSE=0
-    export KMP_FORKJOIN_BARRIER_PATTERN=dist,dist
-    export KMP_PLAIN_BARRIER_PATTERN=dist,dist
-    export KMP_REDUCTION_BARRIER_PATTERN=dist,dist
-    export KMP_AFFINITY=granularity=fine,compact,1,0
-    echo "KMP_BLOCKTIME=$KMP_BLOCKTIME"
-    echo "KMP_TPAUSE=$KMP_TPAUSE"
-    echo "KMP_FORKJOIN_BARRIER_PATTERN=$KMP_FORKJOIN_BARRIER_PATTERN"
-    echo "KMP_PLAIN_BARRIER_PATTERN=$KMP_PLAIN_BARRIER_PATTERN"
-    echo "KMP_REDUCTION_BARRIER_PATTERN=$KMP_REDUCTION_BARRIER_PATTERN"
-    echo "KMP_AFFINITY=$KMP_AFFINITY"
-fi
 
 # TODO(plugin): Add the ZenDNNL environment variables.
 # ZENDNNL_MATMUL_ALGO options:
@@ -80,14 +63,27 @@ echo "ZENDNNL_MATMUL_ALGO=$ZENDNNL_MATMUL_ALGO"
 export USE_ZENDNN_MATMUL_DIRECT=1
 echo "USE_ZENDNN_MATMUL_DIRECT=$USE_ZENDNN_MATMUL_DIRECT"
 
+# KMP settings
+echo -e "\nKMP settings."
+export KMP_BLOCKTIME=1
+export KMP_TPAUSE=0
+export KMP_FORKJOIN_BARRIER_PATTERN=dist,dist
+export KMP_PLAIN_BARRIER_PATTERN=dist,dist
+export KMP_REDUCTION_BARRIER_PATTERN=dist,dist
+export KMP_AFFINITY=granularity=fine,compact,1,0
+echo "KMP_BLOCKTIME=$KMP_BLOCKTIME"
+echo "KMP_TPAUSE=$KMP_TPAUSE"
+echo "KMP_FORKJOIN_BARRIER_PATTERN=$KMP_FORKJOIN_BARRIER_PATTERN"
+echo "KMP_PLAIN_BARRIER_PATTERN=$KMP_PLAIN_BARRIER_PATTERN"
+echo "KMP_REDUCTION_BARRIER_PATTERN=$KMP_REDUCTION_BARRIER_PATTERN"
+echo "KMP_AFFINITY=$KMP_AFFINITY"
+
 # OMP settings
 # The below settings are for Turin. Please update it based on your machine.
 echo -e "\nBy default, OMP settings are based on Turin machine."
 echo "Please update it based on your machine or usecase."
 export OMP_NUM_THREADS=128
 echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
-export GOMP_CPU_AFFINITY="0-127"
-echo "GOMP_CPU_AFFINITY=$GOMP_CPU_AFFINITY"
 export OMP_PROC_BIND=FALSE
 echo "OMP_PROC_BIND=$OMP_PROC_BIND"
 export OMP_WAIT_POLICY=ACTIVE

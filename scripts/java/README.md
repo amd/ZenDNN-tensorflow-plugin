@@ -45,9 +45,7 @@ sudo apt update && sudo apt install bazel-7.4.1
 ```
 
 ## Build TensorFlow-Java
-**Note:** As of now, zentf 5.2 supports only the `tf-2.20` branch of TensorFlow-Java, which must be built from source.
-
-If you don't want to build TensorFlow-Java from source, you can use zentf with the [5.1.0 release](https://github.com/amd/ZenDNN-tensorflow-plugin/blob/r5.1/scripts/java/README.md) of zentf instead.
+**Note:** As of now, zentf 5.2.0 supports only the `tf-2.20` branch of TensorFlow-Java, which must be built from source.
 
 A build script `build_tf_java.sh` is provided to automate this build process.
 
@@ -81,7 +79,7 @@ export LD_LIBRARY_PATH=<Path to zentf C++ parent folder>/ZENTF_v5.2.0_C++_API/li
 Set ZenDNN specific environment variables as shown below,
 ```bash
 cd <Path to zentf C++ parent folder>/ZENTF_v5.2.0_C++_API
-source zentf_env_setup.sh java
+source zentf_env_setup.sh
 ```
 
 Load zentf plugin native library in the application code.
