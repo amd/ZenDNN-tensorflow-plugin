@@ -102,27 +102,22 @@ class ZenFusedConv2DOp : public OpKernel {
 
     // Output tensor.
     Tensor *output = nullptr;
+    const Tensor *addend = nullptr;
 
-    if ((fused_computation_ == FusedComputationType::kBiasAddWithAdd) ||
-        (fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu)) {
-      const Tensor &add_tensor = context->input(3);
-      context->set_output(0, add_tensor);
-      output = context->mutable_output(0);
-    } else {
-      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
+    // Extract addend tensor for binary add fusions (needed before output
+    // allocation)
+    if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
+        fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
+      addend = &context->input(3);  // Add tensor is input(3)
     }
+
+    // Allocate a separate output buffer to preserve addend data.
+    OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
     // Extract bias tensor
     const Tensor *bias = nullptr;
     if (fused_computation_ != FusedComputationType::kRelu) {
       bias = &context->input(2);  // BiasAdd is typically input(2)
-    }
-
-    // Extract addend tensor for residual connections
-    const Tensor *addend = nullptr;
-    if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
-        fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
-      addend = &context->input(3);  // Add tensor is input(3)
     }
 
     // Execute using ZenDNNL (supports both standard and depthwise)

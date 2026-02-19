@@ -505,20 +505,23 @@ class ZenMatMulOp : public OpKernel {
     }
 
     Tensor *out = nullptr;
+    const Tensor *addend = nullptr;
 
-    if ((fused_computation_ == FusedComputationType::kBiasAddWithAdd) ||
-        (fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu)) {
-      const Tensor &add_tensor = context->input(3);
-      context->set_output(0, add_tensor);
-      out = context->mutable_output(0);
-    } else {
-      OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &out));
+    // Extract addend tensor for binary add fusions (needed before output
+    // allocation)
+    if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
+        fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
+      addend = &context->input(3);  // Addend is the 4th input (index 3).
+    }
 
-      if (out->NumElements() == 0) {
-        // If a has shape [0, x] or b has shape [x, 0], the output shape
-        // is a 0-element matrix, so there is nothing to do.
-        return;
-      }
+    // Allocate separate output buffer to preserve addend data for fused
+    // operations
+    OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &out));
+
+    if (out->NumElements() == 0) {
+      // If a has shape [0, x] or b has shape [x, 0], the output shape
+      // is a 0-element matrix, so there is nothing to do.
+      return;
     }
 
     if (a.NumElements() == 0 && b.NumElements() == 0) {
@@ -538,17 +541,10 @@ class ZenMatMulOp : public OpKernel {
     bool zendnnl_success = false;
 
     const Tensor *bias = nullptr;
-    const Tensor *addend = nullptr;
 
     // Extract bias tensor for fusion types that need it
     if (is_fused && fused_computation_ != FusedComputationType::kRelu) {
       bias = &context->input(2);
-    }
-
-    // Extract addend tensor for binary add fusions.
-    if (fused_computation_ == FusedComputationType::kBiasAddWithAdd ||
-        fused_computation_ == FusedComputationType::kBiasAddWithAddAndRelu) {
-      addend = &context->input(3);  // Addend is the 4th input (index 3).
     }
 
     zendnnl_success =
