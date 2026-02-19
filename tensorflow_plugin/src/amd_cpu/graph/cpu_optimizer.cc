@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -89,7 +89,7 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf,
     bool dump_graph = false;
     ReadBoolFromEnvVar("ZENDNN_DUMP_GRAPH", false, &dump_graph);
     if (dump_graph) {
-      DumpGraphDefToFile("remapped_graph", graph_def, "./");
+      DumpGraphDefToFile("remapped_graph", graph_def, "./", true);
     }
     SET_STATUS_IF_ERROR(
         tf_status,
