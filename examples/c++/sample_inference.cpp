@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <cstdio>
 
 // Required headers from TF.
 #include <tensorflow/core/framework/graph.pb.h>         // for GraphDef.
@@ -67,7 +68,16 @@ int main(int argc, char const* argv[]) {
   int input_channels = argc > 7 ? atoi(argv[7]) : 3;
   int output_classes = argc > 8 ? atoi(argv[8]) : 1000;
   int inter_op_threads = 1;
-  int intra_op_threads = 64;
+  int intra_op_threads = 128;
+  {
+    FILE* pipe = popen("lscpu | grep 'Core(s)' | awk 'NF>1{print $NF}'", "r");
+    if (pipe) {
+      char buf[32];
+      if (fgets(buf, sizeof(buf), pipe))
+        intra_op_threads = atoi(buf);
+      pclose(pipe);
+    }
+  }
 
   // Initialize TF session and load the model.
   tf::Session* session;
