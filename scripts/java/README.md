@@ -45,15 +45,14 @@ sudo apt update && sudo apt install bazel-7.4.1
 ```
 
 ## Build TensorFlow-Java
-**Note:** As of now, zentf 5.2.0 supports only the `tf-2.20` branch of TensorFlow-Java, which must be built from source.
+**Note:** zentf 5.2.0 supports TensorFlow-Java v1.2.0-SNAPSHOT (TensorFlow v2.20.0), which must be built from source.
 
 A build script `build_tf_java.sh` is provided to automate this build process.
 
 The script performs the following steps:
 1. Clones the [TensorFlow-Java](https://github.com/tensorflow/java) repository.
 2. Verifies that all prerequisites (Bazel, Maven, Java) are installed.
-3. Checks out the `tf-2.20` branch.
-4. Builds TensorFlow-Java using Maven.
+3. Builds TensorFlow-Java using Maven.
 
 To run the build script:
 ```bash
