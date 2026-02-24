@@ -69,8 +69,8 @@ else
 fi
 echo ""
 
-# Checkout the tf-2.20 branch.
-git checkout tf-2.20
+# Checkout to the commit hash.
+git checkout 75402befedce0e1cf847b6f93d654b708a7db1db
 
 # Build TensorFlow Java.
 if ! mvn clean install; then
