@@ -93,7 +93,7 @@ $ git checkout r5.2
 >**Notes:**
 >* ```export ZENDNNL_MANYLINUX_BUILD=1``` is needed for build from source for RHEL/FEDORA/Almalinux/CentOS OS families.
 >* Configure & Build Tensorflow-ZenDNN Plug-in manually by following the steps [3-6].
- 
+
 ```
 The setup script will configure & build and install Tensorflow-ZenDNN Plug-in. It will also set the necessary environment variables of ZenDNN execution. However, these variables should be verified empirically.
 
@@ -183,17 +183,3 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 
 # Performance tuning and Benchmarking
 * zentf v5.2.0 is supported with ZenDNN v5.2.0. For detailed performance tuning guidelines, refer to the [Performance Tuning](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) section of the ZenDNN user guide.
-
-# Additional Utilities:
-
-## zentf attributes:
-To check the version of zentf use the following command:
-
-```bash
-python -c 'import zentf; print(zentf.__version__)'
-```
-
-To check the build config of zentf use the following command:
-```bash
-python -c 'import zentf; print(*zentf.__config__.split("\n"), sep="\n")'
-```
