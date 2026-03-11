@@ -22,9 +22,9 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "zendnnl_repo",
         build_file = "//third_party:zendnnl_cmake.BUILD",
-        sha256 = "bb15a2e1d0e18624848c4e345c84157c36994b7c40ea7b068079d24908bfe4e7",
-        strip_prefix = "ZenDNN-zendnn-2026-WW09",
-        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnn-2026-WW09.tar.gz"),
+        sha256 = "696526effceb564722097780788b0af7c571d85f2845aaffb349f5c2c2d431ab",
+        strip_prefix = "ZenDNN-zendnn-2026-WW10",
+        urls = tf_mirror_urls("https://github.com/amd/ZenDNN/archive/refs/tags/zendnn-2026-WW10.tar.gz"),
     )
 
     http_archive(
