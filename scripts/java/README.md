@@ -45,7 +45,7 @@ sudo apt update && sudo apt install bazel-7.4.1
 ```
 
 ## Build TensorFlow-Java
-**Note:** zentf 5.2.0 supports TensorFlow-Java v1.2.0-SNAPSHOT (TensorFlow v2.20.0), which must be built from source.
+**Note:** zentf 5.2.1 supports TensorFlow-Java v1.2.0-SNAPSHOT (TensorFlow v2.20.0), which must be built from source.
 
 A build script `build_tf_java.sh` is provided to automate this build process.
 
@@ -67,17 +67,17 @@ Plugin support is now available in TensorFlow Java as of version 1.2.0-SNAPSHOT.
 Note: TensorFlow-Java v1.2.0-SNAPSHOT supports TensorFlow v2.20.0.
 
 ### Set-up zentf plugin
-Download zentf C++ plugin package of 5.2.0 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
+Download zentf C++ plugin package of 5.2.1 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
 
 Set the environment variable 'LD_LIBRARY_PATH' with the path to zentf plugin libraries.
 ```bash
-unzip ZENTF_v5.2.0_C++_API.zip
-export LD_LIBRARY_PATH=<Path to zentf C++ parent folder>/ZENTF_v5.2.0_C++_API/lib-tensorflow-plugins
+unzip ZENTF_v5.2.1_C++_API.zip
+export LD_LIBRARY_PATH=<Path to zentf C++ parent folder>/ZENTF_v5.2.1_C++_API/lib-tensorflow-plugins
 ```
 
 Set ZenDNN specific environment variables as shown below,
 ```bash
-cd <Path to zentf C++ parent folder>/ZENTF_v5.2.0_C++_API
+cd <Path to zentf C++ parent folder>/ZENTF_v5.2.1_C++_API
 source zentf_env_setup.sh
 ```
 

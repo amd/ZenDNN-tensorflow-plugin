@@ -1,8 +1,8 @@
-__The latest ZenDNN Plugin for TensorFlow* (zentf) 5.2.0 is here!__
+__The latest ZenDNN Plugin for TensorFlow* (zentf) 5.2.1 is here!__
 
 The ZenDNN plugin for TensorFlow is called zentf.
 
-The zentf 5.2.0 plugin works seamlessly with TensorFlow version 2.20.0, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.2.1 plugin works seamlessly with TensorFlow version 2.20.0, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 

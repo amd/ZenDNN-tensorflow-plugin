@@ -30,7 +30,7 @@ from setuptools.dist import Distribution
 # result for pip.
 # Also update tensorflow/amd_cpu_plugin.bzl and
 # tensorflow/core/public/version.h
-_VERSION = '5.2.0'
+_VERSION = '5.2.1'
 # this path can't be modified.
 _PLUGIN_LIB_PATH = 'tensorflow-plugins'
 _MY_PLUGIN_PATH = 'zentf'
