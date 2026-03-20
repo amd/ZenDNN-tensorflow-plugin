@@ -71,8 +71,8 @@ jobs:
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
-      ZENDNN_TF_VERSION: '2.20.0'
-      NATIVE_TF_VERSION: '2.20.0'
+      ZENDNN_TF_VERSION: '2.21.0'
+      NATIVE_TF_VERSION: '2.21.0'
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
       blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
       blis_release_version: 'AOCL-Sep2025-b1'
@@ -483,8 +483,8 @@ jobs:
     env:
       PYTHON_VERSION: '3.10'
       ZENDNN_VERSION: '5.2.0'
-      ZENDNN_TF_VERSION: '2.20.0'
-      NATIVE_TF_VERSION: '2.20.0'
+      ZENDNN_TF_VERSION: '2.21.0'
+      NATIVE_TF_VERSION: '2.21.0'
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
       blis_release_hash: '9d639f1a874492ac7668cba2c25623eb6dca7203a4aeae757ce7e62ca87bc319'
       blis_release_version: 'AOCL-Sep2025-b1'
