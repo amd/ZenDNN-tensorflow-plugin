@@ -183,3 +183,17 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 
 # Performance tuning and Benchmarking
 * zentf v5.2.1 is supported with ZenDNN v5.2.1. For detailed performance tuning guidelines, refer to the [Performance Tuning](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) section of the ZenDNN user guide.
+
+# Additional Utilities:
+
+## zentf attributes:
+To check the version of zentf use the following command:
+
+```bash
+python -c 'import zentf; print(zentf.__version__)'
+```
+
+To check the build config of zentf use the following command:
+```bash
+python -c 'import zentf; print(*zentf.__config__.split("\n"), sep="\n")'
+```
