@@ -15,6 +15,11 @@ amd_cpu_plugin_workspace()
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 protobuf_deps()
+# rules_java 8.6.1 requires compatibility_proxy to be set up
+load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
+rules_java_dependencies()
+load("@rules_java//java:repositories.bzl", "rules_java_toolchains")
+rules_java_toolchains()
 load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()
 load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies")

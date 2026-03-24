@@ -4,7 +4,7 @@ __The latest ZenDNN Plugin for TensorFlow* (zentf) 5.2.1 is here!__
 
 The ZenDNN plugin for TensorFlow is called zentf.
 
-The zentf 5.2.1 plugin works seamlessly with TensorFlow version 2.20.0, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
+The zentf 5.2.1 plugin works seamlessly with TensorFlow version 2.21.0, offering a high-performance experience for deep learning on AMD EPYC™ platforms.
 
 ## Support
 
@@ -36,8 +36,8 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 | :--------------: | :-----: |
 | [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) | 7.4.1 |
 | Git | >=1.8 |
-| Python | >=3.9 and <=3.13 |
-| [TensorFlow](https://www.tensorflow.org/) | 2.20.0 |
+| Python | >=3.10 and <=3.13 |
+| [TensorFlow](https://www.tensorflow.org/) | 2.21.0 |
 
 # Installation Guide
 
@@ -45,13 +45,13 @@ This section explains how to use the Python interface. For Java and C++ interfac
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.20.0-zendnn-v5.2.1-rel-env python=3.10 -y
-  $ conda activate tf-v2.20.0-zendnn-v5.2.1-rel-env
+  $ conda create -n tf-v2.21.0-zendnn-v5.2.1-rel-env python=3.10 -y
+  $ conda activate tf-v2.21.0-zendnn-v5.2.1-rel-env
   ```
   > **Note:** Python 3.10 used here for example.
-* Install TensorFlow v2.20.0
+* Install TensorFlow v2.21.0
   ```
-  $ pip install tensorflow==2.20.0
+  $ pip install tensorflow==2.21.0
   ```
 ## Install from binaries.
 

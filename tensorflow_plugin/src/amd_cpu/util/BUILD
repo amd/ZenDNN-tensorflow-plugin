@@ -28,7 +28,6 @@ cc_library(
         "@com_google_absl//absl/log:log_sink",
         "@com_google_absl//absl/log:vlog_is_on",
         "@com_google_absl//absl/log:globals",
-        "@com_google_absl//absl/utility:if_constexpr",
          # Abseil status
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/synchronization",

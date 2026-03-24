@@ -518,7 +518,7 @@ def retrieve_bazel_version():
 
   print('You have bazel %s installed.' % curr_version)
 
-  supported_version = '7.4.1'
+  supported_version = '7.7.0'
   supported_version_int = convert_version_to_int(supported_version)
   if curr_version_int != supported_version_int:
     print('WARNING: current bazel installation is not a supported version.')

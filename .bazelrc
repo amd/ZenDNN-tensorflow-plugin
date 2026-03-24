@@ -17,6 +17,7 @@ build --define=build_with_zendnn=true
 build --define=build_with_openmp=true
 build --copt=-fopenmp
 build --cxxopt=-std=c++17
+build --host_cxxopt=-std=c++17
 build -c opt
 
 # Ignore below folders while -Werror check since

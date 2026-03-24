@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022-2023 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -137,6 +137,9 @@ class Condition {
 };
 
 // Mimic a subset of the std::unique_lock<amd_cpu_plugin::mutex> functionality.
+#ifdef mutex_lock
+#undef mutex_lock
+#endif
 class TF_SCOPED_LOCKABLE mutex_lock {
  public:
   typedef ::amd_cpu_plugin::mutex mutex_type;
@@ -177,6 +180,9 @@ class TF_SCOPED_LOCKABLE mutex_lock {
 
 // Mimic a subset of the std::shared_lock<amd_cpu_plugin::mutex> functionality.
 // Name chosen to minimize conflicts with the tf_shared_lock macro, below.
+#ifdef tf_shared_lock
+#undef tf_shared_lock
+#endif
 class TF_SCOPED_LOCKABLE tf_shared_lock {
  public:
   typedef ::amd_cpu_plugin::mutex mutex_type;

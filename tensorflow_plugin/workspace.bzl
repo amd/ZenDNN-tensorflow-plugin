@@ -35,13 +35,13 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     )
 
     # https://github.com/bazelbuild/bazel-skylib/releases
+    # Updated to 1.7.1 for TF 2.21 / protobuf v6.31.1 (needs paths.is_normalized)
     http_archive(
         name = "bazel_skylib",
-        sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
-        urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-        ],
+        sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+        urls = tf_mirror_urls(
+            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+        ),
     )
 
     http_archive(
@@ -70,22 +70,48 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
         urls = tf_mirror_urls("https://github.com/bazelbuild/rules_cc/releases/download/0.0.17/rules_cc-0.0.17.tar.gz"),
     )
 
-    # rules_java must come before com_google_protobuf for compatibility proxy resolution.
+    # Protobuf v6.31.1 requires rules_java 8.6.1 (see protobuf_deps.bzl)
+    # rules_java 8.6.1 archive has no top-level directory
     tf_http_archive(
         name = "rules_java",
-        sha256 = "7eb8f5cc499d14a57a33f445deb17615905554a5e5a4d4cfbe8d86e019f26ee1",
-        strip_prefix = "rules_java-5.3.5",
-        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_java/archive/5.3.5.tar.gz"),
+        sha256 = "c5bc17e17bb62290b1fd8fdd847a2396d3459f337a7e07da7769b869b488ec26",
+        urls = tf_mirror_urls("https://github.com/bazelbuild/rules_java/releases/download/8.6.1/rules_java-8.6.1.tar.gz"),
     )
 
-    http_archive(
+    # Abseil LTS 20250814.1 (TF 2.21 version)
+    SYS_DIRS = [
+        "algorithm",
+        "base",
+        "cleanup",
+        "container",
+        "debugging",
+        "flags",
+        "functional",
+        "hash",
+        "memory",
+        "meta",
+        "numeric",
+        "random",
+        "status",
+        "strings",
+        "synchronization",
+        "time",
+        "types",
+        "utility",
+    ]
+    SYS_LINKS = {
+        "//third_party/absl:system.absl.{name}.BUILD".format(name = n): "absl/{name}/BUILD.bazel".format(name = n)
+        for n in SYS_DIRS
+    }
+
+    tf_http_archive(
         name = "com_google_absl",
-        sha256 = "16242f394245627e508ec6bb296b433c90f8d914f73b9c026fddb905e27276e8",
-        strip_prefix = "abseil-cpp-20250127.0",
-        urls = [
-            "https://mirror.bazel.build/github.com/abseil/abseil-cpp/archive/refs/tags/20250127.0.tar.gz",
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250127.0.tar.gz",
-        ],
+        sha256 = "d1abe9da2003e6cbbd7619b0ced3e52047422f4f4ac6c66a9bef5d2e99fea837",
+        build_file = clean_dep("//third_party/absl:com_google_absl.BUILD"),
+        system_build_file = clean_dep("//third_party/absl:system.BUILD"),
+        system_link_files = SYS_LINKS,
+        strip_prefix = "abseil-cpp-d38452e1ee03523a208362186fd42248ff2609f6",
+        urls = tf_mirror_urls("https://github.com/abseil/abseil-cpp/archive/d38452e1ee03523a208362186fd42248ff2609f6.tar.gz"),
     )
 
     http_archive(
@@ -101,9 +127,9 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
     tf_http_archive(
         name = "eigen_archive",
         build_file = clean_dep("//third_party:eigen.BUILD"),
-        sha256 = "df23a89e4cdfa7de2d81ee28190bd194413e47ff177c94076f845b32d7280344",  # SHARED_EIGEN_SHA
-        strip_prefix = "eigen-5dc2fbabeee17fe023c38756ebde0c1d56472913",
-        urls = tf_mirror_urls("https://gitlab.com/libeigen/eigen/-/archive/5dc2fbabeee17fe023c38756ebde0c1d56472913/eigen-5dc2fbabeee17fe023c38756ebde0c1d56472913.tar.gz"),
+        sha256 = "a71517b3815984c1a8174db1ebc58a17d4f5c23c06e377bbc4a5dfc85855a516",  # SHARED_EIGEN_SHA
+        strip_prefix = "eigen-dcbaf2d608f306450f1e74949eb87e9a22a7ef4b",
+        urls = tf_mirror_urls("https://gitlab.com/libeigen/eigen/-/archive/dcbaf2d608f306450f1e74949eb87e9a22a7ef4b/eigen-dcbaf2d608f306450f1e74949eb87e9a22a7ef4b.tar.gz"),
     )
 
     tf_http_archive(
@@ -124,16 +150,17 @@ def amd_cpu_plugin_workspace(path_prefix = "", tf_repo_name = ""):
         urls = tf_mirror_urls("https://zlib.net/zlib-1.3.1.tar.gz"),
     )
 
-    tf_http_archive(
+    # Use http_archive (not tf_http_archive) to enable repo_mapping
+    # repo_mapping ensures protobuf's @abseil-cpp references resolve to @com_google_absl
+    # This prevents dual abseil repos and undeclared inclusion errors
+    http_archive(
         name = "com_google_protobuf",
-        sha256 = "f645e6e42745ce922ca5388b1883ca583bafe4366cc74cf35c3c9299005136e2",
-        strip_prefix = "protobuf-5.28.3",
-        system_build_file = clean_dep("//third_party/systemlibs:protobuf.BUILD"),
-        system_link_files = {
-            "//third_party/systemlibs:protobuf.bzl": "protobuf.bzl",
-            "//third_party/systemlibs:protobuf_deps.bzl": "protobuf_deps.bzl",
+        sha256 = "6e09bbc950ba60c3a7b30280210cd285af8d7d8ed5e0a6ed101c72aff22e8d88",
+        strip_prefix = "protobuf-6.31.1",
+        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/refs/tags/v6.31.1.zip"),
+        repo_mapping = {
+            "@abseil-cpp": "@com_google_absl",
         },
-        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v5.28.3.zip"),
     )
 
     tf_http_archive(

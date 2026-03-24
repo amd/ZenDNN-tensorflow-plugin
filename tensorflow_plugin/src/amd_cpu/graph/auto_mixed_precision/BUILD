@@ -16,6 +16,7 @@ cc_library(
         "//tensorflow_plugin/src/amd_cpu/util:common_utils",
         "//tensorflow_plugin/src/amd_cpu:protos_all_cc",
         "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
+        "@com_google_absl//absl/log:check",
     ],
     alwayslink = True,
 )
