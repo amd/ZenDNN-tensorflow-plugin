@@ -1,8 +1,9 @@
 build --define=use_fast_cpp_protos=true
 build --define=allow_oversize_protos=true
 
-# bzlmod is default for bazel v7.4.1 so, disabling it.
+# bzlmod is default for bazel v7+ so, disabling it.
 build --noenable_bzlmod
+
 build --spawn_strategy=standalone
 # build --strategy=Genrule=standalone
 build -c opt

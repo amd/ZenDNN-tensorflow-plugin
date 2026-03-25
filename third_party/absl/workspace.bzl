@@ -1,16 +1,17 @@
-"""Provides the repository macro to import absl."""
+"""Provides the repository macro to import absl.
+
+NOTE: This file is NOT used by the current build system.
+Abseil is defined inline in each version_configs/tf_*/workspace.bzl.
+This file is kept for reference only.
+"""
 
 load("//third_party:repo.bzl", "tf_http_archive", "tf_mirror_urls")
 
 def repo():
     """Imports absl."""
 
-    # Attention: tools parse and update these lines.
-    # LINT.IfChange
-    # Updated for TF 2.21.0: Abseil LTS 20250814.1 (commit d38452e1...)
     ABSL_COMMIT = "d38452e1ee03523a208362186fd42248ff2609f6"
     ABSL_SHA256 = "d1abe9da2003e6cbbd7619b0ced3e52047422f4f4ac6c66a9bef5d2e99fea837"
-    # LINT.ThenChange(//tensorflow/lite/tools/cmake/modules/abseil-cpp.cmake)
 
     SYS_DIRS = [
         "algorithm",

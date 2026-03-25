@@ -22,13 +22,11 @@ cc_library(
         "@com_google_absl//absl/container:inlined_vector",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/container:btree",
-         # Abseil logging
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:log_sink",
         "@com_google_absl//absl/log:vlog_is_on",
         "@com_google_absl//absl/log:globals",
-         # Abseil status
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:optional",
@@ -37,7 +35,10 @@ cc_library(
         "@local_config_tf//:protos_all",
         "@local_config_tf//:tf_header_lib",
         "@nsync//:nsync_cpp",
-    ],
+    ] + select({
+        "//tensorflow_plugin:tf_version_2_21": [],
+        "//conditions:default": ["@com_google_absl//absl/utility:if_constexpr"],
+    }),
 )
 
 cc_library(

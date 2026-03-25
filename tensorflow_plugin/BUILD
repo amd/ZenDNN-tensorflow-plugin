@@ -42,3 +42,9 @@ config_setting(
     define_values = {"tf_main_version": "2.12"},
     visibility = ["//visibility:public"],
 )
+
+config_setting(
+    name = "tf_version_2_21",
+    define_values = {"tf_main_version": "2.21"},
+    visibility = ["//visibility:public"],
+)

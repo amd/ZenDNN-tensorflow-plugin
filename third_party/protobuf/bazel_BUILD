@@ -1,0 +1,3 @@
+# Stub BUILD file for protobuf v3 compatibility with rules_cc 0.0.17.
+# rules_cc 0.0.17 expects @com_google_protobuf//bazel:cc_proto_library.bzl
+# which only exists in protobuf v5+. This stub satisfies that requirement.

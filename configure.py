@@ -49,6 +49,7 @@ _TF_BAZELRC_FILENAME = '.tf_plugin_configure.bazelrc'
 _TF_WORKSPACE_ROOT = ''
 _TF_BAZELRC = ''
 _TF_CURRENT_BAZEL_VERSION = None
+_TF_MINOR_VERSION = None
 
 NCCL_LIB_PATHS = [
     'lib64/', 'lib/powerpc64le-linux-gnu/', 'lib/x86_64-linux-gnu/', ''
@@ -268,15 +269,21 @@ def setup_python(environ_cp):
   version = version.split(".dev")[0]
   version = version.split("rc")[0]
   version = version.split(".post")[0]
+  global _TF_MINOR_VERSION
   current_tensorflow_version = convert_version_to_int(version)
   tf_major_version = version.split(".")[0]
   tf_minor_version = version.split(".")[1]
+  _TF_MINOR_VERSION = int(tf_minor_version)
   write_to_bazelrc('build --define=tf_main_version=' + tf_major_version +
                     '.' + tf_minor_version)
   min_tf_version = convert_version_to_int("2.16.0")
+  max_tf_version = convert_version_to_int("2.21.0")
   if current_tensorflow_version < min_tf_version:
     print('Make sure you installed tensorflow version >= 2.16.0')
     sys.exit(1)
+  if current_tensorflow_version > max_tf_version:
+    print('WARNING: TensorFlow %s is newer than the latest tested version '
+          '(2.21.0). Build may not work correctly.' % version)
 
   # Write tools/python_bin_path.sh
   with open(
@@ -293,6 +300,132 @@ def create_build_configuration(environ_cp):
   write_action_env_to_bazelrc("TF_HEADER_DIR", tf_header_dir)
   write_action_env_to_bazelrc("TF_SHARED_LIBRARY_DIR", tf_shared_lib_dir)
   write_action_env_to_bazelrc("TF_CXX11_ABI_FLAG", 1)
+
+
+def _get_version_config_dir(tf_minor):
+  """Return the version_configs subdirectory name for the given TF minor version.
+
+  Falls back to the nearest available config if an exact match doesn't exist.
+  Only TF 2.16-2.21 are supported; versions outside this range are rejected
+  by setup_python() before this function is called.
+  """
+  candidate = 'tf_2.%d' % tf_minor
+  config_path = os.path.join(_TF_WORKSPACE_ROOT, 'version_configs', candidate)
+  if os.path.isdir(config_path):
+    return candidate
+
+  # Fall back: 2.16-2.19 uses tf_2.19, 2.20 uses tf_2.20, >= 2.21 uses tf_2.21
+  if 16 <= tf_minor <= 19:
+    return 'tf_2.19'
+  elif tf_minor == 20:
+    return 'tf_2.20'
+  else:
+    return 'tf_2.21'
+
+
+def _get_zentf_version(tf_minor):
+  """Return the zentf package version for the given TF minor version."""
+  return '5.2.1'
+
+
+def _get_bazel_version_for_tf(tf_minor):
+  """Return the required Bazel version string for the given TF minor version.
+
+  Although TF 2.16-2.19 were originally built with Bazel 6.5.0, zentf's own
+  build dependencies (rules_cc 0.0.17, abseil 20250127.0) require Bazel 7+.
+  This is safe because zentf only links against TF's pre-built headers and
+  shared library from the pip package -- it does not rebuild TensorFlow itself.
+  """
+  if tf_minor <= 20:
+    return '7.4.1'
+  else:
+    return '7.7.0'
+
+
+def apply_version_config(tf_minor):
+  """Copy version-specific build files based on the detected TF version.
+
+  This swaps workspace.bzl, WORKSPACE, build_config.bzl, BUILD.tpl, and
+  .bazelversion to match the target TensorFlow version before Bazel runs.
+  """
+  config_name = _get_version_config_dir(tf_minor)
+  config_dir = os.path.join(_TF_WORKSPACE_ROOT, 'version_configs', config_name)
+
+  if not os.path.isdir(config_dir):
+    print(
+        'WARNING: version_configs/%s not found, '
+        'skipping version config.' % config_name)
+    return
+
+  tf_ver_str = '2.%d' % tf_minor
+  print(
+      'Configuring build for TensorFlow %s (config: %s)'
+      % (tf_ver_str, config_name))
+
+  file_mappings = {
+      'workspace.bzl': os.path.join('tensorflow_plugin', 'workspace.bzl'),
+      'WORKSPACE': 'WORKSPACE',
+      'build_config_util.bzl': os.path.join(
+          'tensorflow_plugin', 'src', 'amd_cpu', 'util', 'build_config.bzl'),
+      'BUILD.tpl': os.path.join(
+          'third_party', 'tf_dependency', 'BUILD.tpl'),
+  }
+
+  # Note: abseil version is kept modern for all TF versions since the
+  # current codebase requires absl/log targets from newer abseil releases.
+
+  for src_name, dest_rel in file_mappings.items():
+    src_path = os.path.join(config_dir, src_name)
+    dst_path = os.path.join(_TF_WORKSPACE_ROOT, dest_rel)
+    if os.path.exists(src_path):
+      shutil.copy2(src_path, dst_path)
+      print('  Copied %s -> %s' % (src_name, dest_rel))
+    else:
+      print('  WARNING: %s not found in %s' % (src_name, config_dir))
+
+  # Set .bazelversion
+  bazel_ver = _get_bazel_version_for_tf(tf_minor)
+  bazelversion_path = os.path.join(_TF_WORKSPACE_ROOT, '.bazelversion')
+  with open(bazelversion_path, 'w') as f:
+    f.write(bazel_ver + '\n')
+  print('  Set .bazelversion to %s' % bazel_ver)
+
+  # All TF versions use Bazel 7+, so --noenable_bzlmod is always needed
+  bazelrc_path = os.path.join(_TF_WORKSPACE_ROOT, '.bazelrc')
+  if os.path.exists(bazelrc_path):
+    with open(bazelrc_path, 'r') as f:
+      bazelrc_content = f.read()
+
+    if 'noenable_bzlmod' not in bazelrc_content:
+      bazelrc_content = bazelrc_content.replace(
+          'build --define=allow_oversize_protos=true\n',
+          'build --define=allow_oversize_protos=true\n\n'
+          '# bzlmod is default for bazel v7+ so, disabling it.\n'
+          'build --noenable_bzlmod\n',
+          1)
+      with open(bazelrc_path, 'w') as f:
+        f.write(bazelrc_content)
+      print('  Added --noenable_bzlmod to .bazelrc')
+
+  # Set zentf package version in setup.py
+  zentf_ver = _get_zentf_version(tf_minor)
+  setup_py_path = os.path.join(
+      _TF_WORKSPACE_ROOT, 'tensorflow_plugin',
+      'tools', 'pip_package', 'setup.py')
+  if os.path.exists(setup_py_path):
+    with open(setup_py_path, 'r') as f:
+      setup_content = f.read()
+    import re as _re
+    new_content = _re.sub(
+        r"_VERSION = '[^']*'",
+        "_VERSION = '%s'" % zentf_ver,
+        setup_content)
+    if new_content != setup_content:
+      with open(setup_py_path, 'w') as f:
+        f.write(new_content)
+      print('  Set zentf version to %s in setup.py' % zentf_ver)
+
+  print('Version configuration complete for TensorFlow %s\n' % tf_ver_str)
 
 
 def reset_tf_configure_bazelrc():
@@ -489,8 +622,12 @@ def convert_version_to_int(version):
   return int(version_str)
 
 
-def retrieve_bazel_version():
-  """Retrieve installed bazel version (or bazelisk).
+def retrieve_bazel_version(tf_minor=None):
+  """Retrieve installed bazel version (or bazelisk) and check compatibility.
+
+  Args:
+    tf_minor: The TF minor version number, used to determine the expected
+              Bazel version. If None, defaults to expecting 7.7.0.
 
   Returns:
     The bazel version detected.
@@ -511,18 +648,24 @@ def retrieve_bazel_version():
 
   curr_version_int = convert_version_to_int(curr_version)
 
-  # Check if current bazel version can be detected properly.
   if not curr_version_int:
     print('WARNING: current bazel installation is not a release version.')
     return curr_version
 
   print('You have bazel %s installed.' % curr_version)
 
-  supported_version = '7.7.0'
+  if tf_minor is not None:
+    supported_version = _get_bazel_version_for_tf(tf_minor)
+  else:
+    supported_version = '7.7.0'
+
   supported_version_int = convert_version_to_int(supported_version)
   if curr_version_int != supported_version_int:
-    print('WARNING: current bazel installation is not a supported version.')
+    print('WARNING: current bazel installation is not the supported version '
+          'for TensorFlow 2.%s.' % (tf_minor if tf_minor else '21+'))
     print('Supported version is %s' % supported_version)
+    print('If using bazelisk, .bazelversion has been set to %s and '
+          'the correct version will be used automatically.' % supported_version)
 
   return curr_version
 
@@ -1107,18 +1250,26 @@ def main():
   # environment variables.
   environ_cp = dict(os.environ)
 
+  reset_tf_configure_bazelrc()
+
+  cleanup_makefile()
+  setup_python(environ_cp)
+
+  # Apply version-specific configuration based on detected TF version.
+  # This must happen BEFORE bazel version check, since it writes .bazelversion.
+  if _TF_MINOR_VERSION is not None:
+    apply_version_config(_TF_MINOR_VERSION)
+  else:
+    print('WARNING: Could not determine TF minor version, using defaults.')
+
   try:
-    current_bazel_version = retrieve_bazel_version()
+    current_bazel_version = retrieve_bazel_version(tf_minor=_TF_MINOR_VERSION)
   except subprocess.CalledProcessError as e:
     print('Error retrieving bazel version: ', e.output.decode('UTF-8').strip())
     raise e
 
   _TF_CURRENT_BAZEL_VERSION = convert_version_to_int(current_bazel_version)
 
-  reset_tf_configure_bazelrc()
-
-  cleanup_makefile()
-  setup_python(environ_cp)
   create_build_configuration(environ_cp)
 
   if is_windows():
