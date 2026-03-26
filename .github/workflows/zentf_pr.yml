@@ -69,8 +69,8 @@ jobs:
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}} 
     env:
-      PYTHON_VERSION: '3.10'
-      ZENDNN_VERSION: '5.2.0'
+      PYTHON_VERSION: '3.12'
+      ZENDNN_VERSION: '5.2.1'
       ZENDNN_TF_VERSION: '2.21.0'
       NATIVE_TF_VERSION: '2.21.0'
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
@@ -481,8 +481,8 @@ jobs:
     runs-on: [amd-zenai-arc-xlarge-dind]
     if: ${{ github.event_name == 'push' }}
     env:
-      PYTHON_VERSION: '3.10'
-      ZENDNN_VERSION: '5.2.0'
+      PYTHON_VERSION: '3.12'
+      ZENDNN_VERSION: '5.2.1'
       ZENDNN_TF_VERSION: '2.21.0'
       NATIVE_TF_VERSION: '2.21.0'
       KERNELS_LIST: "avgpool maxpool softmax conv2d fusedConv2D fusedDepthwiseConv2d fused_matmul matmul"
