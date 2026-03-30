@@ -118,7 +118,6 @@ cmake(
     out_static_libs = [
         "libzendnnl_archive.a",
         "libaoclutils.a",
-        "libau_cpuid.a",
         "libdnnl.a",
         "libaocl-dlp.a",
         "libfbgemm.a",
@@ -200,9 +199,8 @@ cmake(
             LIB_DIR="lib"
         fi
 
-        # Copy AOCL Utils libraries.
+        # Copy AOCL Utils library.
         copy_lib "$INSTALL_BASE/deps/aoclutils/$LIB_DIR/libaoclutils.a" "libaoclutils.a" "AOCL Utils library"
-        copy_lib "$INSTALL_BASE/deps/aoclutils/$LIB_DIR/libau_cpuid.a" "libau_cpuid.a" "AOCL CPUID library"
 
         # Copy OneDNN library.
         copy_lib "$INSTALL_BASE/deps/onednn/$LIB_DIR/libdnnl.a" "libdnnl.a" "OneDNN library"
@@ -249,5 +247,6 @@ cmake(
         echo "=== ZenDNNL Post-build completed successfully ==="
     """,
 
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
