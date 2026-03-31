@@ -134,8 +134,8 @@ int main(int argc, char const* argv[]) {
   }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration =
-      std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-  float time_tmp = duration.count() / iter;
+      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  float time_tmp = static_cast<float>(duration.count()) / iter / 1000.0f;
   std::time_t start_time = std::chrono::system_clock::to_time_t(start);
   std::time_t stop_time = std::chrono::system_clock::to_time_t(stop);
   std::cout << "Start  " << std::ctime(&start_time) << "Stop "
