@@ -41,7 +41,7 @@ Refer to the [support matrix](https://www.amd.com/en/developer/zendnn.html#getti
 
 # Installation Guide
 
-This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder.
+This section explains how to use the Python interface. For Java and C++ interfaces, kindly look inside the respective folders within the [scripts](./scripts/) folder. To build the C++ package from source, see the [C++ Build from Source Guide](./scripts/c++/BUILD_FROM_SOURCE.md).
 > **Note:** zentf is build compatible with TensorFlow versions 2.16.0 through 2.21.0. The `./configure` script auto-detects the installed TensorFlow version and applies the matching build configuration.
 
 ## Prerequisite
