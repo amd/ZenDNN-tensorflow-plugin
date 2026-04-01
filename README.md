@@ -8,7 +8,7 @@ The zentf 5.2.1 plugin works seamlessly with TensorFlow version 2.21.0, offering
 
 ## Support
 
-We welcome feedback, suggestions, and bug reports. Should you have any of the these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page: https://github.com/amd/ZenDNN-tensorflow-plugin/issues
+We welcome feedback, suggestions, and bug reports. Should you have any of these, please kindly file an issue on the ZenDNN Plugin for TensorFlow Github page: https://github.com/amd/ZenDNN-tensorflow-plugin/issues
 
 ## License
 
@@ -56,11 +56,10 @@ This section explains how to use the Python interface. For Java and C++ interfac
   $ pip install tensorflow==2.21.0
   ```
 ## Install from binaries.
->Note: Use TensorFlow v2.20 for pre-build binaries.
 
 ### 1. Install wheel file using pip:
 ```
-$ pip install zentf==5.2.0
+$ pip install zentf==5.2.1
 ```
 ### 2. Install zentf using release package.
 
@@ -70,9 +69,9 @@ $ pip install zentf==5.2.0
   > **Note:** We are taking an example for release package with Python version 3.10.
 
   ```
-  $ unzip ZENTF_v5.2.0_Python_v3.10.zip
-  $ cd ZENTF_v5.2.0_Python_v3.10/
-  $ pip install zentf-5.2.0-cp310-cp310-manylinux_2_28_x86_64.whl
+  $ unzip ZENTF_v5.2.1_Python_v3.10.zip
+  $ cd ZENTF_v5.2.1_Python_v3.10/
+  $ pip install zentf-5.2.1-cp310-cp310-manylinux_2_28_x86_64.whl
   ```
 
 * To use the recommended environment settings, execute :
@@ -86,9 +85,9 @@ $ pip install zentf==5.2.0
 $ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
 $ cd ZenDNN-tensorflow-plugin/
 ```
-Note: Repository is defaults to main branch, to build the version 5.2.0 checkout the r5.2 branch.
+Note: Repository defaults to main branch, to build the version 5.2.1 checkout the r5.2.1 branch.
 ```
-$ git checkout r5.2
+$ git checkout r5.2.1
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
@@ -102,7 +101,6 @@ The setup script will configure & build and install Tensorflow-ZenDNN Plug-in. I
 
 ZenDNN-tensorflow-plugin$ source scripts/zentf_setup.sh
 ```
-> Note: Build from source on main branch will generate the binary as zentf-5.2.1-cp310-cp310-linux_x86_64.whl
 
 ### 3. Configure the build options:
 ```
@@ -138,7 +136,6 @@ ZenDNN-tensorflow-plugin$ bazel-bin/tensorflow_plugin/tools/pip_package/build_pi
 ```
 ZenDNN-tensorflow-plugin$ pip install zentf-5.2.1-cp310-cp310-linux_x86_64.whl
 ```
-> Note: If r5.2 branch is used to build from source, then the binary would be as zentf-5.2.0-cp310-cp310-linux_x86_64.whl
 
 **The build and installation from source is done!**
 
@@ -187,7 +184,7 @@ random_normal/stddev: (Const): /job:localhost/replica:0/task:0/device:CPU:0
 * [AMD-TensorFlow blog](https://blog.tensorflow.org/2023/03/enabling-optimal-inference-performance-on-amd-epyc-processors-with-the-zendnn-library.html)
 
 # Performance tuning and Benchmarking
-* zentf v5.2 is supported with ZenDNN v5.2. For detailed performance tuning guidelines, refer to the [Performance Tuning](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) section of the ZenDNN user guide.
+* zentf v5.2.1 is supported with ZenDNN v5.2.1. For detailed performance tuning guidelines, refer to the [Performance Tuning](https://docs.amd.com/r/en-US/57300-ZenDNN-user-guide/Performance-Tuning) section of the ZenDNN user guide.
 
 # Additional Utilities:
 
