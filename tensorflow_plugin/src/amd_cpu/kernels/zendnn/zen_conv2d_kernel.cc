@@ -22,6 +22,7 @@ limitations under the License.
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <utility>
 #include <vector>
 // TensorFlow plug-in headers
 #include "tensorflow_plugin/src/amd_cpu/kernels/zendnn/zen_conv_kernel.h"
@@ -148,7 +149,7 @@ bool TryExecuteZenDNNLConv2D(
         relu_po.po_type = post_op_type_t::relu;
         relu_po.alpha = 0.0f;
         relu_po.beta = 0.0f;
-        conv_params.postop_.push_back(relu_po);
+        conv_params.postop_.push_back(std::move(relu_po));
         break;
       }
       case FusedComputationType::kBiasAddWithRelu6: {
@@ -157,7 +158,7 @@ bool TryExecuteZenDNNLConv2D(
         relu6_po.po_type = post_op_type_t::clip;
         relu6_po.alpha = 0.0f;
         relu6_po.beta = 6.0f;
-        conv_params.postop_.push_back(relu6_po);
+        conv_params.postop_.push_back(std::move(relu6_po));
         break;
       }
       case FusedComputationType::kBiasAddWithLeakyRelu: {
@@ -166,7 +167,7 @@ bool TryExecuteZenDNNLConv2D(
         leaky_po.po_type = post_op_type_t::leaky_relu;
         leaky_po.alpha = 0.2f;  // Default LeakyRelu alpha, can be customized
         leaky_po.beta = 0.0f;
-        conv_params.postop_.push_back(leaky_po);
+        conv_params.postop_.push_back(std::move(leaky_po));
         break;
       }
       case FusedComputationType::kBiasAddWithAdd: {
@@ -184,7 +185,7 @@ bool TryExecuteZenDNNLConv2D(
         add_po.buff = static_cast<void*>(addend_data);
         add_po.dtype = (std::is_same<T, float>::value) ? data_type_t::f32
                                                        : data_type_t::bf16;
-        conv_params.postop_.push_back(add_po);
+        conv_params.postop_.push_back(std::move(add_po));
         break;
       }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
@@ -203,14 +204,14 @@ bool TryExecuteZenDNNLConv2D(
         add_po.buff = static_cast<void*>(addend_data);
         add_po.dtype = (std::is_same<T, float>::value) ? data_type_t::f32
                                                        : data_type_t::bf16;
-        conv_params.postop_.push_back(add_po);
+        conv_params.postop_.push_back(std::move(add_po));
 
         // Then relu post-op
         conv_postop relu_po;
         relu_po.po_type = post_op_type_t::relu;
         relu_po.alpha = 0.0f;
         relu_po.beta = 0.0f;
-        conv_params.postop_.push_back(relu_po);
+        conv_params.postop_.push_back(std::move(relu_po));
         break;
       }
       default:
@@ -306,6 +307,7 @@ class ZenConv2DOp : public OpKernel {
       } else {
         LogZenDNNLSuccess("_ZenConv2D");
       }
+      zendnnl::error_handling::apilog_info("_ZenConv2D Compute completed");
       return;
     } else {
       LogZenDNNLFallback(
@@ -324,8 +326,6 @@ class ZenConv2DOp : public OpKernel {
                            ", Output shape: ", out_shape.DebugString()));
       return;  // Unreachable, but explicit
     }
-
-    zendnnl::error_handling::apilog_info("_ZenConv2D Compute completed");
   }
 
  protected:
