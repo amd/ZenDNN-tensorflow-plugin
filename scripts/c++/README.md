@@ -19,16 +19,16 @@ You can download zentf C++ package from [AMD Developer Forum](https://www.amd.co
 
 ### 1. Unzip the package
 ```
-$ unzip <cpp_package_name>.zip
-$ cd <cpp_package_name>/
+unzip <cpp_package_name>.zip
+cd <cpp_package_name>/
 ```
 ### 2. Set required library path
 ```
-$ source zentf_cc_api_setup.sh
+source zentf_cc_api_setup.sh
 ```
 ### 3. Set ZenDNN specific environment variables
 ```
-$ source zentf_env_setup.sh
+source zentf_env_setup.sh
 ```
 Set up is done!
 
