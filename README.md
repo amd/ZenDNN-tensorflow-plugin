@@ -47,19 +47,19 @@ This section explains how to use the Python interface. For Java and C++ interfac
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  $ conda create -n tf-v2.21.0-zendnn-v5.2.1-rel-env python=3.10 -y
-  $ conda activate tf-v2.21.0-zendnn-v5.2.1-rel-env
+  conda create -n tf-v2.21.0-zendnn-v5.2.1-rel-env python=3.10 -y
+  conda activate tf-v2.21.0-zendnn-v5.2.1-rel-env
   ```
   > **Note:** Python 3.10 used here for example.
 * Install TensorFlow v2.21.0
   ```
-  $ pip install tensorflow==2.21.0
+  pip install tensorflow==2.21.0
   ```
 ## Install from binaries.
 
 ### 1. Install wheel file using pip:
 ```
-$ pip install zentf==5.2.1
+pip install zentf==5.2.1
 ```
 ### 2. Install zentf using release package.
 
@@ -69,25 +69,25 @@ $ pip install zentf==5.2.1
   > **Note:** We are taking an example for release package with Python version 3.10.
 
   ```
-  $ unzip ZENTF_v5.2.1_Python_v3.10.zip
-  $ cd ZENTF_v5.2.1_Python_v3.10/
-  $ pip install zentf-5.2.1-cp310-cp310-manylinux_2_28_x86_64.whl
+  unzip ZENTF_v5.2.1_Python_v3.10.zip
+  cd ZENTF_v5.2.1_Python_v3.10/
+  pip install zentf-5.2.1-cp310-cp310-manylinux_2_28_x86_64.whl
   ```
 
 * To use the recommended environment settings, execute :
   ```
-  $ source scripts/zentf_env_setup.sh
+  source scripts/zentf_env_setup.sh
   ```
 
 ## Build and install from source.
 ### 1. Clone the repository
 ```
-$ git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
-$ cd ZenDNN-tensorflow-plugin/
+git clone https://github.com/amd/ZenDNN-tensorflow-plugin.git
+cd ZenDNN-tensorflow-plugin/
 ```
 Note: Repository defaults to main branch, to build the version 5.2.1 checkout the r5.2.1 branch.
 ```
-$ git checkout r5.2.1
+git checkout r5.2.1
 ```
 
 ### 2. Configuring &  Building the TensorFlow-ZenDNN Plug-in using script.
@@ -141,8 +141,8 @@ ZenDNN-tensorflow-plugin$ pip install zentf-5.2.1-cp310-cp310-linux_x86_64.whl
 
 ## Enable TensorFlow-ZenDNN Plug-in:
 ```
-$ export TF_ENABLE_ZENDNN_OPTS=1
-$ export TF_ENABLE_ONEDNN_OPTS=0
+export TF_ENABLE_ZENDNN_OPTS=1
+export TF_ENABLE_ONEDNN_OPTS=0
 ```
 >**Note:** To disable ZenDNN optimizations in your inference execution, you can set the corresponding ZenDNN environment variable `export TF_ENABLE_ZENDNN_OPTS=0`
 

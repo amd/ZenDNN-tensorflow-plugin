@@ -67,7 +67,7 @@ Plugin support is now available in TensorFlow Java as of version 1.2.0-SNAPSHOT.
 Note: TensorFlow-Java v1.2.0-SNAPSHOT supports TensorFlow v2.20.0.
 
 ### Set-up zentf plugin
-Download zentf C++ plugin package of 5.2.1 release from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
+Download zentf C++ plugin package build with TensorFlow-v2.20 for 5.2.1 release for Java from [AMD Developer Forum](https://www.amd.com/en/developer/zendnn.html).
 
 Set the environment variable 'LD_LIBRARY_PATH' with the path to zentf plugin libraries.
 ```bash

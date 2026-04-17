@@ -14,12 +14,12 @@ Please follow the instructions in the [README.md](../../scripts/c%2B%2B/README.m
 
 ### 1. Compile the sample inference application
 ```
-$ cd <cpp_package_name>/
-$ g++ examples/sample_inference.cpp -o sample_inference -I./<tf_folder>/tensorflow/include -L./<tf_folder>/tensorflow/ -ltensorflow_framework -ltensorflow_cc -Wl,-rpath=./<tf_folder>/tensorflow/ -std=c++17
+cd <cpp_package_name>/
+g++ examples/sample_inference.cpp -o sample_inference -I./<tf_folder>/tensorflow/include -L./<tf_folder>/tensorflow/ -ltensorflow_framework -ltensorflow_cc -Wl,-rpath=./<tf_folder>/tensorflow/ -std=c++17
 ```
 ### 2. Usage
 ```
-$ ./sample_inference <model_path(.pb)> <input_node> <output_node> <batch_size> <input_height> <input_width> <input_channels>
+./sample_inference <model_path(.pb)> <input_node> <output_node> <batch_size> <input_height> <input_width> <input_channels>
 ```
 
 ## CNN examples
