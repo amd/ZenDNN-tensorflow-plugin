@@ -181,6 +181,22 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "zen_embedding_lookup_sparse_kernel",
+    srcs = ["zen_embedding_lookup_sparse_kernel.cc"],
+    hdrs = ["zen_zendnnl_utils.h"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":zen_kernel_common",
+        ":zen_zendnnl_utils",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@zendnnl_repo//:zendnnl_lib",
+    ],
+    alwayslink = True,
+)
+
 ZEN_KERNELS = [
     ":zen_softmax_kernel",
     ":zen_conv2d_kernel",
@@ -189,6 +205,7 @@ ZEN_KERNELS = [
     # ":zen_fused_batchnorm_kernel",
     ":zen_batch_matmul_kernels",
     ":zen_group_embedding_kernel",
+    ":zen_embedding_lookup_sparse_kernel",
 ]
 
 cc_library(

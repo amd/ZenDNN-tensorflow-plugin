@@ -107,6 +107,21 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "zen_embedding_lookup_sparse_op",
+    srcs = ["zen_embedding_lookup_sparse_op.cc"],
+    copts = tf_copts(),
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":shape_inference_fns",
+        "//tensorflow_plugin/src/amd_cpu/util:common_utils",
+        "@local_config_tf//:tf_header_lib",
+        "@zendnnl_repo//:zendnnl_lib",  # For ZenDNNL logging
+    ],
+    alwayslink = True,
+)
+
 ZEN_OPS = [
     ":zen_conv2d_op",
     ":zen_matmul_ops",
@@ -115,6 +130,7 @@ ZEN_OPS = [
     # ":zen_fused_batchnorm_ops",
     ":zen_batch_matmul_ops",
     ":zen_group_embedding_op",
+    ":zen_embedding_lookup_sparse_op",
 ]
 
 cc_library(

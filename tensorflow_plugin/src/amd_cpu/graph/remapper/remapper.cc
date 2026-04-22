@@ -202,6 +202,41 @@ struct ContractionWithActivation {
   int activation = kMissingIndex;
 };
 
+// safe_embedding_lookup_sparse subgraph matched by the remapper.
+struct SafeEmbeddingLookupSparse {
+  SafeEmbeddingLookupSparse() = default;
+
+  int select_v2 = kMissingIndex;               // SelectV2 (zero_empty_rows)
+  int tile = kMissingIndex;                    // Tile (broadcast indicator)
+  int reshape = kMissingIndex;                 // Reshape (indicator reshape)
+  int zeros_like = kMissingIndex;              // ZerosLike
+  int sparse_segment = kMissingIndex;          // SparseSegment{Sum,Mean,SqrtN}
+  int sparse_fill_empty_rows = kMissingIndex;  // SparseFillEmptyRows
+  int strided_slice = kMissingIndex;           // StridedSlice (segment_ids)
+  int embedding_table = kMissingIndex;  // Identity/Const (embedding table)
+
+  // Upstream filter chain (GatherV2 + Where + GreaterEqual + Reshape).
+  int gv2_indices = kMissingIndex;     // GatherV2 (reindex sparse indices)
+  int gv2_values = kMissingIndex;      // GatherV2 (gather hashed values)
+  int filter_reshape = kMissingIndex;  // Reshape(Where(...))
+  int filter_where = kMissingIndex;    // Where(GreaterEqual(...))
+  int filter_ge = kMissingIndex;       // GreaterEqual(FloorMod, 0)
+  bool has_upstream_filter = false;
+
+  // Downstream adjust_shape chain
+  // (Shape + Slice + ConcatV2 + Reshape) that reshapes output to original dims.
+  int adjust_shape_node = kMissingIndex;       // Shape (of fused output)
+  int adjust_slice_node = kMissingIndex;       // Slice (extract embed dim)
+  int adjust_concat_node = kMissingIndex;      // ConcatV2 (build target shape)
+  int adjust_reshape_node = kMissingIndex;     // Reshape (final output reshape)
+  int adjust_cast_slice_node = kMissingIndex;  // Slice (from Cast, batch dims)
+  bool has_adjust_shape = false;
+  string orig_dense_shape_input;  // Name of the node providing original dense
+                                  // shape
+
+  string combiner;  // "sum", "mean", or "sqrtn"
+};
+
 // Pad with `VALID` and 'EXPLICIT' padding followed by Depthwise/_Fused(Conv2D).
 // Only `Pad` is supported rather than PadV2/MirrorPad.
 struct PadWithContraction {
@@ -893,6 +928,298 @@ bool FindContractionWithBiasAndAddActivation(
       base.contraction, base.bias_add, base.add,
       base.port_id,     node_index,    base.bias_port};
   *matched = pattern;
+
+  return true;
+}
+
+// ============================================================================
+// safe_embedding_lookup_sparse pattern matching.
+//
+// Matches the subgraph:
+//   SelectV2
+//     ├── Tile
+//     │     └── Reshape
+//     │           └── SparseFillEmptyRows:2 (empty_row_indicator)
+//     ├── ZerosLike
+//     │     └── SparseSegment{Sum,Mean,SqrtN}
+//     └── SparseSegment{Sum,Mean,SqrtN}
+//           ├── Identity|Const (embedding_table)
+//           ├── SparseFillEmptyRows:1 (filled_values)
+//           └── StridedSlice
+//                 └── SparseFillEmptyRows:0 (filled_indices)
+// ============================================================================
+bool IsSparseSegmentOp(const NodeDef& node) {
+  return node.op() == "SparseSegmentSum" || node.op() == "SparseSegmentMean" ||
+         node.op() == "SparseSegmentSqrtN";
+}
+
+string GetCombinerFromSparseSegmentOp(const string& op) {
+  if (op == "SparseSegmentSum") return "sum";
+  if (op == "SparseSegmentMean") return "mean";
+  return "sqrtn";
+}
+
+constexpr int kSparseFillEmptyRowsIndicatorPort = 2;
+
+bool FindSafeEmbeddingLookupSparse(const RemapperContext& ctx, int node_index,
+                                   SafeEmbeddingLookupSparse* matched) {
+  const auto* select_node_view = ctx.graph_view.GetNode(node_index);
+  const auto* select_node_def = select_node_view->node();
+
+  // Root must be SelectV2.
+  if (!IsSelect(*select_node_def)) return false;
+  if (HasControlFaninOrFanout(*select_node_view)) return false;
+  if (select_node_view->NumRegularFanins() != 3) return false;
+
+  // Input 0: Tile (broadcast empty_row_indicator)
+  const auto& fanin_0 = select_node_view->GetRegularFanin(0);
+  const auto* tile_node_view = fanin_0.node_view();
+  const auto* tile_node_def = tile_node_view->node();
+  if (tile_node_def->op() != "Tile") return false;
+
+  // Input 1: ZerosLike
+  const auto& fanin_1 = select_node_view->GetRegularFanin(1);
+  const auto* zeros_like_node_view = fanin_1.node_view();
+  const auto* zeros_like_node_def = zeros_like_node_view->node();
+  if (zeros_like_node_def->op() != "ZerosLike") return false;
+
+  // Input 2: SparseSegment{Sum,Mean,SqrtN}
+  const auto& fanin_2 = select_node_view->GetRegularFanin(2);
+  const auto* sparse_seg_node_view = fanin_2.node_view();
+  const auto* sparse_seg_node_def = sparse_seg_node_view->node();
+  if (!IsSparseSegmentOp(*sparse_seg_node_def)) return false;
+
+  // ZerosLike must feed from the SAME SparseSegment op.
+  if (zeros_like_node_view->NumRegularFanins() < 1) return false;
+  const auto& zl_fanin = zeros_like_node_view->GetRegularFanin(0);
+  if (zl_fanin.node_view()->node_index() !=
+      sparse_seg_node_view->node_index()) {
+    return false;
+  }
+
+  // SparseSegment must have 3 inputs:
+  //   0: embedding_table (Identity or Const)
+  //   1: SparseFillEmptyRows:1 (filled_values)
+  //   2: StridedSlice (segment_ids from SparseFillEmptyRows:0)
+  if (sparse_seg_node_view->NumRegularFanins() < 3) return false;
+
+  const auto& seg_fanin_0 = sparse_seg_node_view->GetRegularFanin(0);
+  const auto* table_node_view = seg_fanin_0.node_view();
+  const auto* table_node_def = table_node_view->node();
+
+  const auto& seg_fanin_1 = sparse_seg_node_view->GetRegularFanin(1);
+  const auto* sfr_values_node_view = seg_fanin_1.node_view();
+  const auto* sfr_values_node_def = sfr_values_node_view->node();
+
+  const auto& seg_fanin_2 = sparse_seg_node_view->GetRegularFanin(2);
+  const auto* strided_slice_node_view = seg_fanin_2.node_view();
+  const auto* strided_slice_node_def = strided_slice_node_view->node();
+
+  // Validate: input 1 must come from SparseFillEmptyRows (output port 1).
+  if (sfr_values_node_def->op() != "SparseFillEmptyRows") return false;
+  if (seg_fanin_1.index() != 1) return false;
+
+  // Validate: StridedSlice's input should come from SparseFillEmptyRows:0.
+  if (strided_slice_node_def->op() != "StridedSlice") return false;
+  if (strided_slice_node_view->NumRegularFanins() < 1) return false;
+  const auto& ss_fanin = strided_slice_node_view->GetRegularFanin(0);
+  if (ss_fanin.node_view()->node_index() !=
+      sfr_values_node_view->node_index()) {
+    return false;
+  }
+  if (ss_fanin.index() != 0) return false;
+
+  // Validate: Tile -> Reshape -> SparseFillEmptyRows:2 (same SFR node).
+  if (tile_node_view->NumRegularFanins() < 1) return false;
+  const auto& tile_fanin_0 = tile_node_view->GetRegularFanin(0);
+  const auto* reshape_node_view = tile_fanin_0.node_view();
+  const auto* reshape_node_def = reshape_node_view->node();
+  if (reshape_node_def->op() != "Reshape") return false;
+
+  if (reshape_node_view->NumRegularFanins() < 1) return false;
+  const auto& reshape_fanin_0 = reshape_node_view->GetRegularFanin(0);
+  if (reshape_fanin_0.node_view()->node_index() !=
+      sfr_values_node_view->node_index()) {
+    return false;
+  }
+  if (reshape_fanin_0.index() != kSparseFillEmptyRowsIndicatorPort)
+    return false;
+
+  // Validate: embedding table is Identity or Const.
+  if (table_node_def->op() != "Identity" && table_node_def->op() != "Const") {
+    return false;
+  }
+
+  // All checks passed — populate the match.
+  matched->select_v2 = select_node_view->node_index();
+  matched->tile = tile_node_view->node_index();
+  matched->reshape = reshape_node_view->node_index();
+  matched->zeros_like = zeros_like_node_view->node_index();
+  matched->sparse_segment = sparse_seg_node_view->node_index();
+  matched->sparse_fill_empty_rows = sfr_values_node_view->node_index();
+  matched->strided_slice = strided_slice_node_view->node_index();
+  matched->embedding_table = table_node_view->node_index();
+  matched->combiner = GetCombinerFromSparseSegmentOp(sparse_seg_node_def->op());
+
+  // --- Try to absorb upstream GatherV2 + Where + GreaterEqual chain ---
+  // Pattern: sfr.input(0) = GatherV2(SparseReshape:0, Reshape, Const)
+  //          sfr.input(1) = GatherV2(FloorMod, Reshape, Const)
+  //          Both GatherV2s share the same Reshape(Where(GreaterEqual(FloorMod,
+  //          0)))
+  if (sfr_values_node_view->NumRegularFanins() >= 2) {
+    const auto& sfr_fanin_0 = sfr_values_node_view->GetRegularFanin(0);
+    const auto& sfr_fanin_1 = sfr_values_node_view->GetRegularFanin(1);
+    const auto* gv2_idx_view = sfr_fanin_0.node_view();
+    const auto* gv2_val_view = sfr_fanin_1.node_view();
+    const auto* gv2_idx_def = gv2_idx_view->node();
+    const auto* gv2_val_def = gv2_val_view->node();
+
+    if (gv2_idx_def->op() == "GatherV2" && gv2_val_def->op() == "GatherV2" &&
+        gv2_idx_view->NumRegularFanins() >= 2 &&
+        gv2_val_view->NumRegularFanins() >= 2) {
+      // GatherV2[indices].input(1) and GatherV2[values].input(1) should be
+      // the same Reshape node.
+      const auto& gv2_idx_fanin1 = gv2_idx_view->GetRegularFanin(1);
+      const auto& gv2_val_fanin1 = gv2_val_view->GetRegularFanin(1);
+      const auto* filt_reshape_view = gv2_idx_fanin1.node_view();
+      const auto* filt_reshape_def = filt_reshape_view->node();
+
+      if (filt_reshape_def->op() == "Reshape" &&
+          gv2_idx_fanin1.node_view()->node_index() ==
+              gv2_val_fanin1.node_view()->node_index() &&
+          filt_reshape_view->NumRegularFanins() >= 1) {
+        // Reshape.input(0) = Where
+        const auto& reshape_fanin = filt_reshape_view->GetRegularFanin(0);
+        const auto* where_view = reshape_fanin.node_view();
+        const auto* where_def = where_view->node();
+
+        if (where_def->op() == "Where" && where_view->NumRegularFanins() >= 1) {
+          // Where.input(0) = GreaterEqual
+          const auto& where_fanin = where_view->GetRegularFanin(0);
+          const auto* ge_view = where_fanin.node_view();
+          const auto* ge_def = ge_view->node();
+
+          if (ge_def->op() == "GreaterEqual" &&
+              ge_view->NumRegularFanins() >= 1) {
+            // GreaterEqual.input(0) should be the same as
+            // GatherV2[values].input(0) (both are FloorMod).
+            const auto& ge_fanin0 = ge_view->GetRegularFanin(0);
+            const auto& gv2_val_fanin0 = gv2_val_view->GetRegularFanin(0);
+
+            if (ge_fanin0.node_view()->node_index() ==
+                gv2_val_fanin0.node_view()->node_index()) {
+              // Full chain matched!
+              matched->gv2_indices = gv2_idx_view->node_index();
+              matched->gv2_values = gv2_val_view->node_index();
+              matched->filter_reshape = filt_reshape_view->node_index();
+              matched->filter_where = where_view->node_index();
+              matched->filter_ge = ge_view->node_index();
+              matched->has_upstream_filter = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // --- Try to absorb downstream adjust_shape chain ---
+  // Pattern: SelectV2 -> Shape -> Slice (embed dim)
+  //          SelectV2 -> Reshape (final output)
+  //          Cast(orig_dense_shape) -> Slice (batch dims)
+  //          ConcatV2(batch_slice, embed_slice) -> Reshape.input(1)
+  {
+    // Check if SelectV2 has exactly 2 consumers: Shape and Reshape.
+    const auto& select_fanouts = select_node_view->GetRegularFanouts();
+    const utils::MutableNodeView* ds_shape_view = nullptr;
+    const utils::MutableNodeView* ds_reshape_view = nullptr;
+
+    // Collect all fanout consumers of output port 0.
+    if (!select_fanouts.empty()) {
+      for (const auto& consumer : select_fanouts[0]) {
+        const auto* cv = consumer.node_view();
+        if (cv->node()->op() == "Shape") ds_shape_view = cv;
+        if (cv->node()->op() == "Reshape") ds_reshape_view = cv;
+      }
+    }
+
+    if (ds_shape_view != nullptr && ds_reshape_view != nullptr) {
+      // Shape must have exactly 1 consumer: a Slice node.
+      bool shape_ok = false;
+      const utils::MutableNodeView* ds_slice_embed_view = nullptr;
+      const auto& shape_fanouts = ds_shape_view->GetRegularFanouts();
+      if (!shape_fanouts.empty() && shape_fanouts[0].size() == 1) {
+        ds_slice_embed_view = shape_fanouts[0][0].node_view();
+        if (ds_slice_embed_view->node()->op() == "Slice") {
+          shape_ok = true;
+        }
+      }
+
+      if (shape_ok && ds_slice_embed_view != nullptr) {
+        // Slice(embed) must feed into a ConcatV2.
+        const utils::MutableNodeView* ds_concat_view = nullptr;
+        const auto& slice_fanouts = ds_slice_embed_view->GetRegularFanouts();
+        if (!slice_fanouts.empty()) {
+          for (const auto& consumer : slice_fanouts[0]) {
+            if (consumer.node_view()->node()->op() == "ConcatV2") {
+              ds_concat_view = consumer.node_view();
+            }
+          }
+        }
+
+        if (ds_concat_view != nullptr) {
+          // ConcatV2 must feed into the Reshape as shape input (input[1]).
+          if (ds_reshape_view->NumRegularFanins() >= 2) {
+            const auto& reshape_shape_fanin =
+                ds_reshape_view->GetRegularFanin(1);
+            if (reshape_shape_fanin.node_view()->node_index() ==
+                ds_concat_view->node_index()) {
+              // Find the batch-dims Slice in ConcatV2 inputs.
+              // ConcatV2 has: Slice(batch_dims), Slice(embed_dims), axis_const
+              const utils::MutableNodeView* ds_slice_batch_view = nullptr;
+              for (int ci = 0; ci < ds_concat_view->NumRegularFanins(); ++ci) {
+                const auto& cf = ds_concat_view->GetRegularFanin(ci);
+                if (cf.node_view()->node()->op() == "Slice" &&
+                    cf.node_view()->node_index() !=
+                        ds_slice_embed_view->node_index()) {
+                  ds_slice_batch_view = cf.node_view();
+                  break;
+                }
+              }
+
+              if (ds_slice_batch_view != nullptr) {
+                // Slice(batch) input[0] should be Cast(orig_dense_shape).
+                if (ds_slice_batch_view->NumRegularFanins() >= 1) {
+                  const auto& batch_src =
+                      ds_slice_batch_view->GetRegularFanin(0);
+                  const auto* cast_view = batch_src.node_view();
+                  // Accept Cast or direct dense_shape source.
+                  string orig_ds_input;
+                  if (cast_view->node()->op() == "Cast" &&
+                      cast_view->NumRegularFanins() >= 1) {
+                    // orig_dense_shape is Cast's input.
+                    orig_ds_input = cast_view->node()->input(0);
+                  } else {
+                    orig_ds_input = ds_slice_batch_view->node()->input(0);
+                  }
+
+                  // All checks passed for adjust_shape.
+                  matched->adjust_shape_node = ds_shape_view->node_index();
+                  matched->adjust_slice_node =
+                      ds_slice_embed_view->node_index();
+                  matched->adjust_concat_node = ds_concat_view->node_index();
+                  matched->adjust_reshape_node = ds_reshape_view->node_index();
+                  matched->adjust_cast_slice_node =
+                      ds_slice_batch_view->node_index();
+                  matched->has_adjust_shape = true;
+                  matched->orig_dense_shape_input = orig_ds_input;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   return true;
 }
@@ -2447,6 +2774,201 @@ Status AddPadWithContractionNode(RemapperContext* ctx,
   return OkStatus();
 }
 
+// Fuse safe_embedding_lookup_sparse subgraph into
+// _ZenSafeEmbeddingLookupSparse.
+Status AddFusedSafeEmbeddingLookupSparse(
+    RemapperContext* ctx, const SafeEmbeddingLookupSparse& matched,
+    std::vector<bool>* invalidated_nodes, std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& select_v2 = graph->node(matched.select_v2);
+  const NodeDef& sparse_segment = graph->node(matched.sparse_segment);
+  const NodeDef& sfr = graph->node(matched.sparse_fill_empty_rows);
+  const NodeDef& table_node = graph->node(matched.embedding_table);
+
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Fusing safe_embedding_lookup_sparse at ", select_v2.name(),
+      " with combiner=", matched.combiner);
+
+  NodeDef fused_node;
+  fused_node.set_name(select_v2.name());
+  fused_node.set_op("_ZenSafeEmbeddingLookupSparse");
+  fused_node.set_device(sparse_segment.device());
+
+  // Input 0: params (embedding table)
+  // If the table_node is Identity, pass through to its input (the Const/Var).
+  if (table_node.op() == "Identity") {
+    fused_node.add_input(table_node.input(0));
+  } else {
+    fused_node.add_input(table_node.name());
+  }
+
+  // Input 1: sp_indices — sparse indices
+  // Input 2: sp_values — sparse values (embedding indices)
+  if (matched.has_upstream_filter) {
+    // Wire past the GatherV2 chain to the raw upstream inputs.
+    // GatherV2[indices].input(0) = SparseReshape:0 (raw sparse indices)
+    // GatherV2[values].input(0) = FloorMod (raw hashed values)
+    const NodeDef& gv2_idx = graph->node(matched.gv2_indices);
+    const NodeDef& gv2_val = graph->node(matched.gv2_values);
+    fused_node.add_input(gv2_idx.input(0));  // SparseReshape:0
+    fused_node.add_input(gv2_val.input(0));  // FloorMod output
+  } else {
+    // No upstream filter — wire directly from SFR inputs (pre-filtered).
+    fused_node.add_input(sfr.input(0));
+    fused_node.add_input(sfr.input(1));
+  }
+
+  // Input 3: sp_dense_shape — SparseFillEmptyRows input 2 (dense_shape)
+  // This is SparseReshape:1
+  fused_node.add_input(sfr.input(2));
+
+  // Input 4: default_value — SparseFillEmptyRows input 3
+  fused_node.add_input(sfr.input(3));
+
+  // Input 5: orig_dense_shape — for adjust_shape, or same as sp_dense_shape.
+  if (matched.has_adjust_shape) {
+    fused_node.add_input(matched.orig_dense_shape_input);
+    // Use the final Reshape node's name so its consumers are auto-redirected.
+    fused_node.set_name(graph->node(matched.adjust_reshape_node).name());
+  } else {
+    // No adjust_shape — pass sp_dense_shape as orig_dense_shape (no-op
+    // reshape).
+    fused_node.add_input(sfr.input(2));
+  }
+
+  // Copy data type from the embedding table.
+  auto* attr = fused_node.mutable_attr();
+  if (!HasNodeAttr(sparse_segment, "T")) {
+    VLOG(1) << "SafeEmbeddingLookupSparse fusion: sparse_segment node "
+            << sparse_segment.name() << " missing 'T' attribute";
+    return Status::OK();
+  }
+  (*attr)["T"] = sparse_segment.attr().at("T");
+
+  // Set Tindices from the sparse segment's Tidx.
+  if (!HasNodeAttr(sparse_segment, "Tidx")) {
+    VLOG(1) << "SafeEmbeddingLookupSparse fusion: sparse_segment node "
+            << sparse_segment.name() << " missing 'Tidx' attribute";
+    return Status::OK();
+  }
+  (*attr)["Tindices"] = sparse_segment.attr().at("Tidx");
+
+  // Set combiner attribute.
+  SetAttrValue(matched.combiner, &(*attr)["combiner"]);
+  SetAttrValue(matched.has_adjust_shape, &(*attr)["has_adjust_shape"]);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(fused_node), &status);
+  TF_RETURN_IF_ERROR(status);
+  TF_RETURN_IF_ERROR(mutation->Apply());
+
+  // The SelectV2 node is replaced by the fused node.
+  (*invalidated_nodes)[matched.select_v2] = true;
+
+  // Mark intermediate nodes for deletion.
+  (*nodes_to_delete)[matched.tile] = true;
+  (*nodes_to_delete)[matched.reshape] = true;
+  (*nodes_to_delete)[matched.zeros_like] = true;
+  (*nodes_to_delete)[matched.sparse_segment] = true;
+  (*nodes_to_delete)[matched.strided_slice] = true;
+  // Only delete SparseFillEmptyRows if no other consumers need it.
+  // Check if SFR outputs are used only by nodes we're deleting.
+  const auto* sfr_node_view =
+      ctx->graph_view.GetNode(matched.sparse_fill_empty_rows);
+  bool sfr_safe_to_delete = true;
+  for (const auto& fanout : sfr_node_view->GetRegularFanouts()) {
+    for (const auto& consumer : fanout) {
+      int idx = consumer.node_view()->node_index();
+      if (idx != matched.sparse_segment && idx != matched.strided_slice &&
+          idx != matched.reshape && idx != matched.select_v2 &&
+          idx != matched.zeros_like && idx != matched.tile &&
+          (!matched.has_upstream_filter ||
+           (idx != matched.gv2_indices && idx != matched.gv2_values))) {
+        sfr_safe_to_delete = false;
+        break;
+      }
+    }
+    if (!sfr_safe_to_delete) break;
+  }
+  if (sfr_safe_to_delete) {
+    (*nodes_to_delete)[matched.sparse_fill_empty_rows] = true;
+  }
+  // Only delete Identity table node if it has no other consumers.
+  if (table_node.op() == "Identity") {
+    const auto* table_view = ctx->graph_view.GetNode(matched.embedding_table);
+    bool table_safe_to_delete = true;
+    for (const auto& fanout : table_view->GetRegularFanouts()) {
+      for (const auto& consumer : fanout) {
+        int idx = consumer.node_view()->node_index();
+        if (idx != matched.sparse_segment) {
+          table_safe_to_delete = false;
+          break;
+        }
+      }
+      if (!table_safe_to_delete) break;
+    }
+    if (table_safe_to_delete) {
+      (*nodes_to_delete)[matched.embedding_table] = true;
+    }
+  }
+
+  // Delete absorbed upstream filter nodes (GatherV2, Reshape, Where,
+  // GreaterEqual) if they have no other consumers.
+  if (matched.has_upstream_filter) {
+    // Helper: check if a node's only consumers are in our deletion set.
+    auto safe_to_delete = [&](int node_idx) -> bool {
+      const auto* nv = ctx->graph_view.GetNode(node_idx);
+      for (const auto& fanout : nv->GetRegularFanouts()) {
+        for (const auto& consumer : fanout) {
+          int cidx = consumer.node_view()->node_index();
+          if (!(*nodes_to_delete)[cidx] && cidx != matched.select_v2) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    // GatherV2 nodes feed only into SFR (which is already deleted).
+    if (safe_to_delete(matched.gv2_indices))
+      (*nodes_to_delete)[matched.gv2_indices] = true;
+    if (safe_to_delete(matched.gv2_values))
+      (*nodes_to_delete)[matched.gv2_values] = true;
+    // Reshape feeds only into the two GatherV2s.
+    if (safe_to_delete(matched.filter_reshape))
+      (*nodes_to_delete)[matched.filter_reshape] = true;
+    // Where feeds only into Reshape.
+    if (safe_to_delete(matched.filter_where))
+      (*nodes_to_delete)[matched.filter_where] = true;
+    // GreaterEqual feeds only into Where.
+    if (safe_to_delete(matched.filter_ge))
+      (*nodes_to_delete)[matched.filter_ge] = true;
+
+    zendnnl::error_handling::apilog_info(
+        "Remapper: Absorbed upstream GatherV2/Where/GreaterEqual filter chain");
+  }
+
+  // Delete absorbed downstream adjust_shape nodes.
+  if (matched.has_adjust_shape) {
+    // The fused node now takes the name of the final Reshape, so
+    // the original SelectV2 node (matched.select_v2) should be deleted.
+    (*nodes_to_delete)[matched.select_v2] = true;
+    (*invalidated_nodes)[matched.adjust_reshape_node] = true;
+
+    (*nodes_to_delete)[matched.adjust_shape_node] = true;       // Shape
+    (*nodes_to_delete)[matched.adjust_slice_node] = true;       // Slice (embed)
+    (*nodes_to_delete)[matched.adjust_concat_node] = true;      // ConcatV2
+    (*nodes_to_delete)[matched.adjust_cast_slice_node] = true;  // Slice (batch)
+
+    zendnnl::error_handling::apilog_info(
+        "Remapper: Absorbed downstream adjust_shape chain (Shape+Slice+"
+        "ConcatV2+Reshape)");
+  }
+
+  return OkStatus();
+}
+
 // Contraction + Mul(scale).
 Status AddFusedContractionNode(RemapperContext* ctx,
                                const ContractionWithMul& matched,
@@ -3270,6 +3792,17 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
       if (FindGroupEmbedding(ctx, i, &group_embedding)) {
         TF_ABORT_IF_ERROR(AddGroupEmbeddingNode(
             &ctx, group_embedding, &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
+
+      // Fuse safe_embedding_lookup_sparse subgraph.
+      SafeEmbeddingLookupSparse safe_emb;
+      if (FindSafeEmbeddingLookupSparse(ctx, i, &safe_emb)) {
+        zendnnl::error_handling::apilog_info(
+            "Remapper: Found SafeEmbeddingLookupSparse (", safe_emb.combiner,
+            ")");
+        TF_ABORT_IF_ERROR(AddFusedSafeEmbeddingLookupSparse(
+            &ctx, safe_emb, &invalidated_nodes, &nodes_to_delete));
         continue;
       }
 
