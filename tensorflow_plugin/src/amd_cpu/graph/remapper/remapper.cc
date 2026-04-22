@@ -235,6 +235,29 @@ struct ContractionWithMul {
   int scalar = kMissingIndex;
 };
 
+// A contiguous run of GatherV2 ops sharing the same table within a ConcatV2.
+struct GroupEmbeddingRun {
+  std::string table_name;
+  std::vector<std::string> index_names;
+  std::vector<int> nodes_to_remove;
+  int start_pos = 0;
+  int end_pos = 0;  // inclusive
+  int gather_axis = 0;
+};
+
+// Horizontal fusion: contiguous runs of
+// GatherV2 -> Cast -> IsInf/ZerosLike -> SelectV2 within a ConcatV2
+// are replaced by _ZenGroupEmbedding ops.
+struct GroupEmbedding {
+  GroupEmbedding() = default;
+
+  int concat = kMissingIndex;
+  std::vector<GroupEmbeddingRun> runs;
+  // When true, ALL ConcatV2 inputs matched and the entire ConcatV2 is
+  // replaced by a single multi-table _ZenGroupEmbedding node.
+  bool full_fusion = false;
+};
+
 bool IsAddWithNoBroadcast(const RemapperContext& ctx, const NodeDef& node) {
   if (!IsAdd(node)) return false;
 
@@ -2580,6 +2603,592 @@ Status AddFusedBatchMatMul(RemapperContext* ctx,
   return OkStatus();
 }
 
+// Try to match a single ConcatV2 input as a GatherV2 wrapped in zero or more
+// SafeCast layers and an optional Cast.
+//
+// Supported patterns (all feed into ConcatV2):
+//   BF16:  SelectV2(IsInf(Cast(GatherV2)), ZerosLike, Cast)
+//   FP32:  SelectV2(IsInf(SelectV2(IsInf(GatherV2),..)),..,..)  (stacked)
+//   Direct: GatherV2
+//
+// On success, sets table_name, index_name, gather_axis and appends
+// intermediate node indices to remove_indices.
+bool MatchGatherInput(const RemapperContext& ctx,
+                      const utils::MutableNodeView* inp_view,
+                      std::string* table_name, std::string* index_name,
+                      int* gather_axis, std::vector<int>* remove_indices) {
+  const auto* cur_view = inp_view;
+
+  // Iteratively unwrap SafeCast layers:
+  //   SelectV2(IsInf(X), ZerosLike(X), X) → unwrap to X
+  // and optional Cast layers.
+  constexpr int kMaxUnwrapDepth = 4;
+  int depth = 0;
+  for (depth = 0; depth < kMaxUnwrapDepth; ++depth) {
+    const auto* cur_def = cur_view->node();
+
+    if (cur_def->op() == "SelectV2") {
+      if (cur_view->NumRegularFanins() < 3) return false;
+
+      const auto* cond_view = cur_view->GetRegularFanin(0).node_view();
+      const auto* then_view = cur_view->GetRegularFanin(1).node_view();
+      const auto* else_view = cur_view->GetRegularFanin(2).node_view();
+
+      if (cond_view->node()->op() != "IsInf") return false;
+      if (then_view->node()->op() != "ZerosLike") return false;
+
+      if (cond_view->NumRegularFanins() < 1) return false;
+      const auto* isinf_input_view = cond_view->GetRegularFanin(0).node_view();
+      if (isinf_input_view->node_index() != else_view->node_index())
+        return false;
+
+      remove_indices->push_back(cur_view->node_index());
+      remove_indices->push_back(cond_view->node_index());
+      remove_indices->push_back(then_view->node_index());
+
+      cur_view = else_view;
+      continue;
+    }
+
+    if (IsCast(*cur_def)) {
+      remove_indices->push_back(cur_view->node_index());
+      if (cur_view->NumRegularFanins() < 1) return false;
+      cur_view = cur_view->GetRegularFanin(0).node_view();
+      continue;
+    }
+
+    break;
+  }
+
+  // Log warning if we hit the unwrap depth limit without finding a gather
+  if (depth == kMaxUnwrapDepth && !IsGather(*cur_view->node())) {
+    zendnnl::error_handling::apilog_info(
+        "MatchGatherInput: hit unwrap depth limit at ", cur_view->node()->op(),
+        " node ", cur_view->node()->name());
+  }
+
+  if (!IsGather(*cur_view->node())) return false;
+
+  const auto* gather_view = cur_view;
+  const auto* gather_def = gather_view->node();
+
+  if (gather_view->NumRegularFanins() < 3) return false;
+
+  const auto* axis_view = gather_view->GetRegularFanin(2).node_view();
+  const auto* axis_def = axis_view->node();
+  if (!IsConstant(*axis_def)) return false;
+  Tensor axis_tensor;
+  if (!axis_tensor.FromProto(axis_def->attr().at("value").tensor()))
+    return false;
+  int axis_val = 0;
+  if (axis_tensor.dtype() == DT_INT32) {
+    axis_val = axis_tensor.flat<int32>()(0);
+  } else if (axis_tensor.dtype() == DT_INT64) {
+    axis_val = static_cast<int>(axis_tensor.flat<int64>()(0));
+  } else {
+    return false;
+  }
+
+  *table_name = gather_def->input(0);
+  *index_name = gather_def->input(1);
+  *gather_axis = axis_val;
+  remove_indices->push_back(gather_view->node_index());
+  return true;
+}
+
+// Find GatherV2 ops (via SafeCast chain) within a ConcatV2.
+//
+// Full-fusion path (preferred): when ALL ConcatV2 value inputs match the
+// gather pattern with the same axis, build one table-group per contiguous
+// same-table segment and set full_fusion=true.  The ConcatV2 will be
+// replaced entirely by a single multi-table _ZenGroupEmbedding.
+//
+// Fallback path: when some inputs don't match, build contiguous same-table
+// runs of size >= kMinRunSize and keep the ConcatV2 with reduced inputs.
+constexpr int kMinRunSize = 2;
+
+bool FindGroupEmbedding(const RemapperContext& ctx, int node_index,
+                        GroupEmbedding* matched) {
+  const auto* node_view = ctx.graph_view.GetNode(node_index);
+  const auto* node_def = node_view->node();
+  if (node_def == nullptr) return false;
+
+  if (node_def->op() != "ConcatV2") return false;
+
+  if (!HasNodeAttr(*node_def, "N")) return false;
+  int n_values = node_def->attr().at("N").i();
+  if (n_values < kMinRunSize) return false;
+
+  // --- Pass 1: try to match every input. ---
+  struct GatherInfo {
+    std::string table_name;
+    std::string index_name;
+    int axis_val;
+    std::vector<int> remove_indices;
+  };
+  std::vector<GatherInfo> all_gathers(n_values);
+  bool all_match = true;
+  int common_axis = 0;
+
+  for (int v = 0; v < n_values; ++v) {
+    if (v >= node_view->NumRegularFanins()) {
+      all_match = false;
+      break;
+    }
+
+    const auto& fanin = node_view->GetRegularFanin(v);
+    const auto* inp_view = fanin.node_view();
+
+    bool ok = MatchGatherInput(
+        ctx, inp_view, &all_gathers[v].table_name, &all_gathers[v].index_name,
+        &all_gathers[v].axis_val, &all_gathers[v].remove_indices);
+    if (!ok) {
+      zendnnl::error_handling::apilog_info(
+          "Remapper: full-fusion check failed at input ", v, " of ", n_values,
+          " (", inp_view->node()->op(), " ", inp_view->node()->name(), ")");
+      all_match = false;
+      break;
+    }
+    if (v == 0) {
+      common_axis = all_gathers[v].axis_val;
+    } else if (all_gathers[v].axis_val != common_axis) {
+      zendnnl::error_handling::apilog_info(
+          "Remapper: full-fusion check failed at input ", v,
+          " axis=", all_gathers[v].axis_val, " != common_axis=", common_axis);
+      all_match = false;
+      break;
+    }
+  }
+
+  // --- Full-fusion path ---
+  if (all_match && n_values >= kMinRunSize) {
+    std::vector<GroupEmbeddingRun> runs;
+    GroupEmbeddingRun current_run;
+
+    for (int v = 0; v < n_values; ++v) {
+      const auto& gi = all_gathers[v];
+      if (v > 0 && gi.table_name == current_run.table_name) {
+        current_run.index_names.push_back(gi.index_name);
+        current_run.nodes_to_remove.insert(current_run.nodes_to_remove.end(),
+                                           gi.remove_indices.begin(),
+                                           gi.remove_indices.end());
+        current_run.end_pos = v;
+      } else {
+        if (v > 0) runs.push_back(std::move(current_run));
+        current_run = GroupEmbeddingRun();
+        current_run.table_name = gi.table_name;
+        current_run.index_names.push_back(gi.index_name);
+        current_run.nodes_to_remove = gi.remove_indices;
+        current_run.start_pos = v;
+        current_run.end_pos = v;
+        current_run.gather_axis = gi.axis_val;
+      }
+    }
+    runs.push_back(std::move(current_run));
+
+    int total_gathers = 0;
+    for (const auto& run : runs) {
+      total_gathers += static_cast<int>(run.index_names.size());
+    }
+
+    matched->concat = node_index;
+    matched->runs = std::move(runs);
+    matched->full_fusion = true;
+
+    zendnnl::error_handling::apilog_info(
+        "Remapper: Found full-fusion GroupEmbedding with ",
+        matched->runs.size(), " table groups (", total_gathers,
+        " GatherV2 ops) in ConcatV2 (", node_def->name(), ")");
+    return true;
+  }
+
+  // --- Fallback: contiguous same-table runs of size >= kMinRunSize ---
+  std::vector<GroupEmbeddingRun> runs;
+  GroupEmbeddingRun current_run;
+  bool in_run = false;
+
+  for (int v = 0; v < n_values; ++v) {
+    if (v >= node_view->NumRegularFanins()) break;
+
+    const auto& fanin = node_view->GetRegularFanin(v);
+    const auto* inp_view = fanin.node_view();
+
+    std::string table_name, index_name;
+    int axis_val = 0;
+    std::vector<int> remove_indices;
+
+    bool is_match = MatchGatherInput(ctx, inp_view, &table_name, &index_name,
+                                     &axis_val, &remove_indices);
+
+    if (is_match && in_run && table_name == current_run.table_name &&
+        axis_val == current_run.gather_axis) {
+      current_run.index_names.push_back(index_name);
+      current_run.nodes_to_remove.insert(current_run.nodes_to_remove.end(),
+                                         remove_indices.begin(),
+                                         remove_indices.end());
+      current_run.end_pos = v;
+    } else {
+      if (in_run &&
+          static_cast<int>(current_run.index_names.size()) >= kMinRunSize) {
+        runs.push_back(std::move(current_run));
+      }
+      if (is_match) {
+        current_run = GroupEmbeddingRun();
+        current_run.table_name = table_name;
+        current_run.index_names.push_back(index_name);
+        current_run.nodes_to_remove = std::move(remove_indices);
+        current_run.start_pos = v;
+        current_run.end_pos = v;
+        current_run.gather_axis = axis_val;
+        in_run = true;
+      } else {
+        in_run = false;
+      }
+    }
+  }
+  if (in_run &&
+      static_cast<int>(current_run.index_names.size()) >= kMinRunSize) {
+    runs.push_back(std::move(current_run));
+  }
+
+  if (runs.empty()) return false;
+
+  int total_gathers = 0;
+  for (const auto& run : runs) {
+    total_gathers += static_cast<int>(run.index_names.size());
+  }
+
+  matched->concat = node_index;
+  matched->runs = std::move(runs);
+  matched->full_fusion = false;
+
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Found GroupEmbedding with ", matched->runs.size(), " runs (",
+      total_gathers, " GatherV2 ops) in ConcatV2 (", node_def->name(), ")");
+  return true;
+}
+
+// Infer table / index / output dtypes from the first run's intermediate nodes.
+void InferGroupEmbeddingDtypes(const GraphDef& graph,
+                               const GroupEmbeddingRun& first_run,
+                               DataType* table_dtype, DataType* indices_dtype,
+                               DataType* output_dtype) {
+  *table_dtype = DT_FLOAT;
+  *indices_dtype = DT_INT64;
+  *output_dtype = DT_FLOAT;
+  for (int idx : first_run.nodes_to_remove) {
+    const NodeDef& n = graph.node(idx);
+    if (IsGather(n)) {
+      if (HasNodeAttr(n, "Tparams"))
+        *table_dtype = n.attr().at("Tparams").type();
+      if (HasNodeAttr(n, "Tindices"))
+        *indices_dtype = n.attr().at("Tindices").type();
+      break;
+    }
+  }
+  // If a Cast exists (BF16 pattern), output dtype is the Cast's DstT.
+  // Otherwise (FP32 pattern — no Cast), output dtype matches table dtype.
+  bool found_cast = false;
+  for (int idx : first_run.nodes_to_remove) {
+    const NodeDef& n = graph.node(idx);
+    if (IsCast(n) && HasNodeAttr(n, "DstT")) {
+      *output_dtype = n.attr().at("DstT").type();
+      found_cast = true;
+      break;
+    }
+  }
+  if (!found_cast) {
+    *output_dtype = *table_dtype;
+  }
+}
+
+// Full-fusion path: replace the entire ConcatV2 with a single multi-table
+// _ZenGroupEmbedding node.
+Status AddFullFusionGroupEmbeddingNode(RemapperContext* ctx,
+                                       const GroupEmbedding& matched,
+                                       std::vector<bool>* invalidated_nodes,
+                                       std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& concat_node = graph->node(matched.concat);
+
+  DataType table_dtype, indices_dtype, output_dtype;
+  InferGroupEmbeddingDtypes(*graph, matched.runs[0], &table_dtype,
+                            &indices_dtype, &output_dtype);
+
+  const std::string concat_name = concat_node.name();
+  const std::string concat_device = concat_node.device();
+
+  const int num_tables = static_cast<int>(matched.runs.size());
+  int total_indices = 0;
+  std::vector<int> gathers_per_table;
+  gathers_per_table.reserve(num_tables);
+  for (const auto& run : matched.runs) {
+    int n = static_cast<int>(run.index_names.size());
+    gathers_per_table.push_back(n);
+    total_indices += n;
+  }
+
+  std::string emb_name = concat_name + "/_ZenGroupEmbedding";
+
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Creating full-fusion ", emb_name, " with ", num_tables,
+      " table groups, ", total_indices, " total gathers");
+
+  NodeDef emb_node;
+  emb_node.set_name(emb_name);
+  emb_node.set_op(kZenGroupEmbedding);
+  emb_node.set_device(concat_device);
+
+  // Inputs: tables first, then all indices.
+  for (const auto& run : matched.runs) {
+    emb_node.add_input(run.table_name);
+  }
+  for (const auto& run : matched.runs) {
+    for (const auto& idx_name : run.index_names) {
+      emb_node.add_input(idx_name);
+    }
+  }
+
+  auto* attr = emb_node.mutable_attr();
+  SetAttrValue(num_tables, &(*attr)["num_tables"]);
+  SetAttrValue(total_indices, &(*attr)["N"]);
+  SetAttrValue(table_dtype, &(*attr)["T_table"]);
+  SetAttrValue(indices_dtype, &(*attr)["T_indices"]);
+  SetAttrValue(output_dtype, &(*attr)["T_output"]);
+  SetAttrValue(-1, &(*attr)["embedding_dim"]);
+  SetAttrValue(matched.runs[0].gather_axis, &(*attr)["gather_axis"]);
+  SetAttrValue(gathers_per_table, &(*attr)["gathers_per_table"]);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(emb_node), &status);
+  TF_RETURN_IF_ERROR(status);
+
+  // Mark all intermediate nodes for deletion.
+  for (const auto& run : matched.runs) {
+    for (int idx : run.nodes_to_remove) {
+      (*nodes_to_delete)[idx] = true;
+    }
+  }
+
+  // Replace the ConcatV2: point all its consumers to the new node.
+  auto* concat_view = ctx->graph_view.GetNode(matched.concat);
+  auto fanouts = concat_view->GetRegularFanouts();
+  for (const auto& fanout_set : fanouts) {
+    for (const auto& fanout : fanout_set) {
+      mutation->AddOrUpdateRegularFanin(fanout.node_view(), fanout.index(),
+                                        TensorId(emb_name, 0));
+    }
+  }
+
+  // Also replace control outputs.
+  for (const auto& ctrl_fanout : concat_view->GetControlledFanouts()) {
+    mutation->RemoveControllingFanin(ctrl_fanout.node_view(),
+                                     concat_view->node()->name());
+    mutation->AddControllingFanin(ctrl_fanout.node_view(), emb_name);
+  }
+
+  TF_RETURN_IF_ERROR(mutation->Apply());
+
+  (*nodes_to_delete)[matched.concat] = true;
+  (*invalidated_nodes)[matched.concat] = true;
+
+  return OkStatus();
+}
+
+// Multi-table path: merge all runs into a single multi-table
+// _ZenGroupEmbedding.  If the only remaining non-gather input is at the
+// last ConcatV2 position, absorb it as a passthrough and eliminate the
+// ConcatV2 entirely.  Otherwise keep the ConcatV2 with reduced inputs.
+Status AddMultiTableGroupEmbeddingNode(RemapperContext* ctx,
+                                       const GroupEmbedding& matched,
+                                       std::vector<bool>* invalidated_nodes,
+                                       std::vector<bool>* nodes_to_delete) {
+  const GraphDef* graph = ctx->graph_view.graph();
+  const NodeDef& concat_node = graph->node(matched.concat);
+
+  DataType table_dtype, indices_dtype, output_dtype;
+  InferGroupEmbeddingDtypes(*graph, matched.runs[0], &table_dtype,
+                            &indices_dtype, &output_dtype);
+
+  const std::string concat_name = concat_node.name();
+  const std::string concat_device = concat_node.device();
+  const int n_values = concat_node.attr().at("N").i();
+
+  std::vector<std::string> original_inputs;
+  original_inputs.reserve(concat_node.input_size());
+  for (int i = 0; i < concat_node.input_size(); ++i) {
+    original_inputs.push_back(concat_node.input(i));
+  }
+
+  // Identify positions consumed by gather runs.
+  std::set<int> consumed_positions;
+  for (const auto& run : matched.runs) {
+    for (int p = run.start_pos; p <= run.end_pos; ++p) {
+      consumed_positions.insert(p);
+    }
+  }
+
+  // Check if exactly one unconsumed position exists at the end.
+  std::vector<int> unconsumed;
+  for (int v = 0; v < n_values; ++v) {
+    if (consumed_positions.count(v) == 0) unconsumed.push_back(v);
+  }
+  bool has_trailing_passthrough =
+      (unconsumed.size() == 1 && unconsumed[0] == n_values - 1);
+
+  // Build the single multi-table _ZenGroupEmbedding node.
+  const int num_tables = static_cast<int>(matched.runs.size());
+  int total_indices = 0;
+  std::vector<int> gathers_per_table;
+  gathers_per_table.reserve(num_tables);
+  for (const auto& run : matched.runs) {
+    int n = static_cast<int>(run.index_names.size());
+    gathers_per_table.push_back(n);
+    total_indices += n;
+  }
+
+  std::string emb_name = concat_name + "/_ZenGroupEmbedding";
+
+  zendnnl::error_handling::apilog_info(
+      "Remapper: Creating multi-table ", emb_name, " with ", num_tables,
+      " table groups, ", total_indices, " total gathers",
+      has_trailing_passthrough ? ", with trailing passthrough" : "");
+
+  NodeDef emb_node;
+  emb_node.set_name(emb_name);
+  emb_node.set_op(kZenGroupEmbedding);
+  emb_node.set_device(concat_device);
+
+  // Inputs: tables, then indices, then passthrough (if any).
+  for (const auto& run : matched.runs) {
+    emb_node.add_input(run.table_name);
+  }
+  for (const auto& run : matched.runs) {
+    for (const auto& idx_name : run.index_names) {
+      emb_node.add_input(idx_name);
+    }
+  }
+  if (has_trailing_passthrough) {
+    emb_node.add_input(original_inputs[unconsumed[0]]);
+  }
+
+  auto* attr = emb_node.mutable_attr();
+  SetAttrValue(num_tables, &(*attr)["num_tables"]);
+  SetAttrValue(total_indices, &(*attr)["N"]);
+  SetAttrValue(table_dtype, &(*attr)["T_table"]);
+  SetAttrValue(indices_dtype, &(*attr)["T_indices"]);
+  SetAttrValue(output_dtype, &(*attr)["T_output"]);
+  SetAttrValue(-1, &(*attr)["embedding_dim"]);
+  SetAttrValue(matched.runs[0].gather_axis, &(*attr)["gather_axis"]);
+  SetAttrValue(gathers_per_table, &(*attr)["gathers_per_table"]);
+  SetAttrValue(has_trailing_passthrough ? 1 : 0, &(*attr)["num_passthrough"]);
+
+  utils::Mutation* mutation = ctx->graph_view.GetMutationBuilder();
+  Status status;
+  mutation->AddNode(std::move(emb_node), &status);
+  TF_RETURN_IF_ERROR(status);
+
+  for (const auto& run : matched.runs) {
+    for (int idx : run.nodes_to_remove) {
+      (*nodes_to_delete)[idx] = true;
+    }
+  }
+
+  if (has_trailing_passthrough) {
+    // Passthrough absorbed — replace ConcatV2 entirely.
+    auto* concat_view = ctx->graph_view.GetNode(matched.concat);
+
+    auto fanouts = concat_view->GetRegularFanouts();
+    for (const auto& fanout_set : fanouts) {
+      for (const auto& fanout : fanout_set) {
+        mutation->AddOrUpdateRegularFanin(fanout.node_view(), fanout.index(),
+                                          TensorId(emb_name, 0));
+      }
+    }
+    for (const auto& ctrl_fanout : concat_view->GetControlledFanouts()) {
+      mutation->RemoveControllingFanin(ctrl_fanout.node_view(),
+                                       concat_view->node()->name());
+      mutation->AddControllingFanin(ctrl_fanout.node_view(), emb_name);
+    }
+
+    TF_RETURN_IF_ERROR(mutation->Apply());
+
+    (*nodes_to_delete)[matched.concat] = true;
+    (*invalidated_nodes)[matched.concat] = true;
+  } else {
+    // Keep ConcatV2 with reduced inputs.
+    std::vector<std::string> new_value_inputs;
+    bool emb_inserted = false;
+    for (int v = 0; v < n_values; ++v) {
+      if (consumed_positions.count(v)) {
+        if (!emb_inserted) {
+          new_value_inputs.push_back(emb_name);
+          emb_inserted = true;
+        }
+      } else {
+        new_value_inputs.push_back(original_inputs[v]);
+      }
+    }
+
+    int new_n = static_cast<int>(new_value_inputs.size());
+    auto* concat_view = ctx->graph_view.GetNode(matched.concat);
+    int total_fanins = concat_view->NumRegularFanins();
+    int new_total_fanins = new_n + 1;
+
+    for (int vi = 0; vi < new_n; ++vi) {
+      const std::string& inp = new_value_inputs[vi];
+      auto colon = inp.find(':');
+      std::string node_name =
+          (colon == std::string::npos) ? inp : inp.substr(0, colon);
+      int port =
+          (colon == std::string::npos) ? 0 : std::stoi(inp.substr(colon + 1));
+      mutation->AddOrUpdateRegularFanin(concat_view, vi,
+                                        TensorId(node_name, port));
+    }
+
+    {
+      const std::string& axis_inp = original_inputs[n_values];
+      auto colon = axis_inp.find(':');
+      std::string node_name =
+          (colon == std::string::npos) ? axis_inp : axis_inp.substr(0, colon);
+      int port = (colon == std::string::npos)
+                     ? 0
+                     : std::stoi(axis_inp.substr(colon + 1));
+      mutation->AddOrUpdateRegularFanin(concat_view, new_n,
+                                        TensorId(node_name, port));
+    }
+
+    for (int fi = total_fanins - 1; fi >= new_total_fanins; --fi) {
+      mutation->RemoveRegularFanin(concat_view, fi);
+    }
+
+    AttrValue n_attr;
+    n_attr.set_i(new_n);
+    mutation->AddOrUpdateNodeAttr(concat_view, "N", n_attr);
+
+    TF_RETURN_IF_ERROR(mutation->Apply());
+
+    (*invalidated_nodes)[matched.concat] = true;
+  }
+
+  return OkStatus();
+}
+
+Status AddGroupEmbeddingNode(RemapperContext* ctx,
+                             const GroupEmbedding& matched,
+                             std::vector<bool>* invalidated_nodes,
+                             std::vector<bool>* nodes_to_delete) {
+  if (matched.full_fusion) {
+    return AddFullFusionGroupEmbeddingNode(ctx, matched, invalidated_nodes,
+                                           nodes_to_delete);
+  }
+  // Multi-table fusion: merge all runs into a single op, keep ConcatV2
+  // for any remaining non-gather inputs.
+  return AddMultiTableGroupEmbeddingNode(ctx, matched, invalidated_nodes,
+                                         nodes_to_delete);
+}
+
 }  // namespace
 
 Status RunRemapper(const char* device_name, const GrapplerItem& item,
@@ -2655,6 +3264,15 @@ Status RunRemapper(const char* device_name, const GrapplerItem& item,
                                          node_def->name(), " (", node_def->op(),
                                          ")");
     {
+      // Horizontal fusion: GatherV2 x N -> [SafeCast] -> ConcatV2 =>
+      // _ZenGroupEmbedding.
+      GroupEmbedding group_embedding;
+      if (FindGroupEmbedding(ctx, i, &group_embedding)) {
+        TF_ABORT_IF_ERROR(AddGroupEmbeddingNode(
+            &ctx, group_embedding, &invalidated_nodes, &nodes_to_delete));
+        continue;
+      }
+
       // Keras Dense layer fwd fusion.
       KerasDenseLayerFwd keras_dense_layer_fwd;
       if (FindKerasDenseLayerFwd(ctx, i, &keras_dense_layer_fwd)) {

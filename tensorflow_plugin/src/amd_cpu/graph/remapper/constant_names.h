@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ constexpr char kSub[] = "Sub";
 constexpr char kTanh[] = "Tanh";
 
 // Fused op names.
+constexpr char kZenGroupEmbedding[] = "_ZenGroupEmbedding";
 constexpr char kFusedBatchMatMulV2[] = "_FusedBatchMatMulV2";
 constexpr char kFusedBatchNormEx[] = "_FusedBatchNormEx";
 constexpr char kFusedConv2D[] = "_FusedConv2D";
