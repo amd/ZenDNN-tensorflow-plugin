@@ -25,40 +25,40 @@ g++ examples/sample_inference.cpp -o sample_inference -I./<tf_folder>/tensorflow
 ## CNN examples
 ### ResNet50
 #### Execute the following commands to run inference for resnet50 model:
-##### Download the pretrained model ```resnet50_fp32_pretrained_model.pb```
+##### Download the pretrained model ```resnet50_v1.pb```
 ```bash
-wget https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/resnet50_fp32_pretrained_model.pb
+wget https://zenodo.org/records/2535873/files/resnet50_v1.pb
 ```
 ##### Run the model
 ```bash
-./sample_inference <model_path(to resnet50_fp32_pretrained_model.pb)> input predict 1280 224 224 3
+./sample_inference <model_path(to resnet50_v1.pb)> input_tensor softmax_tensor 1280 224 224 3
 ```
 ##### Output
 On successful execution, the output would be as follows.
 ```
-Example Output data: Tensor<type: float shape: [1280,1001] values: [0.000189354629 0.000291871896 0.0012335889...]...>
+Example Output data: Tensor<type: float shape: [1280,1001] values: [0.000107617641 0.000108799642 0.000492911378...]...>
 
-Time taken: 2030.000000
-FPS for 1280 images: 630.541870
+Time taken: 11965.825195
+FPS for 1280 images: 106.971306
 ```
 >Note: The execution time/FPS listed in output is simply an example.
 
-### InceptionV3
-#### Execute the following commands to run inference for inceptionv3 model:
-##### Download the pretrained model ```inceptionv3_fp32_pretrained_model.pb```
+### MobilenetV1
+#### Execute the following commands to run inference for mobilenetv1 model:
+##### Download the pretrained model ```mobilenet_v1_1.0_224_frozen.pb```
 ```bash
-wget https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/inceptionv3_fp32_pretrained_model.pb
+wget https://web.archive.org/web/2id_/https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/mobilenet_v1_1.0_224_frozen.pb
 ```
 ##### Run the model
 ```bash
-./sample_inference <model_path(to inceptionv3_fp32_pretrained_model.pb)> input predict 1280 299 299 3
+./sample_inference <model_path(to mobilenet_v1_1.0_224_frozen.pb)> input MobilenetV1/Predictions/Reshape_1 1280 224 224 3
 ```
 ##### Output
 On successful execution, the output would be as follows.
 ```
-Example Output data: Tensor<type: float shape: [1280,1001] values: [8.6072534e-05 0.000105876556 0.000373733055...]...>
+Example Output data: Tensor<type: float shape: [1280,1001] values: [2.90372441e-06 7.68667724e-06 3.70206799e-05...]...>
 
-Time taken: 2408.000000
-FPS for 1280 images: 531.561462
+Time taken: 904.982788
+FPS for 1280 images: 1414.391479
 ```
 >Note: The execution time/FPS listed in output is simply an example.

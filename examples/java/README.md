@@ -14,7 +14,7 @@ Please follow the instructions in the [README.md](../../scripts/java/README.md) 
 
 ```bash
 Download the model.
-wget https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/wide_deep_fp32_pretrained_model.pb
+wget https://web.archive.org/web/2id_/https://storage.googleapis.com/intel-optimized-tensorflow/models/v1_8/wide_deep_fp32_pretrained_model.pb
 ```
 
 ```bash
