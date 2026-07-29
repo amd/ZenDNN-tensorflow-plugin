@@ -49,10 +49,10 @@ This section explains how to use the Python interface. For Java and C++ interfac
 ## Prerequisite
 * Create conda environment and activate it.
   ```
-  conda create -n tf-v2.21.0-zentf-v2.21.0.1-env python=3.10 -y
+  conda create -n tf-v2.21.0-zentf-v2.21.0.1-env python=3.12 -y
   conda activate tf-v2.21.0-zentf-v2.21.0.1-env
   ```
-  > **Note:** Python 3.10 used here for example.
+  > **Note:** Python 3.12 used here for example.
 * Install TensorFlow v2.21.0
   ```
   pip install tensorflow==2.21.0
@@ -86,8 +86,8 @@ ZenDNN-tensorflow-plugin$ ./configure
 Please specify the location of python. [Default is /home/user/anaconda3/envs/zentf-env/bin/python]:
 
 Found possible Python library paths:
-  /home/user/anaconda3/envs/zentf-env/lib/python3.10/site-packages
-Please input the desired Python library path to use.  Default is [/home/user/anaconda3/envs/zentf-env/lib/python3.10/site-packages]
+  /home/user/anaconda3/envs/zentf-env/lib/python3.12/site-packages
+Please input the desired Python library path to use.  Default is [/home/user/anaconda3/envs/zentf-env/lib/python3.12/site-packages]
 
 Configuring build for TensorFlow 2.21 (config: tf_2.21)
   Copied workspace.bzl -> tensorflow_plugin/workspace.bzl
