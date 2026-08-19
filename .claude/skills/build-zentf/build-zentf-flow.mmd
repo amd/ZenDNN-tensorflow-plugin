@@ -1,0 +1,45 @@
+%% build-zentf: build and verify the TensorFlow-ZenDNN plug-in (zentf).
+%% Shared front-end (confirm the TF version -> env prep -> ./configure), then a
+%% three-way branch on the interface (Python wheel / C++ .so / Java), then a
+%% shared enable-and-verify tail plus an optional benchmark. Every gate has an
+%% explicit STOP terminal — there are no retry loops.
+flowchart TD
+    START(["Start"]):::term
+    START --> V0
+
+    V0["Confirm the TF version FIRST<br/>mandatory prompt, it drives every downstream step"]:::box
+    V0 --> GVAL{"TF version in version_configs/tf_2.*<br/>AND inside the README range?"}:::dia
+    GVAL -->|"no"| STVER["STOP: unsupported TF version<br/>reconfirm or change the ref"]:::stop
+    GVAL -->|"yes"| S1
+
+    S1["Stage 1 - Env prep<br/>conda env, pip install tensorflow==ver<br/>Bazel 7.7.0, gcc 13.3 or newer<br/>RHEL family also needs ZENDNNL_MANYLINUX_BUILD=1"]:::box
+    S1 --> GTF{"tf.__version__ equals the confirmed version?"}:::dia
+    GTF -->|"no"| STTF["STOP: version / toolchain mismatch"]:::stop
+    GTF -->|"yes"| S2
+
+    S2["Stage 2 - ./configure<br/>bazel clean --expunge first<br/>selects the tf_2.NN config, bazel then fetches<br/>the pinned zendnnl_repo tarball as-is"]:::box
+    S2 --> GCFG{"selected config tf_2.NN matches?"}:::dia
+    GCFG -->|"no"| STCFG["STOP: config mismatch or TF not found"]:::stop
+    GCFG -->|"yes"| GBR{"Which interface?"}:::dia
+
+    GBR -->|"Python"| PY["bazel build pip_package<br/>then pip install zentf-*.whl"]:::box
+    GBR -->|"C++"| CPP["bazel build libamdcpu_plugin_cc.so<br/>assemble the package, extract TF, create the symlinks"]:::box
+    GBR -->|"Java"| JAVA["source build_tf_java.sh, builds TF-Java<br/>reuses the C++ .so, TF-Java ref must match the TF C++ ABI"]:::box
+
+    PY --> S5
+    CPP --> S5
+    JAVA --> S5
+
+    S5["Stage 5 - Enable and verify<br/>TF_ENABLE_ZENDNN_OPTS=1, TF_ENABLE_ONEDNN_OPTS=0<br/>run the interface sample"]:::box
+    S5 --> GACT{"'ZenDNN custom operations are on' in the log<br/>AND the sample exits 0?"}:::dia
+    GACT -->|"no"| STACT["STOP: zentf not active<br/>check the env vars, or rebuild"]:::stop
+    GACT -->|"yes"| G6{"Benchmark needed?"}:::dia
+
+    G6 -->|"no"| DONE
+    G6 -->|"yes"| S6["Stage 6 - clean run<br/>tune OMP / KMP plus ZENDNNL_MATMUL_ALGO<br/>report FPS / latency"]:::box
+    S6 --> DONE(["Verified zentf build"]):::term
+
+    classDef box fill:#eef3fb,stroke:#33517a,color:#1a1a1a
+    classDef dia fill:#fbf3d9,stroke:#a2842a,color:#1a1a1a
+    classDef stop fill:#f7dede,stroke:#a23a3a,color:#1a1a1a
+    classDef term fill:#dfeede,stroke:#33517a,color:#1a1a1a
