@@ -38,6 +38,9 @@ on:
   repository_dispatch:
     types: [zendnn-pr , zendnnTools-pr]
 
+permissions:
+  contents: read
+
 jobs:
   keyword_check:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch' }}
