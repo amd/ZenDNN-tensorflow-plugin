@@ -36,7 +36,7 @@ on:
         required: false
         default: '0'
   repository_dispatch:
-    types: [zendnn-pr , zendnnTools-pr]
+    types: [zendnn-pr , zendnnTools-pr , zendnnl-pr]
 
 permissions:
   contents: read
@@ -68,7 +68,7 @@ jobs:
     secrets: inherit
     
   ZenDNN_TensorFlow_PR:
-    runs-on: [amd-zenai-arc-xlarge-dind]
+    runs-on: [amd-zenai-arc-large-dind]
     needs: [keyword_check ,syntactic_check, trailing_check, unnecessary_check , jira-id-check , license-header-check  ]
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}} 
     env:
@@ -96,6 +96,13 @@ jobs:
       ZENDNN_TRIGGERING_PR_URL: ${{ github.event.client_payload.zendnn_pr_url || '' }}
       ZENDNN_TRIGGERING_REPO: ${{ github.event.client_payload.triggering_repo || '' }}
       ZENDNN_TRIGGERING_EVENT: ${{ github.event.client_payload.triggering_event || '' }}
+      # Add Zendnnl triggering PR information
+      ZENDNNL_TRIGGERING_PR_NUMBER: ${{ github.event.client_payload.zendnnl_pr_number || '' }}
+      ZENDNNL_TRIGGERING_PR_TITLE: ${{ github.event.client_payload.zendnnl_pr_title || '' }}
+      ZENDNNL_TRIGGERING_PR_AUTHOR: ${{ github.event.client_payload.zendnnl_pr_author || '' }}
+      ZENDNNL_TRIGGERING_PR_URL: ${{ github.event.client_payload.zendnnl_pr_url || '' }}
+      ZENDNNL_TRIGGERING_REPO: ${{ github.event.client_payload.triggering_repo || '' }}
+      ZENDNNL_TRIGGERING_EVENT: ${{ github.event.client_payload.triggering_event || '' }}
       # Add triggering PR information
       TRIGGERING_PR_NUMBER: ${{ github.event.client_payload.zendnntools_pr_number || '' }}
       TRIGGERING_PR_TITLE: ${{ github.event.client_payload.zendnntools_pr_title || '' }}
@@ -160,6 +167,23 @@ jobs:
            echo "   ZenDNN_tools Ref: ${{ github.event.client_payload.zendnntools_ref }}"
            echo "   ZenDNN_tools SHA: ${{ github.event.client_payload.zendnntools_ref_sha }}"
           fi
+         elif [ "${{ github.event.action }}" = "zendnnl-pr" ]; then
+          if [ -n "${{ env.ZENDNNL_TRIGGERING_PR_NUMBER }}" ]; then
+           echo "🔵 TRIGGERED BY ZENDNNL PR:"
+           echo "   Repository: ${{ env.ZENDNNL_TRIGGERING_REPO }}"
+           echo "   PR Number: #${{ env.ZENDNNL_TRIGGERING_PR_NUMBER }}"
+           echo "   PR Title: ${ZENDNNL_TRIGGERING_PR_TITLE}"
+           echo "   PR Author: ${{ env.ZENDNNL_TRIGGERING_PR_AUTHOR }}"
+           echo "   PR URL: ${{ env.ZENDNNL_TRIGGERING_PR_URL }}"
+           echo "   Original Event: ${{ env.ZENDNNL_TRIGGERING_EVENT }}"
+           echo "   ZenDNNL Ref: ${{ github.event.client_payload.zendnnl_ref }}"
+           echo "   ZenDNNL SHA: ${{ github.event.client_payload.zendnnl_ref_sha }}"
+          else
+           echo "🔵 TRIGGERED BY ZENDNNL (No PR info - likely push/dispatch)"
+           echo "   Repository: AMD-Zenai/ZenDNN"
+           echo "   ZenDNNL Ref: ${{ github.event.client_payload.zendnnl_ref }}"
+           echo "   ZenDNNL SHA: ${{ github.event.client_payload.zendnnl_ref_sha }}"
+          fi
          else
           # Unknown or other trigger type
           echo "⚠️  TRIGGERED BY UNKNOWN SOURCE:"
@@ -169,7 +193,26 @@ jobs:
          fi
          echo "=============================================="
          echo ""
-        shell: bash 
+        shell: bash
+      - name: Report pending status to triggering repo(s)
+        if: github.event_name == 'repository_dispatch'
+        shell: bash
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          post_pending () {
+            local repo="$1"; local sha="$2"
+            if [ -n "$sha" ]; then
+              echo "Posting pending status to ${repo} @ ${sha}"
+              curl -s -X POST \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+                "https://api.github.com/repos/${repo}/statuses/${sha}" \
+                -d "{\"state\":\"pending\",\"target_url\":\"${RUN_URL}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} build started\"}"
+            fi
+          }
+          post_pending "AMD-Zenai/ZenDNN" "${{ github.event.client_payload.zendnnl_ref_sha }}"
+          post_pending "AMD-Zenai/ZenDNN" "${{ github.event.client_payload.zendnn_ref_sha }}"
+          post_pending "AMD-Zenai/ZenDNN_tools" "${{ github.event.client_payload.zendnntools_ref_sha }}"
       - name: Checkout ZenDNN_TensorFlow_Plugin
         uses: actions/checkout@v6
         with:
@@ -419,19 +462,29 @@ jobs:
           # Optionally, also remove ZenDNN_TensorFlow_Plugin if you want to delete the repo itself
           rm -rf "$PARENT_DIR/ZenDNN_TensorFlow_Plugin/*"
       - name: Report status back to ZenDNN repo
-        if: always()
+        if: always() && github.event_name == 'repository_dispatch'
         run: |
-         state="success"
-         if [ "${{ job.status }}" != "success" ]; then
-          state="failure"
-         fi
-         curl -s -X POST \
-         -H "Accept: application/vnd.github.v3+json" \
-         -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
-          "https://api.github.com/repos/AMD-Zenai/ZenDNN/statuses/${{ github.event.client_payload.zendnn_ref_sha }}" \
-          -d "{\"state\":\"${state}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}" 
+          state="success"
+          if [ "${{ job.status }}" != "success" ]; then
+            state="failure"
+          fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          post_status () {
+            local sha="$1"
+            if [ -n "$sha" ]; then
+              echo "Reporting ${state} to ZenDNN commit ${sha}"
+              curl -s -X POST \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Authorization: token ${{ secrets.ZIAIE_PAT }}" \
+                "https://api.github.com/repos/AMD-Zenai/ZenDNN/statuses/${sha}" \
+                -d "{\"state\":\"${state}\",\"target_url\":\"${RUN_URL}\",\"context\":\"${{ github.repository }} CI\",\"description\":\"${{ github.repository }} ${state}\"}"
+            fi
+          }
+          post_status "${{ github.event.client_payload.zendnnl_ref_sha }}"
+          post_status "${{ github.event.client_payload.zendnn_ref_sha }}"
+        shell: bash
       - name: Report status back to ZenDNNTOOLS repo
-        if: always()
+        if: always() && github.event_name == 'repository_dispatch'
         run: |
          state="success"
          if [ "${{ job.status }}" != "success" ]; then
@@ -481,7 +534,7 @@ jobs:
 
        
   ZenDNN_TensorFlow_Push:
-    runs-on: [amd-zenai-arc-xlarge-dind]
+    runs-on: [amd-zenai-arc-large-dind]
     if: ${{ github.event_name == 'push' }}
     env:
       PYTHON_VERSION: '3.12'
