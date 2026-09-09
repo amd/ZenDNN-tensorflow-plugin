@@ -48,7 +48,7 @@ jobs:
     secrets: inherit
   syntactic_check:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}} 
-    uses: AMD-Zenai/ZenDNN_TensorFlow_Plugin/.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml@main
+    uses: ./.github/workflows/ZenDNN_TF_Plugin_SA_Syntactic_Check_tests.yml
     secrets: inherit
   trailing_check:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'}}
