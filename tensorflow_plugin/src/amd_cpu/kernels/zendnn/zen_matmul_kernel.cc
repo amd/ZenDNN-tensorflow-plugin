@@ -52,6 +52,7 @@ bool TryExecuteZenDNNLMatMul(OpKernelContext *context, const Tensor &a,
                              FusedComputationType fusion_type,
                              const Tensor *addend = nullptr) {
   try {
+    using namespace zendnnl::common;
     using namespace zendnnl::memory;
     using namespace zendnnl::ops;
     using namespace zendnnl::lowoha::matmul;

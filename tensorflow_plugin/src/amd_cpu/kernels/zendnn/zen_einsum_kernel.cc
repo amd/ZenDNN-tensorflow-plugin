@@ -46,6 +46,7 @@ bool TryExecuteZenDNNLEinsumAsMatMul(OpKernelContext* context, const Tensor& a,
                                      const Tensor& b, Tensor* output,
                                      bool transpose_a, bool transpose_b) {
   try {
+    using namespace zendnnl::common;
     using namespace zendnnl::memory;
     using namespace zendnnl::ops;
     using namespace zendnnl::lowoha::matmul;
@@ -249,6 +250,7 @@ bool TryExecuteZenDNNLEinsumAsBatchMatMulBroadcast(
     const Tensor& input2,  // [b, c, d]
     Tensor* output) {      // [a, b, d]
   try {
+    using namespace zendnnl::common;
     using namespace zendnnl::memory;
     using namespace zendnnl::ops;
     using namespace zendnnl::lowoha::matmul;

@@ -306,7 +306,7 @@ bool TryExecuteZenDNNLBatchMatmul(
     try {
       using namespace zendnnl::lowoha::matmul;
       using namespace zendnnl::memory;
-      using namespace zendnnl::ops;
+      using namespace zendnnl::common;
 
       // Setup batch parameters
       matmul_batch_params_t batch_params;

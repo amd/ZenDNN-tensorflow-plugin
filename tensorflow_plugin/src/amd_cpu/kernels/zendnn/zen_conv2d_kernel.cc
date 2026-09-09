@@ -135,7 +135,6 @@ bool TryExecuteZenDNNLConv2D(
     }
 
     // Add post-ops based on fusion type
-    using namespace zendnnl::ops;
     using conv_postop = zendnnl::lowoha::conv::conv_postop;
     switch (fusion_type) {
       case FusedComputationType::kBiasAdd:
