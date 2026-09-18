@@ -41,6 +41,12 @@ on:
 permissions:
   contents: read
 
+# A new dispatch for the same originating PR supersedes the previous ZenTF run.
+# workflow_dispatch / main-push stay isolated via github.run_id.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.zendnn_pr_number || github.event.client_payload.zendnnl_pr_number || github.event.client_payload.zendnntools_pr_number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'repository_dispatch' || (github.event_name == 'pull_request' && github.event.action != 'unlabeled') }}
+
 jobs:
   keyword_check:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch' }}
