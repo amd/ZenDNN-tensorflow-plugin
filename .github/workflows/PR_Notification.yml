@@ -14,6 +14,12 @@ permissions:
   contents: read
   actions: read
 
+# One waiter per PR. Without this, every synchronize leaves the previous
+# notifier polling for up to the job timeout and Teams gets a card per SHA.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   notify_teams:
     runs-on: amd-zenai-arc-xsmall-dind
