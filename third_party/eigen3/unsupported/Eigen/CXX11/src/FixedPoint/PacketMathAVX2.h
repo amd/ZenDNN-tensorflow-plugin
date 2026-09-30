@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
+ * reserved. Notified per clause 4(b) of the license.
+ ******************************************************************************/
+
 #ifndef CXX11_SRC_FIXEDPOINT_PACKETMATHAVX2_H_
 #define CXX11_SRC_FIXEDPOINT_PACKETMATHAVX2_H_
 #ifdef _MSC_VER
@@ -515,7 +520,7 @@ template <>
 struct scalar_product_op<QInt32, double> : binary_op_base<QInt32, double> {
   typedef typename ScalarBinaryOpTraits<QInt32, double>::ReturnType result_type;
 #ifndef EIGEN_SCALAR_BINARY_OP_PLUGIN
-  EIGEN_EMPTY_STRUCT_CTOR(scalar_product_op)
+  scalar_product_op() = default;
 #else
   scalar_product_op() { EIGEN_SCALAR_BINARY_OP_PLUGIN }
 #endif

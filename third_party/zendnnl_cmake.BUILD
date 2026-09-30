@@ -96,9 +96,9 @@ cmake(
         "ZENDNNL_AOCLDLP_INJECTED": "OFF",
     },
     env = {
-        "CXXFLAGS": "-fopenmp -std=c++17",
+        "CXXFLAGS": "-fopenmp -std=c++17 -Wno-error=maybe-uninitialized",
         "CFLAGS": "-fopenmp",
-        "LDFLAGS": "-lgomp",
+        "LDFLAGS": "-lgomp -lstdc++",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
         "CC": "gcc",
