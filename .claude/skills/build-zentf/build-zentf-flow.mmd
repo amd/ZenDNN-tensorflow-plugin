@@ -12,7 +12,7 @@ flowchart TD
     GVAL -->|"no"| STVER["STOP: unsupported TF version<br/>reconfirm or change the ref"]:::stop
     GVAL -->|"yes"| S1
 
-    S1["Stage 1 - Env prep<br/>conda env, pip install tensorflow==ver<br/>Bazel 7.7.0, gcc 13.3 or newer<br/>RHEL family also needs ZENDNNL_MANYLINUX_BUILD=1"]:::box
+    S1["Stage 1 - Env prep<br/>conda env, pip install tensorflow==ver<br/>Bazel 7.7.0, gcc 14 and g++ 14<br/>RHEL family also needs ZENDNNL_MANYLINUX_BUILD=1"]:::box
     S1 --> GTF{"tf.__version__ equals the confirmed version?"}:::dia
     GTF -->|"no"| STTF["STOP: version / toolchain mismatch"]:::stop
     GTF -->|"yes"| S2

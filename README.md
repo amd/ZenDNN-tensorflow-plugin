@@ -122,7 +122,7 @@ bazel-bin/tensorflow_plugin/tools/pip_package/build_pip_package .
 
 ### 6. Install wheel file using pip:
 ```
-pip install zentf-2.21.0.1-cp310-cp310-linux_x86_64.whl
+pip install zentf-2.21.0.1-cp312-cp312-linux_x86_64.whl
 ```
 
 **The build and installation from source is done!**

@@ -87,8 +87,8 @@ grep -n 'build compatible with TensorFlow' README.md   # states the current rang
 ## Stage 1 - Environment prep
 Uses the **confirmed** TF version throughout.
 ```bash
-# Python 3.10-3.13 supported; 3.10 shown as an example.
-conda create -n tf-v<ver>-zentf-env python=3.10 -y
+# Python 3.10-3.13 supported; 3.12 shown as an example.
+conda create -n tf-v<ver>-zentf-env python=3.12 -y
 conda activate tf-v<ver>-zentf-env
 pip install tensorflow==<confirmed-ver>
 # verify the installed version equals the one requested:
@@ -97,7 +97,7 @@ python3 -c "import tensorflow as tf; print(tf.__version__)"   # MUST == <confirm
 Toolchain requirements (from the repo prereqs / C++ build guide):
 - **Bazel 7.7.0** (`./configure` sets `.bazelversion` to this; install it if
   missing).
-- **gcc >= 13.1** (per the ZenDNN user guide), **git >= 1.8**.
+- **gcc 14 and g++ 14**, **git >= 1.8**.
 - **RHEL family only:** `export ZENDNNL_MANYLINUX_BUILD=1`.
 - **Java interface additionally needs:** Maven 3.6+, JDK 11+, `JAVA_HOME` set to
   the JDK path (e.g. `/usr/lib/jvm/java-11-openjdk-amd64` on Ubuntu), and
@@ -287,9 +287,9 @@ wheel/`.so` for the active interface is installed/loaded, and rebuild if needed.
 
 ## Stage 6 - Benchmark (optional)
 Only if the user wants performance numbers. Run a **clean** run (no debug/verbose
-logging). Tune per hardware — the `zentf_env_setup.sh` defaults target AMD Turin:
-- `OMP_NUM_THREADS` — set to the physical core count (128 Turin default in the
-  script; adjust for Genoa etc.).
+logging). Tune per hardware — `zentf_env_setup.sh` exports the defaults:
+- `OMP_NUM_THREADS` — set to the physical core count (256 by default in the
+  script; adjust for your machine).
 - `KMP_AFFINITY=granularity=fine,compact,1,0`, `OMP_PROC_BIND`, `OMP_WAIT_POLICY`
   — already exported by the setup script.
 - `ZENDNNL_MATMUL_ALGO`: **1** for FP32 / direct BF16 models; **4 or 5** for AMP
@@ -309,7 +309,7 @@ prints `FPS for N images: ...`).
   grep it fresh; it changes per release.
 - **RHEL/Fedora/Alma/CentOS:** `export ZENDNNL_MANYLINUX_BUILD=1` before building.
 - **Wheel filename is version/python-tag pinned** — install by glob
-  (`pip install zentf-*.whl`), don't hardcode `cp310` etc.
+  (`pip install zentf-*.whl`), don't hardcode `cp312` etc.
 - **C++** needs the TF headers/libs extracted from the pip wheel, the two
   `libtensorflow_{cc,framework}.so` symlinks, and the `libomp.so.5` symlink
   (created by `zentf_cc_api_setup.sh`) — missing any → runtime `.so` load errors.

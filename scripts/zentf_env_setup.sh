@@ -78,11 +78,10 @@ echo "KMP_PLAIN_BARRIER_PATTERN=$KMP_PLAIN_BARRIER_PATTERN"
 echo "KMP_REDUCTION_BARRIER_PATTERN=$KMP_REDUCTION_BARRIER_PATTERN"
 echo "KMP_AFFINITY=$KMP_AFFINITY"
 
-# OMP settings
-# The below settings are for Turin. Please update it based on your machine.
-echo -e "\nBy default, OMP settings are based on Turin machine."
-echo "Please update it based on your machine or usecase."
-export OMP_NUM_THREADS=128
+# OMP settings. Please update these based on your machine.
+echo -e "\nOMP settings."
+echo "Please update these based on your machine or usecase."
+export OMP_NUM_THREADS=256
 echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
 export OMP_PROC_BIND=FALSE
 echo "OMP_PROC_BIND=$OMP_PROC_BIND"

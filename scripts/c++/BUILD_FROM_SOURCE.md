@@ -12,7 +12,7 @@ This guide walks through building the TensorFlow-ZenDNN plug-in C++ package (`ZE
 | **Conda** | Active conda environment |
 | **TensorFlow** | v2.16.0 -- v2.21.0 installed in the environment |
 | **Bazel** | Version matching the `.bazelversion` in the repo |
-| **GCC** | >= 13.3 |
+| **GCC / G++** | 14 |
 | **Python 3** | Available as `python3` |
 
 ---
@@ -124,7 +124,7 @@ source zentf_cc_api_setup.sh
 source zentf_env_setup.sh
 ```
 
-> **Note:** The `zentf_env_setup.sh` ships with OMP defaults tuned for AMD Turin.
+> **Note:** `zentf_env_setup.sh` sets `OMP_NUM_THREADS=256` by default.
 > Adjust `OMP_NUM_THREADS` and related variables to match your hardware.
 
 ### Step 7 -- Compile and Run the Sample
