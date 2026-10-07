@@ -125,6 +125,9 @@ bazel-bin/tensorflow_plugin/tools/pip_package/build_pip_package .
 pip install zentf-2.21.0.1-cp312-cp312-linux_x86_64.whl
 ```
 
+>**Notes:**
+>* If you get the error: ImportError: /lib64/libstdc++.so.6: version `GLIBCXX_.a.b.cc' not found, export LD_PRELOAD as: export LD_PRELOAD=<path_to_conda>/envs/<env_name>/lib/libstdc++.so.6:$LD_PRELOAD
+
 **The build and installation from source is done!**
 
 ## Enable TensorFlow-ZenDNN Plug-in:
