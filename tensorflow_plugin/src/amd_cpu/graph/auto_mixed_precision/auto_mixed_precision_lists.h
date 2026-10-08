@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2026 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  ******************************************************************************/
 
@@ -19,7 +19,7 @@ limitations under the License.
 ==============================================================================*/
 
 #ifndef TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_AUTO_MIXED_PRECISION_AUTO_MIXED_PRECISION_LISTS_H_
-#define TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_AUTO_MIXED_PRECISION_AUTO_MIXED_PRECISION_LISTs_H_
+#define TENSORFLOW_PLUGIN_SRC_AMD_CPU_GRAPH_AUTO_MIXED_PRECISION_AUTO_MIXED_PRECISION_LISTS_H_
 
 #include <string>
 
